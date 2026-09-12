@@ -2,7 +2,7 @@ import React from "react";
 import Select from "react-select";
 import { MdDelete } from "react-icons/md";
 import { Box, IconButton, Radio, Checkbox } from "@mui/material";
-import { InlineMath } from "react-katex";
+import { MathText } from "../../utils/mathText";
 import "katex/dist/katex.min.css";
 
 import ReactQuill from "react-quill";
@@ -205,7 +205,7 @@ const CreateExamAdminForm = ({
               question.questionText.includes("\\")) && (
               <div className="text-sm text-stone-500 bg-white border border-dashed border-stone-300 rounded-lg px-4 py-2">
                 <span className="text-xs text-stone-400 mr-2">Preview:</span>
-                <InlineMath math={question.questionText} />
+                <MathText text={question.questionText} />
               </div>
             )}
           <div className=" grid grid-cols-2 sm:grid-cols-4 gap-2">

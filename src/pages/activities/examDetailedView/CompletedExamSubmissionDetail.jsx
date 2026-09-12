@@ -30,7 +30,7 @@ import {
 import { toPng } from "html-to-image";
 import download from "downloadjs";
 import "katex/dist/katex.min.css";
-import { InlineMath } from "react-katex";
+import { MathText } from "../../../utils/mathText";
 
 const formatDate = (dateString) => {
   const options = { year: "numeric", month: "short", day: "numeric" };
@@ -715,12 +715,7 @@ const CompletedExamSubmissionDetail = () => {
                         Question:
                       </div>
                       <p className="text-gray-900">
-                        {question.questionId.questionText.includes("^") ||
-                        question.questionId.questionText.includes("\\") ? (
-                          <InlineMath math={question.questionId.questionText} />
-                        ) : (
-                          question.questionId.questionText
-                        )}
+                        <MathText text={question.questionId.questionText} />
                       </p>
                       {question.questionId.image && (
                         <img
@@ -789,12 +784,7 @@ const CompletedExamSubmissionDetail = () => {
                                   </div>
                                   <div className="flex flex-col gap-2 w-full">
                                     <span className="text-sm text-gray-800">
-                                      {optionText.includes("^") ||
-                                      optionText.includes("\\") ? (
-                                        <InlineMath math={optionText} />
-                                      ) : (
-                                        optionText
-                                      )}
+                                      <MathText text={optionText} />
                                     </span>
                                     {optionImage && (
                                       <img src={optionImage} alt="Option image" className="max-h-24 object-contain rounded-md" />

@@ -39,7 +39,7 @@ import TimerDisplay from "../../components/exam/TimerDisplay";
 import { MarkContext } from "../../context/MarkContext";
 import { DurationContext } from "../../context/DurationContext";
 import "katex/dist/katex.min.css";
-import { InlineMath } from "react-katex";
+import { MathText } from "../../utils/mathText";
 
 const formatTime = (seconds) => {
   const minutes = Math.floor(seconds / 60);
@@ -644,12 +644,7 @@ const AttendExamStudent = () => {
               </div>
               <div className="mb-8">
                 <h2 className="text-xl font-bold text-gray-900 mb-2 font-inter leading-relaxed">
-                  {currentQuestion.questionText.includes("^") ||
-                  currentQuestion.questionText.includes("\\") ? (
-                    <InlineMath math={currentQuestion.questionText} />
-                  ) : (
-                    currentQuestion.questionText
-                  )}
+                  <MathText text={currentQuestion.questionText} />
                 </h2>
                 {currentQuestion.image && (
                   <img
@@ -705,11 +700,7 @@ const AttendExamStudent = () => {
                           </div>
                           <div className="flex flex-col gap-2">
                             <div className="text-gray-800">
-                              {optionText.includes("^") || optionText.includes("\\") ? (
-                                <InlineMath math={optionText} />
-                              ) : (
-                                optionText
-                              )}
+                              <MathText text={optionText} />
                             </div>
                             {optionImage && (
                               <img src={optionImage} alt={`Option ${index + 1}`} className="max-h-24 rounded-md object-contain" />
@@ -750,11 +741,7 @@ const AttendExamStudent = () => {
                           </div>
                           <div className="flex flex-col gap-2">
                             <div className="text-gray-800">
-                              {optionText.includes("^") || optionText.includes("\\") ? (
-                                <InlineMath math={optionText} />
-                              ) : (
-                                optionText
-                              )}
+                              <MathText text={optionText} />
                             </div>
                             {optionImage && (
                               <img src={optionImage} alt={`Option ${index + 1}`} className="max-h-24 rounded-md object-contain" />

@@ -1,8 +1,8 @@
 import React, { useState } from "react";
 import axios from "axios";
 import toast from "react-hot-toast";
-import { InlineMath } from "react-katex";
 import "katex/dist/katex.min.css";
+import { MathText } from "../../utils/mathText";
 import {
   CheckCircle2,
   FileText,
@@ -14,25 +14,15 @@ import {
 } from "lucide-react";
 
 // Renders questionText with inline KaTeX whenever it looks like it contains
-// LaTeX (mirrors the detection convention already used for question text
-// elsewhere, e.g. AttendExamStudent.jsx / CreateExamAdminForm.jsx).
+// LaTeX (only the LaTeX-looking substrings render as math — the rest stays
+// plain text, since PDF-extracted text mixes prose and formulas with no
+// delimiters between them).
 const MathPreview = ({ text }) => {
   if (!text || (!text.includes("^") && !text.includes("\\"))) return null;
 
-  const parts = text.split(/(\$[^$]+\$)/g);
-
   return (
     <div className="mt-1 text-xs text-gray-500 bg-gray-50 border border-gray-100 rounded-lg px-2 py-1.5">
-      {parts.map((part, i) => {
-        if (part.startsWith("$") && part.endsWith("$")) {
-          return <InlineMath key={i} math={part.slice(1, -1)} />;
-        }
-        return part.includes("\\") || part.includes("^") ? (
-          <InlineMath key={i} math={part} />
-        ) : (
-          <span key={i}>{part}</span>
-        );
-      })}
+      <MathText text={text} />
     </div>
   );
 };

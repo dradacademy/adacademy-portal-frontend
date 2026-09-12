@@ -837,22 +837,44 @@ const CreateExamAdminPage = () => {
   };
 
   const handleAddQuestion = () => {
-    setNewQuestions((prev) => [
-      ...prev,
-      {
-        questionType: "MCQ",
-        questionText: "",
-        level: 2,
-        marks: null,
-        negativeMark: null,
-        duration: null,
-        options: [{ text: "", image: null }, { text: "", image: null }],
-        correctAnswers: [],
-        image: null,
-        answerKeyText: "",
-        answerKeyImage: null,
-      },
-    ]);
+    setNewQuestions((prev) => {
+      const newIndex = prev.length;
+
+      // Keep a newly added question included in every manual-selection
+      // question set. Without this, a question created after the initial
+      // default set (which only auto-selects the first question) is saved
+      // but never actually shown to students — the exam silently only
+      // uses whichever questions were checked in the active set.
+      setQuestionSets((prevSets) =>
+        prevSets.map((set) =>
+          set.selectionType === "manual"
+            ? {
+                ...set,
+                questions: [...(set.questions || []), newIndex].sort(
+                  (a, b) => a - b,
+                ),
+              }
+            : set,
+        ),
+      );
+
+      return [
+        ...prev,
+        {
+          questionType: "MCQ",
+          questionText: "",
+          level: 2,
+          marks: null,
+          negativeMark: null,
+          duration: null,
+          options: [{ text: "", image: null }, { text: "", image: null }],
+          correctAnswers: [],
+          image: null,
+          answerKeyText: "",
+          answerKeyImage: null,
+        },
+      ];
+    });
   };
 
   const handleDeleteQuestion = (index) => {
