@@ -71,14 +71,14 @@ const AdminExamPage = () => {
       : [];
   }, [allExams]);
 
-  // Get exam duration
-  const getExamDuration = (level) =>
-    ({
-      1: durationData.level1Duration,
-      2: durationData.level2Duration,
-      3: durationData.level3Duration,
-      4: durationData.level4Duration,
-    }[level] || 0);
+  // Get total exam duration by summing each question's own duration
+  // override, falling back to the level-based config (mirrors the backend
+  // resolver — an exam no longer has one uniform level/duration).
+  const getExamDuration = (questions = []) =>
+    questions.reduce((sum, q) => {
+      const fallback = durationData?.[`level${q.level}Duration`] || 3600;
+      return sum + (q.duration ?? fallback);
+    }, 0);
 
   const handleDeleteExam = async (e) => {
     e.preventDefault();
@@ -147,10 +147,10 @@ const AdminExamPage = () => {
             examCode,
             status,
             questionTypeCount,
-            level,
+            order,
             totalQuestions,
           } = exam;
-          const examDuration = getExamDuration(level) * totalQuestions;
+          const examDuration = getExamDuration(exam.questions);
 
           return (
             <div
@@ -199,7 +199,7 @@ const AdminExamPage = () => {
                       {exam.shuffleQuestion === true ? "Un-Shuffle" : "Shuffle"}
                     </div>
                     <Link
-                      to={`/dashboard/exam/create-exam?subjectId=${exam.subjectId}&subTopicId=${exam.subTopicId}&level=${exam.level}`}
+                      to={`/dashboard/exam/create-exam?subjectId=${exam.subjectId}&subTopicId=${exam.subTopicId}&examId=${exam._id}`}
                       className="p-[10px] bg-white/10 rounded-lg hover:bg-white/20 transition-colors"
                     >
                       <BiEdit className="text-xl" />
@@ -262,8 +262,8 @@ const AdminExamPage = () => {
                   <div className=" flex gap-3 items-center w-full bg-gradient-to-br bg-emerald-400 text-white py-3 px-5 rounded-3xl">
                     <BiTrophy className="text-2xl" />
                     <div>
-                      <p className="text-green-100 text-sm">Difficulty</p>
-                      <p className="text-lg font-bold">Level {level}</p>
+                      <p className="text-green-100 text-sm">Sequence</p>
+                      <p className="text-lg font-bold">Order {order}</p>
                     </div>
                   </div>
                   <div

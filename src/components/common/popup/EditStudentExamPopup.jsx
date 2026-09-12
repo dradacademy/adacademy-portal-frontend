@@ -1,6 +1,7 @@
-import React, { useContext } from "react";
+import React, { useContext, useEffect, useState } from "react";
 import { Dialog } from "@mui/material";
 import { MdClose } from "react-icons/md";
+import axios from "axios";
 import { AuthContext } from "../../../context/AuthContext";
 import { ExamContext } from "../../../context/ExamContext";
 
@@ -14,6 +15,33 @@ const EditStudentExamPopup = ({
 }) => {
   const { allUsersData } = useContext(AuthContext);
   const { subjects } = useContext(ExamContext);
+
+  // Exams are order-based now (no fixed "level"), so instead of a
+  // hardcoded Level 1-4 picker, fetch the actual exams that exist for
+  // whichever subject+subtopic the admin picks and let them choose one
+  // by its position (Order N) in that sequence.
+  const [examsForSubTopic, setExamsForSubTopic] = useState([]);
+
+  useEffect(() => {
+    if (!studentExamUpdateData.subjectId || !studentExamUpdateData.subTopicId) {
+      setExamsForSubTopic([]);
+      return;
+    }
+
+    axios
+      .get(`${import.meta.env.VITE_APP_API_URL}/exams/getAll`)
+      .then(({ data }) => {
+        const matching = (data || [])
+          .filter(
+            (exam) =>
+              exam.subjectId === studentExamUpdateData.subjectId &&
+              exam.subTopicId === studentExamUpdateData.subTopicId,
+          )
+          .sort((a, b) => a.order - b.order);
+        setExamsForSubTopic(matching);
+      })
+      .catch(() => setExamsForSubTopic([]));
+  }, [studentExamUpdateData.subjectId, studentExamUpdateData.subTopicId]);
 
   return (
     <Dialog
@@ -34,8 +62,7 @@ const EditStudentExamPopup = ({
                 : "Update Exam"}
             </h1>
             <p className=" text-sm text-stone-500 font-work-sans">
-              Select the user, subject, sub-topic, and level for the rewrite
-              exam.
+              Select the user, subject, sub-topic, and exam to rewrite.
               <br />
               <span className=" text-red-500">
                 Note: This will overwrite the existing exam data for the user.
@@ -75,6 +102,8 @@ const EditStudentExamPopup = ({
               setStudentExamUpdateData({
                 ...studentExamUpdateData,
                 subjectId: e.target.value,
+                subTopicId: "",
+                examId: "",
               })
             }
             className=" border border-stone-300 rounded-lg p-2 focus:outline-none"
@@ -92,6 +121,7 @@ const EditStudentExamPopup = ({
               setStudentExamUpdateData({
                 ...studentExamUpdateData,
                 subTopicId: e.target.value,
+                examId: "",
               })
             }
             className=" border border-stone-300 rounded-lg p-2 focus:outline-none disabled:opacity-80 disabled:cursor-not-allowed"
@@ -109,19 +139,22 @@ const EditStudentExamPopup = ({
               ))}
           </select>
           <select
-            value={studentExamUpdateData.level}
+            value={studentExamUpdateData.examId}
             onChange={(e) =>
               setStudentExamUpdateData({
                 ...studentExamUpdateData,
-                level: Number(e.target.value),
+                examId: e.target.value,
               })
             }
-            className=" border border-stone-300 rounded-lg p-2 focus:outline-none"
+            className=" border border-stone-300 rounded-lg p-2 focus:outline-none disabled:opacity-80 disabled:cursor-not-allowed"
+            disabled={!studentExamUpdateData.subTopicId}
           >
-            <option value={1}>Level 1</option>
-            <option value={2}>Level 2</option>
-            <option value={3}>Level 3</option>
-            <option value={4}>Level 4</option>
+            <option value="">Select Exam</option>
+            {examsForSubTopic.map((exam) => (
+              <option key={exam._id} value={exam._id}>
+                {`Order ${exam.order} (${exam.examCode})`}
+              </option>
+            ))}
           </select>
         </div>
         <div className=" grid grid-cols-2 gap-1">

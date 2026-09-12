@@ -181,7 +181,7 @@ const ExamOverviewDashboard = ({ onExamClick }) => {
                 <div className="bg-gradient-to-r from-blue-600 to-indigo-600 p-6 text-white">
                   <div className="flex items-center justify-between mb-2">
                     <span className="text-xs font-semibold px-3 py-1 bg-white/20 rounded-full">
-                      Level {exam.level}
+                      Order {exam.order}
                     </span>
                     <FaBook className="text-lg opacity-80" />
                   </div>

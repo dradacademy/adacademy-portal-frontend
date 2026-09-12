@@ -18,6 +18,7 @@ import { FileText } from "lucide-react";
 import StatsActivity from "../../../components/activities/common/StatsActivity";
 import ExamDataEmptyComponent from "../../../components/activities/common/ExamDataEmptyComponent";
 import { MarkContext } from "../../../context/MarkContext";
+import { calculateTotalPossibleMarks } from "../../../utils/examMarks";
 
 const formatDate = (dateString) => {
   const options = { year: "numeric", month: "short", day: "numeric" };
@@ -51,18 +52,12 @@ const StudentActivities = () => {
     percentageRange: [0, 100],
   });
 
-  const positiveMarkForLevel = (level) => {
-    if (level === 1) {
-      return markData.level1Mark;
-    } else if (level === 2) {
-      return markData.level2Mark;
-    } else if (level === 3) {
-      return markData.level3Mark;
-    } else if (level === 4) {
-      return markData.level4Mark;
-    }
-    return markData.level1Mark;
-  };
+  // Total possible marks for an exam submission, summed per-question
+  // (falls back to the level-based config) — an exam no longer carries
+  // one uniform level/mark, so a flat per-level lookup would be wrong
+  // once an exam mixes levels or a question overrides its own marks.
+  const totalPossibleMarksForExam = (exam) =>
+    calculateTotalPossibleMarks(exam?.questions || [], markData);
 
   useEffect(() => {
     const fetchAllData = async () => {
@@ -100,19 +95,19 @@ const StudentActivities = () => {
       ...examData.previousAttempts.map((e) => ({
         subjectName: e.examId.subject?.name,
         subTopicName: e.examId.subTopicName,
-        level: e.examId.level,
+        order: e.examId.order,
       })),
       ...examData.completed.map((e) => ({
         subjectName: e.examId.subject?.name,
         subTopicName: e.examId.subTopicName,
-        level: e.examId.level,
+        order: e.examId.order,
       })),
     ];
 
     return {
       uniqueSubjects: [...new Set(allExams.map((exam) => exam.subjectName))],
       uniqueTopics: [...new Set(allExams.map((exam) => exam.subTopicName))],
-      uniqueLevels: [...new Set(allExams.map((exam) => exam.level))].sort(
+      uniqueLevels: [...new Set(allExams.map((exam) => exam.order))].sort(
         (a, b) => a - b
       ),
     };
@@ -171,21 +166,18 @@ const StudentActivities = () => {
 
     if (filters.levels.length > 0) {
       filtered = filtered.filter((exam) => {
-        const level = exam.level || exam.examId?.level || 0;
-        return filters.levels.includes(level);
+        const order = exam.order || exam.examId?.order || 0;
+        return filters.levels.includes(order);
       });
     }
 
     if (activeTab != "Available") {
       if (filters.percentageRange && filters.percentageRange.length === 2) {
         filtered = filtered.filter((exam) => {
-          const scorePercentage = Math.round(
-            (exam.obtainedMark /
-              (
-                exam.examData?.length * positiveMarkForLevel(exam.examId?.level)
-              ).toFixed(2)) *
-              100
-          );
+          const totalPossibleMarks = totalPossibleMarksForExam(exam.examId);
+          const scorePercentage = totalPossibleMarks
+            ? Math.round((exam.obtainedMark / totalPossibleMarks) * 100)
+            : 0;
           return (
             scorePercentage >= filters.percentageRange[0] &&
             scorePercentage <= filters.percentageRange[1]
@@ -323,7 +315,7 @@ const StudentActivities = () => {
                 currentUsertype={"student"}
                 index={index}
                 exam={exam}
-                positiveMarkForLevel={positiveMarkForLevel}
+                totalPossibleMarks={totalPossibleMarksForExam(exam.examId)}
                 formatDate={formatDate}
               />
             ))
@@ -334,7 +326,7 @@ const StudentActivities = () => {
                 currentUsertype={"student"}
                 index={index}
                 exam={exam}
-                positiveMarkForLevel={positiveMarkForLevel}
+                totalPossibleMarks={totalPossibleMarksForExam(exam.examId)}
                 formatDate={formatDate}
               />
             ))

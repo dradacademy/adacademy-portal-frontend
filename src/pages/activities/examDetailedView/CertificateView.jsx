@@ -33,7 +33,7 @@ const CertificateView = ({ userData, examData, scoreData, markData }) => {
                   {examData.examId.subject?.name}: {examData.examId.subTopicName}
                 </h2>
                 <p className="text-gray-600">
-                  Level {examData.examId.level} | Code:{" "}
+                  Order {examData.examId.order} | Code:{" "}
                   {examData.examId.examCode}
                 </p>
               </div>
@@ -47,17 +47,7 @@ const CertificateView = ({ userData, examData, scoreData, markData }) => {
                 <div className="h-12 w-px bg-gray-200 hidden sm:flex"></div>
                 <div className="text-center">
                   <div className=" text-2xl sm:text-3xl font-bold text-gray-900">
-                    {examData.obtainedMark}/
-                    {scoreData.totalQuestions *
-                      (examData.examId.level === 1
-                        ? markData.level1Mark
-                        : examData.examId.level === 2
-                        ? markData.level2Mark
-                        : examData.examId.level === 3
-                        ? markData.level3Mark
-                        : examData.examId.level === 4
-                        ? markData.level4Mark
-                        : markData.level1Mark)}
+                    {examData.obtainedMark}/{scoreData.totalMarks}
                   </div>
                   <div className="text-sm text-gray-600">Points</div>
                 </div>

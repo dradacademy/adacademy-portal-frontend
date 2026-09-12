@@ -34,6 +34,7 @@ import PreviousAttemptComponent from "../../../components/activities/common/Prev
 import CompletedExam from "../../../components/activities/common/CompletedExam";
 import ExamDataEmptyComponent from "../../../components/activities/common/ExamDataEmptyComponent";
 import { MarkContext } from "../../../context/MarkContext";
+import { calculateTotalPossibleMarks } from "../../../utils/examMarks";
 
 const capitalize = (str) => {
   return str
@@ -101,12 +102,12 @@ const EvaluatorActivities = () => {
       ...allPreviousAttemptsData.map((e) => ({
         subjectName: e.examId?.subject?.name,
         subTopicName: e.examId?.subTopicName,
-        level: e.examId?.level,
+        order: e.examId?.order,
       })),
       ...allCompletedExams.map((e) => ({
         subjectName: e.examId?.subject?.name,
         subTopicName: e.examId?.subTopicName,
-        level: e.examId?.level,
+        order: e.examId?.order,
       })),
     ];
     const uniqueUsers = [
@@ -129,22 +130,16 @@ const EvaluatorActivities = () => {
     setSubjects([...new Set(allExams.map((exam) => exam.subjectName))]);
     setTopics([...new Set(allExams.map((exam) => exam.subTopicName))]);
     setLevels(
-      [...new Set(allExams.map((exam) => exam.level))].sort((a, b) => a - b)
+      [...new Set(allExams.map((exam) => exam.order))].sort((a, b) => a - b)
     );
     setUsers(uniqueUsers);
   }, [allPreviousAttemptsData, allCompletedExams]);
 
-  const positiveMarkForLevel = (level) => {
-    if (level === 1) {
-      return markData.level1Mark;
-    } else if (level === 2) {
-      return markData.level2Mark;
-    } else if (level === 3) {
-      return markData.level3Mark;
-    } else if (level === 4) {
-      return markData.level4Mark;
-    }
-  };
+  // Total possible marks for an exam submission, summed per-question
+  // (falls back to the level-based config) — mirrors the backend resolver
+  // now that an exam no longer carries one uniform level/mark.
+  const totalPossibleMarksForExam = (exam) =>
+    calculateTotalPossibleMarks(exam?.questions || [], markData);
 
   const toggleFilter = (type, value) => {
     setFilters((prev) => {
@@ -204,20 +199,17 @@ const EvaluatorActivities = () => {
 
     if (filters.levels.length > 0) {
       filtered = filtered.filter((exam) => {
-        const level = exam.examId?.level || 0;
-        return filters.levels.includes(level);
+        const order = exam.examId?.order || 0;
+        return filters.levels.includes(order);
       });
     }
 
     if (filters.percentageRange && filters.percentageRange.length === 2) {
       filtered = filtered.filter((exam) => {
-        const scorePercentage = Math.round(
-          (exam.obtainedMark /
-            (
-              exam.examData.length * positiveMarkForLevel(exam.examId?.level)
-            ).toFixed(2)) *
-            100
-        );
+        const totalPossibleMarks = totalPossibleMarksForExam(exam.examId);
+        const scorePercentage = totalPossibleMarks
+          ? Math.round((exam.obtainedMark / totalPossibleMarks) * 100)
+          : 0;
         return (
           scorePercentage >= filters.percentageRange[0] &&
           scorePercentage <= filters.percentageRange[1]
@@ -288,7 +280,7 @@ const EvaluatorActivities = () => {
                 currentUsertype={"evaluator"}
                 index={index}
                 exam={exam}
-                positiveMarkForLevel={positiveMarkForLevel}
+                totalPossibleMarks={totalPossibleMarksForExam(exam.examId)}
                 formatDate={formatDate}
               />
             ))
@@ -299,7 +291,7 @@ const EvaluatorActivities = () => {
                 currentUsertype={"evaluator"}
                 index={index}
                 exam={exam}
-                positiveMarkForLevel={positiveMarkForLevel}
+                totalPossibleMarks={totalPossibleMarksForExam(exam.examId)}
                 formatDate={formatDate}
               />
             ))

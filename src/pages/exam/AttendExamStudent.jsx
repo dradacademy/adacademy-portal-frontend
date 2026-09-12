@@ -89,35 +89,46 @@ const AttendExamStudent = () => {
   const [isCalculatorDialogOpen, setIsCalculatorDialogOpen] = useState(false);
   const [questionStatus, setQuestionStatus] = useState([]);
 
+  // Resolve a question's own marks/negativeMark first (admin can override
+  // them individually per question); fall back to the level-based config
+  // exactly like the backend resolver, so display always matches grading.
   const getMarksForQuestion = useCallback(
-    (level) => {
-      switch (level) {
-        case 1:
-          return {
-            marks: markData.level1Mark,
-            negative: markData.level1NegativeMark,
-          };
-        case 2:
-          return {
-            marks: markData.level2Mark,
-            negative: markData.level2NegativeMark,
-          };
-        case 3:
-          return {
-            marks: markData.level3Mark,
-            negative: markData.level3NegativeMark,
-          };
-        case 4:
-          return {
-            marks: markData.level4Mark,
-            negative: markData.level4NegativeMark,
-          };
-        default:
-          return {
-            marks: markData.level1Mark,
-            negative: markData.level1NegativeMark,
-          };
-      }
+    (question) => {
+      const level = question?.level;
+      const fallback = (() => {
+        switch (level) {
+          case 1:
+            return {
+              marks: markData.level1Mark,
+              negative: markData.level1NegativeMark,
+            };
+          case 2:
+            return {
+              marks: markData.level2Mark,
+              negative: markData.level2NegativeMark,
+            };
+          case 3:
+            return {
+              marks: markData.level3Mark,
+              negative: markData.level3NegativeMark,
+            };
+          case 4:
+            return {
+              marks: markData.level4Mark,
+              negative: markData.level4NegativeMark,
+            };
+          default:
+            return {
+              marks: markData.level1Mark,
+              negative: markData.level1NegativeMark,
+            };
+        }
+      })();
+
+      return {
+        marks: question?.marks ?? fallback.marks,
+        negative: question?.negativeMark ?? fallback.negative,
+      };
     },
     [markData],
   );
@@ -137,18 +148,16 @@ const AttendExamStudent = () => {
           setExamData(data.exam);
           setSubmissionId(data.submissionId); // Store submissionId
 
-          const perQuestionDuration =
-            data.exam.level === 1
-              ? durationData.level1Duration
-              : data.exam.level === 2
-                ? durationData.level2Duration
-                : data.exam.level === 3
-                  ? durationData.level3Duration
-                  : durationData.level4Duration;
-
+          // Trust the server-computed total (sum of each question's own
+          // resolved duration); only fall back to a client-side sum in the
+          // unexpected case it's missing, using the same per-question
+          // resolution logic as the backend.
           const totalDuration =
             data.serverDuration ||
-            data.exam.questions.length * perQuestionDuration;
+            data.exam.questions.reduce((sum, q) => {
+              const fallback = durationData?.[`level${q.level}Duration`] || 3600;
+              return sum + (q.duration ?? fallback);
+            }, 0);
           setTotalTime(totalDuration);
 
           // Canonical Timer Logic: Sync with Server Start Time
@@ -375,7 +384,7 @@ const AttendExamStudent = () => {
   }
 
   const currentQuestion = examData.questions[currentQuestionIndex];
-  const { marks, negative } = getMarksForQuestion(currentQuestion.level);
+  const { marks, negative } = getMarksForQuestion(currentQuestion);
 
   return (
     <div className="min-h-screen bg-gray-50 p-5">
@@ -441,11 +450,11 @@ const AttendExamStudent = () => {
                 </div>
                 <div className="grid grid-cols-2 gap-2 mb-3 font-inter">
                   <div className="bg-gray-50 p-2 rounded-lg">
-                    <div className="text-xs text-gray-500 mb-1">Level</div>
+                    <div className="text-xs text-gray-500 mb-1">Order</div>
                     <div className="flex items-center gap-1">
                       <Layers className="h-3.5 w-3.5 text-gray-700" />
                       <span className="text-sm font-medium text-gray-800">
-                        {examData.level}
+                        {examData.order}
                       </span>
                     </div>
                   </div>
@@ -820,7 +829,7 @@ const AttendExamStudent = () => {
         <EligibilityPopup
           subjectName={examData.subjectName}
           subtopicName={examData.subtopicName}
-          level={examData.level}
+          totalDurationSeconds={totalTime}
           passPercentage={examData.passPercentage}
           questionLength={examData.questions.length}
           setOpenEligibilityPopup={setOpenEligibilityPopup}

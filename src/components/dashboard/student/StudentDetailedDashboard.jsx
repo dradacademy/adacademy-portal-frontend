@@ -287,7 +287,7 @@ const StudentDetailedDashboard = ({ student, onBack }) => {
                   {exams.map((exam, idx) => (
                     <div key={idx} className="bg-gray-50 p-4 rounded-xl border">
                       <p className="font-semibold">
-                        {exam.subTopic} • Level {exam.level}
+                        {exam.subTopic} • Order {exam.order}
                       </p>
 
                       <div className="grid grid-cols-4 gap-3 mt-3 text-sm">

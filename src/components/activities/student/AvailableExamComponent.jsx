@@ -24,30 +24,7 @@ const AvailableExamComponent = ({
           <div>
             <div className="flex items-center gap-1 ">
               <span className="text-xs font-medium text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full">
-                Level {exam.level}
-              </span>
-              <span className="text-xs font-medium text-teal-600 bg-teal-50 px-2 py-0.5 rounded-full">
-                {`${Math.floor(
-                  (exam.questions.length *
-                    (exam.level === 1
-                      ? durationData.level1Duration
-                      : exam.level === 2
-                      ? durationData.level2Duration
-                      : exam.level === 3
-                      ? durationData.level3Duration
-                      : durationData.level4Duration)) /
-                    60
-                )} min ${
-                  (exam.questions.length *
-                    (exam.level === 1
-                      ? durationData.level1Duration
-                      : exam.level === 2
-                      ? durationData.level2Duration
-                      : exam.level === 3
-                      ? durationData.level3Duration
-                      : durationData.level4Duration)) %
-                  60
-                } sec`}
+                Order {exam.order}
               </span>
             </div>
             <h3 className="text-lg font-bold text-gray-900 capitalize mt-1 ">

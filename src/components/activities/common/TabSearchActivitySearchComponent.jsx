@@ -188,30 +188,30 @@ const TabSearchActivitySearchComponent = ({
                   <Layers className="h-4 w-4 text-purple-600" />
                 </div>
                 <h3 className="font-medium text-gray-900 font-poppins">
-                  Level
+                  Order
                 </h3>
               </div>
               <div className="space-y-2">
-                {levels.map((level) => (
+                {levels.map((order) => (
                   <div
-                    key={level}
-                    onClick={() => toggleFilter("levels", level)}
+                    key={order}
+                    onClick={() => toggleFilter("levels", order)}
                     className={`flex items-center gap-2 p-2 rounded-lg cursor-pointer transition-colors ${
-                      filters.levels.includes(level)
+                      filters.levels.includes(order)
                         ? "bg-purple-600 text-white"
                         : "bg-white text-gray-700 hover:bg-purple-100"
                     }`}
                   >
                     <div
                       className={`w-6 h-6 rounded-full flex items-center justify-center text-xs ${
-                        filters.levels.includes(level)
+                        filters.levels.includes(order)
                           ? "bg-white text-purple-600"
                           : "bg-purple-100 text-purple-600"
                       }`}
                     >
-                      {level}
+                      {order}
                     </div>
-                    <span className="text-sm">Level {level}</span>
+                    <span className="text-sm">Order {order}</span>
                   </div>
                 ))}
               </div>

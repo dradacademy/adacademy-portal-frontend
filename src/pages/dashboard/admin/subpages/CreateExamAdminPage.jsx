@@ -16,18 +16,29 @@ import {
   Zap,
 } from "lucide-react";
 import BulkQuestionUploadAdmin from "../../common/BulkQuestionUploadAdmin";
+import PdfQuestionImportAdmin from "../../common/PdfQuestionImportAdmin";
 import { useContext } from "react";
 import { ExamContext } from "../../../../context/ExamContext";
 
 const sampleExcelData = [
-  ["Subject", "SubTopic", "Level", "Status", "PassPercentage"],
-  ["", "", 1, "active", 90],
+  ["Subject", "SubTopic", "Status", "PassPercentage"],
+  ["", "", "active", 90],
   [],
-  ["QuestionType", "QuestionText", "Options", "CorrectAnswers", "Image"],
-  ["MCQ", "ques 1", ["1", "2"], ["1"], null],
-  ["MSQ", "ques 2", ["1", "2", "3"], ["2", "3"], null],
-  ["Fill in the Blanks", "ques 3", null, ["true", "yes"], null],
-  ["Short Answer", "ques 4", null, ["one ", "two", "three"], null],
+  [
+    "QuestionType",
+    "QuestionText",
+    "Options",
+    "CorrectAnswers",
+    "Image",
+    "Level",
+    "Marks",
+    "NegativeMark",
+    "Duration",
+  ],
+  ["MCQ", "ques 1", ["1", "2"], ["1"], null, 1, "", "", ""],
+  ["MSQ", "ques 2", ["1", "2", "3"], ["2", "3"], null, 2, "", "", ""],
+  ["Fill in the Blanks", "ques 3", null, ["true", "yes"], null, 1, "", "", ""],
+  ["Short Answer", "ques 4", null, ["one ", "two", "three"], null, 3, "", "", ""],
 ];
 
 const CreateExamAdminPage = () => {
@@ -39,12 +50,14 @@ const CreateExamAdminPage = () => {
   const [fileData, setFileData] = useState(null);
   const subject = searchParams.get("subjectId") || "";
   const subTopic = searchParams.get("subTopicId") || "";
-  const level = parseInt(searchParams.get("level"), 10) || 1;
+  // Explicit examId decides create-vs-edit now that an exam's position in
+  // its subject+subTopic sequence (`order`) is auto-assigned, not chosen
+  // by the admin the way `level` used to be.
+  const examId = searchParams.get("examId") || null;
 
   const [formData, setFormData] = useState({
     subject: "",
     subTopic: "",
-    level: null,
     status: "active",
     passPercentage: null,
     questions: [],
@@ -67,14 +80,17 @@ const CreateExamAdminPage = () => {
       ...prevData,
       subject: subject,
       subTopic: subTopic,
-      level: level,
     }));
-  }, [subject, subTopic, level]);
+  }, [subject, subTopic]);
 
   const [newQuestions, setNewQuestions] = useState([
     {
       questionType: "MCQ",
       questionText: "",
+      level: 2,
+      marks: null,
+      negativeMark: null,
+      duration: null,
       options: [{ text: "", image: null }, { text: "", image: null }],
       correctAnswers: [],
       image: null,
@@ -115,14 +131,11 @@ const CreateExamAdminPage = () => {
   }, [formData.subject, subTopic, subjects]);
 
   useEffect(() => {
-    if (!formData.subject || !formData.subTopic || !formData.level) return;
+    if (!formData.subject || !formData.subTopic) return;
 
-    const existingExam = allExams.find(
-      (exam) =>
-        exam.subjectId === formData.subject &&
-        exam.subTopicId === formData.subTopic &&
-        exam.level === formData.level,
-    );
+    const existingExam = examId
+      ? allExams.find((exam) => exam._id === examId)
+      : null;
 
     if (existingExam) {
       setFormData((prev) => ({
@@ -140,6 +153,10 @@ const CreateExamAdminPage = () => {
           : existingExam.questions
       ).map(q => ({
         ...q,
+        level: q.level ?? 2,
+        marks: q.marks ?? null,
+        negativeMark: q.negativeMark ?? null,
+        duration: q.duration ?? null,
         options: q.options ? q.options.map(opt => typeof opt === "string" ? { text: opt, image: null } : opt) : q.options,
         answerKeyText: q.answerKeyText || "",
         answerKeyImage: q.answerKeyImage || null,
@@ -215,11 +232,10 @@ const CreateExamAdminPage = () => {
       const updatedExcelData = [...sampleExcelData.map((row) => [...row])];
       updatedExcelData[1][0] = formData.subject;
       updatedExcelData[1][1] = formData.subTopic;
-      updatedExcelData[1][2] = formData.level;
 
       existingExam?.questions?.forEach((question, index) => {
         while (updatedExcelData.length <= index + 4) {
-          updatedExcelData.push(["", "", "", "", ""]);
+          updatedExcelData.push(["", "", "", "", "", "", "", "", ""]);
         }
 
         updatedExcelData[index + 4][0] = question.questionType;
@@ -237,6 +253,10 @@ const CreateExamAdminPage = () => {
         }
 
         updatedExcelData[index + 4][4] = question.image;
+        updatedExcelData[index + 4][5] = question.level ?? 2;
+        updatedExcelData[index + 4][6] = question.marks ?? "";
+        updatedExcelData[index + 4][7] = question.negativeMark ?? "";
+        updatedExcelData[index + 4][8] = question.duration ?? "";
       });
 
       setExcelTemplateData(updatedExcelData);
@@ -245,6 +265,10 @@ const CreateExamAdminPage = () => {
         {
           questionType: "MCQ",
           questionText: "",
+          level: 2,
+          marks: null,
+          negativeMark: null,
+          duration: null,
           options: [{ text: "", image: null }, { text: "", image: null }],
           correctAnswers: [],
           image: null,
@@ -271,15 +295,9 @@ const CreateExamAdminPage = () => {
     }
 
     const updatedData = [...excelTemplateData];
-    updatedData[1] = [
-      formData.subject,
-      formData.subTopic,
-      formData.level,
-      "active",
-      90,
-    ];
+    updatedData[1] = [formData.subject, formData.subTopic, "active", 90];
     setExcelTemplateData(updatedData);
-  }, [formData.subject, formData.subTopic, formData.level, allExams]);
+  }, [formData.subject, formData.subTopic, examId, allExams]);
 
   useEffect(() => {
     setFormData((prev) => ({
@@ -339,18 +357,11 @@ const CreateExamAdminPage = () => {
   //   XLSX.writeFile(wb, "Exam_Template.xlsx");
   // };
   const downloadTemplate = () => {
-    const headerRow = [
-      "Subject",
-      "SubTopic",
-      "Level",
-      "Status",
-      "PassPercentage",
-    ];
+    const headerRow = ["Subject", "SubTopic", "Status", "PassPercentage"];
 
     const detailsRow = [
       formData.subject,
       formData.subTopic,
-      formData.level,
       formData.status,
       formData.passPercentage,
     ];
@@ -361,23 +372,35 @@ const CreateExamAdminPage = () => {
       "Options",
       "CorrectAnswers",
       "Image",
+      "Level",
+      "Marks",
+      "NegativeMark",
+      "Duration",
     ];
 
     const sampleQuestions = [
-      ["What is 2 + 2?", "MCQ", "1,2,3,4", "4", ""],
+      ["What is 2 + 2?", "MCQ", "1,2,3,4", "4", "", 1, "", "", ""],
       [
         "Which of the following are prime numbers?",
         "MSQ",
         "2,3,4,5,6",
         "2,3,5",
         "",
+        2,
+        "",
+        "",
+        "",
       ],
-      ["The capital of France is ____.", "Fill in the Blanks", "", "Paris", ""],
+      ["The capital of France is ____.", "Fill in the Blanks", "", "Paris", "", 1, "", "", ""],
       [
         "Explain the water cycle briefly.",
         "Short Answer",
         "",
         "evaporation,condensation,precipitation",
+        "",
+        3,
+        "",
+        "",
         "",
       ],
     ];
@@ -527,7 +550,29 @@ const CreateExamAdminPage = () => {
 
         const image = row[colIndex["Image"]] || null;
 
-        return { questionText, questionType, options, correctAnswers, image };
+        const parseOptionalNumber = (raw) => {
+          if (raw === undefined || raw === null || raw === "") return null;
+          const num = Number(raw);
+          return Number.isFinite(num) ? num : null;
+        };
+
+        const rawLevel = row[colIndex["Level"]];
+        const level = parseOptionalNumber(rawLevel) ?? 2;
+        const marks = parseOptionalNumber(row[colIndex["Marks"]]);
+        const negativeMark = parseOptionalNumber(row[colIndex["NegativeMark"]]);
+        const duration = parseOptionalNumber(row[colIndex["Duration"]]);
+
+        return {
+          questionText,
+          questionType,
+          options,
+          correctAnswers,
+          image,
+          level,
+          marks,
+          negativeMark,
+          duration,
+        };
       });
 
     if (uploadedQuestions.length === 0) {
@@ -568,6 +613,33 @@ const CreateExamAdminPage = () => {
     toast.success(
       `${uploadedQuestions.length} questions imported successfully!`,
     );
+  };
+
+  // Merges admin-approved draft questions from the PDF-import review screen
+  // into the question list — mirrors the Excel-import merge above so both
+  // paths behave identically once questions land in newQuestions.
+  const handlePdfImportQuestions = (importedQuestions) => {
+    setNewQuestions((prev) => {
+      const existingFiltered = prev.filter((q) => q.questionText.trim() !== "");
+      const merged = [...existingFiltered, ...importedQuestions];
+
+      setQuestionSets([
+        {
+          name: "Imported Set",
+          selectionType: "manual",
+          questions: merged.map((_, i) => i),
+          config: {
+            MCQ: { count: 0 },
+            MSQ: { count: 0 },
+            "Fill in the Blanks": { count: 0 },
+            "Short Answer": { count: 0 },
+          },
+        },
+      ]);
+      setActiveQuestionSetIndex(0);
+
+      return merged;
+    });
   };
 
   // Can Rollback
@@ -642,7 +714,13 @@ const CreateExamAdminPage = () => {
     setNewQuestions((prev) => {
       const updated = [...prev];
       if (name === "level") {
-        updated[index][name] = parseInt(value, 10);
+        updated[index][name] = parseInt(value, 10) || 1;
+      } else if (
+        name === "marks" ||
+        name === "negativeMark" ||
+        name === "duration"
+      ) {
+        updated[index][name] = value === "" ? null : Number(value);
       } else {
         updated[index][name] = value;
       }
@@ -764,6 +842,10 @@ const CreateExamAdminPage = () => {
       {
         questionType: "MCQ",
         questionText: "",
+        level: 2,
+        marks: null,
+        negativeMark: null,
+        duration: null,
         options: [{ text: "", image: null }, { text: "", image: null }],
         correctAnswers: [],
         image: null,
@@ -833,10 +915,6 @@ const CreateExamAdminPage = () => {
       toast.error("Please select any subject!");
       return false;
     }
-    if (!formData.level) {
-      toast.error("Please select any level!");
-      return false;
-    }
     if (!formData.subTopic) {
       toast.error("Please select any subtopic!");
       return false;
@@ -852,9 +930,14 @@ const CreateExamAdminPage = () => {
       return false;
     }
 
-    const hasValidQuestions = newQuestions.every((q) => {
+    const hasValidQuestions = newQuestions.every((q, qIndex) => {
       if (!q.questionText.trim()) {
         toast.error("All questions must have text!");
+        return false;
+      }
+
+      if (!q.level) {
+        toast.error(`Question ${qIndex + 1}: Please select a level!`);
         return false;
       }
 
@@ -932,12 +1015,9 @@ const CreateExamAdminPage = () => {
     if (!validateForm()) return;
 
     try {
-      const existingExam = allExams.find(
-        (exam) =>
-          exam.subjectId === formData.subject &&
-          exam.subTopicId === formData.subTopic &&
-          exam.level === formData.level,
-      );
+      const existingExam = examId
+        ? allExams.find((exam) => exam._id === examId)
+        : null;
 
       const uploadToCloudinary = async (file) => {
         if (!file || typeof file !== "object") return file;
@@ -1065,14 +1145,15 @@ const CreateExamAdminPage = () => {
         </div>
       </div>
       <div className=" flex flex-col gap-4">
-        {formData.subject != "" &&
-          formData.subTopic != "" &&
-          formData.level != null && (
+        {formData.subject != "" && formData.subTopic != "" && (
             <BulkQuestionUploadAdmin
               fileData={fileData}
               downloadTemplate={downloadTemplate}
               handleExcelUpload={handleExcelUpload}
             />
+          )}
+        {formData.subject != "" && formData.subTopic != "" && (
+            <PdfQuestionImportAdmin onImportQuestions={handlePdfImportQuestions} />
           )}
         {/* Question Set Manager Component - Replaces old selection */}
         {newQuestions.length > 0 && (
@@ -1119,12 +1200,7 @@ const CreateExamAdminPage = () => {
           onClick={handleSubmit}
           className=" bg-indigo-400 text-stone-50 font-medium py-[10px] px-4 rounded-xl font-poppins cursor-pointer hover:opacity-85 duration-300"
         >
-          {allExams.find(
-            (exam) =>
-              exam.subjectId === formData.subject &&
-              exam.subTopicId === formData.subTopic &&
-              exam.level === formData.level,
-          )
+          {examId && allExams.find((exam) => exam._id === examId)
             ? "Update Exam"
             : "Create Exam"}
         </button>

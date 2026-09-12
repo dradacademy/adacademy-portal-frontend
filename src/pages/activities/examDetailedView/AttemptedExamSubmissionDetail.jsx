@@ -24,6 +24,10 @@ import {
   BadgeInfo,
 } from "lucide-react";
 import { MarkContext } from "../../../context/MarkContext";
+import {
+  resolveQuestionMarks,
+  calculateTotalPossibleMarks,
+} from "../../../utils/examMarks";
 import "katex/dist/katex.min.css";
 import { InlineMath } from "react-katex";
 
@@ -45,30 +49,20 @@ const formatDuration = (secs) => {
   return `${minutes}m ${seconds}s`;
 };
 
-const positiveMarkForLevel = (level, markData) => {
-  if (level === 1) {
-    return markData.level1Mark;
-  } else if (level === 2) {
-    return markData.level2Mark;
-  } else if (level === 3) {
-    return markData.level3Mark;
-  } else if (level === 4) {
-    return markData.level4Mark;
-  }
-  return markData.level1Mark;
-};
-
-const negativeMarkForLevel = (level, markData) => {
-  if (level === 1) {
-    return markData.level1NegativeMark;
-  } else if (level === 2) {
-    return markData.level2NegativeMark;
-  } else if (level === 3) {
-    return markData.level3NegativeMark;
-  } else if (level === 4) {
-    return markData.level4NegativeMark;
-  }
-  return markData.level1NegativeMark;
+// Best-effort "representative" level for an exam that mixes levels, used
+// only for the legacy review-criteria lookup below (a separate feature,
+// keyed by subject+subTopic+level, that hasn't been redesigned for
+// per-question levels yet). Picks the most common level among the exam's
+// questions, defaulting to 1.
+const getRepresentativeLevel = (questions = []) => {
+  if (!questions.length) return 1;
+  const counts = {};
+  questions.forEach((q) => {
+    counts[q.level] = (counts[q.level] || 0) + 1;
+  });
+  return Number(
+    Object.entries(counts).sort((a, b) => b[1] - a[1])[0]?.[0] || 1,
+  );
 };
 
 const AttemptedExamSubmissionDetail = () => {
@@ -106,17 +100,10 @@ const AttemptedExamSubmissionDetail = () => {
 
         if (data) {
           const totalQuestions = data.examData?.length || 0;
-          const totalMarks =
-            totalQuestions *
-            (data.examId.level === 1
-              ? markData.level1Mark
-              : data.examId.level === 2
-                ? markData.level2Mark
-                : data.examId.level === 3
-                  ? markData.level3Mark
-                  : data.examId.level === 4
-                    ? markData.level4Mark
-                    : markData.level1Mark);
+          const totalMarks = calculateTotalPossibleMarks(
+            data.examId?.questions || [],
+            markData,
+          );
 
           const scorePercentage = totalMarks
             ? ((data.obtainedMark / totalMarks) * 100).toFixed(1)
@@ -150,7 +137,7 @@ const AttemptedExamSubmissionDetail = () => {
             params: {
               subject: examData.examId.subject._id,
               subTopic: examData.examId.subTopic,
-              level: examData.examId.level,
+              level: getRepresentativeLevel(examData.examId.questions),
               percentage: scoreData.scorePercentage,
             },
           },
@@ -181,8 +168,8 @@ const AttemptedExamSubmissionDetail = () => {
     const { questionId, studentAnswer, correctAnswer } = question;
     const questionType = questionId?.questionType;
 
-    const positiveMark = positiveMarkForLevel(examData.examId.level, markData);
-    const negativeMark = negativeMarkForLevel(examData.examId.level, markData);
+    const { positive: positiveMark, negative: negativeMark } =
+      resolveQuestionMarks(questionId, markData);
 
     if (questionType === "MCQ") {
       // MCQ: Full positive mark or negative mark (no partial marks)
@@ -423,7 +410,7 @@ const AttemptedExamSubmissionDetail = () => {
                   </div>
                   <div className="flex items-center gap-1">
                     <Layers className="h-4 w-4" />
-                    <span>Level {examData.examId.level}</span>
+                    <span>Order {examData.examId.order}</span>
                   </div>
                   <div className="flex items-center gap-1">
                     <CalendarDays className="h-4 w-4" />

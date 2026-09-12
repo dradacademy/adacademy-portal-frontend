@@ -155,7 +155,7 @@ const ViewQuestionOfExamAdminPage = () => {
             </div>
             <div className="flex gap-2">
               <button className=" text-sm font-medium py-1 px-4 rounded-3xl bg-indigo-100 text-indigo-400">
-                Level: {examDetails.level}
+                Order: {examDetails.order}
               </button>
               <button
                 className={` text-sm font-medium py-1 px-4 rounded-3xl ${
@@ -223,6 +223,24 @@ const ViewQuestionOfExamAdminPage = () => {
                     <span className="px-4 py-1 bg-indigo-100 text-indigo-400 rounded-full text-sm">
                       {question.questionType}
                     </span>
+                    <span className="px-3 py-1 bg-stone-100 text-stone-500 rounded-full text-xs">
+                      Level {question.level}
+                    </span>
+                    {question.marks != null && (
+                      <span className="px-3 py-1 bg-emerald-50 text-emerald-600 rounded-full text-xs">
+                        {question.marks} marks
+                      </span>
+                    )}
+                    {question.negativeMark != null && (
+                      <span className="px-3 py-1 bg-rose-50 text-rose-500 rounded-full text-xs">
+                        -{question.negativeMark} negative
+                      </span>
+                    )}
+                    {question.duration != null && (
+                      <span className="px-3 py-1 bg-amber-50 text-amber-600 rounded-full text-xs">
+                        {question.duration}s
+                      </span>
+                    )}
                   </div>
                 </div>
 

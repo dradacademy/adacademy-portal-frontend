@@ -15,7 +15,7 @@ const MarkAndDurationAdmin = () => {
     userId: "",
     subjectId: "",
     subTopicId: "",
-    level: 1,
+    examId: "",
   });
   const [popupType, setPopupType] = useState("");
 
@@ -30,7 +30,7 @@ const MarkAndDurationAdmin = () => {
       userId: "",
       subjectId: "",
       subTopicId: "",
-      level: 1,
+      examId: "",
     });
     setPopupType("");
   };
@@ -42,7 +42,7 @@ const MarkAndDurationAdmin = () => {
         !studentExamUpdateData.userId ||
         !studentExamUpdateData.subjectId ||
         !studentExamUpdateData.subTopicId ||
-        !studentExamUpdateData.level
+        !studentExamUpdateData.examId
       ) {
         toast.error("Please fill all fields");
         return;

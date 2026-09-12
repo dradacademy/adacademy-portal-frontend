@@ -2,6 +2,8 @@ import React from "react";
 import Select from "react-select";
 import { MdDelete } from "react-icons/md";
 import { Box, IconButton, Radio, Checkbox } from "@mui/material";
+import { InlineMath } from "react-katex";
+import "katex/dist/katex.min.css";
 
 import ReactQuill from "react-quill";
 import "react-quill/dist/quill.snow.css";
@@ -93,38 +95,7 @@ const CreateExamAdminForm = ({
           }}
         />
       </div>
-      <div className=" grid grid-cols-3 gap-2 w-full">
-        <Select
-          name="level"
-          value={
-            [1, 2, 3, 4]
-              .map((lvl) => ({
-                value: lvl,
-                label: `Level ${lvl}`,
-              }))
-              .find((option) => option.value === formData.level) || null
-          }
-          onChange={(selectedOption) =>
-            handleChange({
-              target: { name: "level", value: selectedOption.value },
-            })
-          }
-          options={[1, 2, 3, 4].map((lvl) => ({
-            value: lvl,
-            label: `Level ${lvl}`,
-          }))}
-          isSearchable={false}
-          styles={{
-            control: (base) => ({
-              ...base,
-              borderRadius: "8px",
-              padding: "4px",
-              borderColor: "#ccc",
-              boxShadow: "none",
-              "&:hover": { borderColor: "#888" },
-            }),
-          }}
-        />
+      <div className=" grid grid-cols-2 gap-2 w-full">
         <Select
           name="status"
           value={
@@ -229,6 +200,89 @@ const CreateExamAdminForm = ({
             onChange={(e) => handleQuestionChange(qIndex, e)}
             required
           />
+          {question.questionText &&
+            (question.questionText.includes("^") ||
+              question.questionText.includes("\\")) && (
+              <div className="text-sm text-stone-500 bg-white border border-dashed border-stone-300 rounded-lg px-4 py-2">
+                <span className="text-xs text-stone-400 mr-2">Preview:</span>
+                <InlineMath math={question.questionText} />
+              </div>
+            )}
+          <div className=" grid grid-cols-2 sm:grid-cols-4 gap-2">
+            <div className="flex flex-col gap-1">
+              <label className="text-xs text-stone-500">Level</label>
+              <Select
+                name="level"
+                value={
+                  [1, 2, 3, 4]
+                    .map((lvl) => ({ value: lvl, label: `Level ${lvl}` }))
+                    .find((option) => option.value === question.level) || null
+                }
+                onChange={(selectedOption) =>
+                  handleQuestionChange(qIndex, {
+                    target: { name: "level", value: selectedOption.value },
+                  })
+                }
+                options={[1, 2, 3, 4].map((lvl) => ({
+                  value: lvl,
+                  label: `Level ${lvl}`,
+                }))}
+                isSearchable={false}
+                styles={{
+                  control: (base) => ({
+                    ...base,
+                    borderRadius: "8px",
+                    padding: "2px",
+                    borderColor: "#ccc",
+                    boxShadow: "none",
+                    "&:hover": { borderColor: "#888" },
+                  }),
+                }}
+              />
+            </div>
+            <div className="flex flex-col gap-1">
+              <label className="text-xs text-stone-500">
+                Marks (blank = default)
+              </label>
+              <input
+                type="number"
+                name="marks"
+                placeholder="Auto"
+                className=" border border-stone-300 py-[9px] px-4 focus:outline-none rounded-lg bg-white w-full"
+                value={question.marks ?? ""}
+                onChange={(e) => handleQuestionChange(qIndex, e)}
+                onWheel={(e) => e.target.blur()}
+              />
+            </div>
+            <div className="flex flex-col gap-1">
+              <label className="text-xs text-stone-500">
+                Negative Mark (blank = default)
+              </label>
+              <input
+                type="number"
+                name="negativeMark"
+                placeholder="Auto"
+                className=" border border-stone-300 py-[9px] px-4 focus:outline-none rounded-lg bg-white w-full"
+                value={question.negativeMark ?? ""}
+                onChange={(e) => handleQuestionChange(qIndex, e)}
+                onWheel={(e) => e.target.blur()}
+              />
+            </div>
+            <div className="flex flex-col gap-1">
+              <label className="text-xs text-stone-500">
+                Duration secs (blank = default)
+              </label>
+              <input
+                type="number"
+                name="duration"
+                placeholder="Auto"
+                className=" border border-stone-300 py-[9px] px-4 focus:outline-none rounded-lg bg-white w-full"
+                value={question.duration ?? ""}
+                onChange={(e) => handleQuestionChange(qIndex, e)}
+                onWheel={(e) => e.target.blur()}
+              />
+            </div>
+          </div>
           <div className=" grid grid-cols-2 gap-3">
             {question.image ? (
               <img

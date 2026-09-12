@@ -1,6 +1,5 @@
 import { Info, Sparkles } from "lucide-react";
-import React, { useContext } from "react";
-import { DurationContext } from "../../../context/DurationContext";
+import React from "react";
 
 const enterFullScreenMode = () => {
   const elem = document.documentElement; // or a specific div
@@ -21,13 +20,11 @@ const enterFullScreenMode = () => {
 const EligibilityPopup = ({
   subjectName,
   subtopicName,
-  level,
+  totalDurationSeconds,
   passPercentage,
   questionLength,
   setOpenEligibilityPopup,
 }) => {
-  const { durationData } = useContext(DurationContext);
-
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
       <div className="bg-white rounded-xl shadow-lg max-w-md w-full p-6 mx-4">
@@ -43,26 +40,8 @@ const EligibilityPopup = ({
           </p>
           <p>
             You have{" "}
-            {`${Math.floor(
-              (questionLength *
-                (level === 1
-                  ? durationData.level1Duration
-                  : level === 2
-                  ? durationData.level2Duration
-                  : level === 3
-                  ? durationData.level3Duration
-                  : durationData.level4Duration)) /
-                60
-            )} Minutes ${
-              (questionLength *
-                (level === 1
-                  ? durationData.level1Duration
-                  : level === 2
-                  ? durationData.level2Duration
-                  : level === 3
-                  ? durationData.level3Duration
-                  : durationData.level4Duration)) %
-              60
+            {`${Math.floor((totalDurationSeconds || 0) / 60)} Minutes ${
+              (totalDurationSeconds || 0) % 60
             } Seconds`}{" "}
             to complete {questionLength} questions.
           </p>

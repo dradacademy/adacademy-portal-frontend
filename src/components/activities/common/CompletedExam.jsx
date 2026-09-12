@@ -17,9 +17,13 @@ const CompletedExam = ({
   currentUsertype,
   index,
   exam,
-  positiveMarkForLevel,
+  totalPossibleMarks,
   formatDate,
 }) => {
+  const scorePercentage = totalPossibleMarks
+    ? Math.round((exam.obtainedMark / totalPossibleMarks) * 100)
+    : 0;
+
   return (
     <div
       key={index}
@@ -71,34 +75,21 @@ const CompletedExam = ({
               </div>
               <div className="flex items-center gap-2 text-sm text-gray-600">
                 <Layers className="h-4 w-4 text-gray-400" />
-                <span>Level {exam.examId.level}</span>
+                <span>Order {exam.examId.order}</span>
               </div>
             </div>
             <div className="space-y-3">
               <div className="flex items-center gap-2 text-sm text-green-600">
                 <BarChart3 className="h-4 w-4 text-green-600" />
                 <span>
-                  Obtained Score: {exam.obtainedMark} (
-                  {Math.round(
-                    (exam.obtainedMark.toFixed(2) /
-                      (
-                        exam.examData.length *
-                        positiveMarkForLevel(exam.examId.level)
-                      ).toFixed(2)) *
-                      100
-                  )}
-                  %)
+                  Obtained Score: {exam.obtainedMark} ({scorePercentage}%)
                 </span>
               </div>
               <div className="flex items-center gap-2 text-sm text-green-600">
                 <Award className="h-4 w-4 text-green-600" />
                 <span>
                   {/* Passed:{" "} */}
-                  Total:{" "}
-                  {(
-                    exam.examData.length *
-                    positiveMarkForLevel(exam.examId.level)
-                  ).toFixed(2)}{" "}
+                  Total: {totalPossibleMarks.toFixed(2)}{" "}
                   (Required: {exam.examId.passPercentage}%)
                 </span>
               </div>
@@ -153,17 +144,7 @@ const CompletedExam = ({
                 Score
               </div>
               <div className="flex items-center justify-center gap-1 text-green-800">
-                <span className="font-semibold">
-                  {Math.round(
-                    (exam.obtainedMark.toFixed(2) /
-                      (
-                        exam.examData.length *
-                        positiveMarkForLevel(exam.examId.level)
-                      ).toFixed(2)) *
-                      100
-                  )}
-                  %
-                </span>
+                <span className="font-semibold">{scorePercentage}%</span>
               </div>
             </div>
           </div>
