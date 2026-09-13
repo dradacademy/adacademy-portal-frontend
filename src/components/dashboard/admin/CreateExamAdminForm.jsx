@@ -2,7 +2,7 @@ import React from "react";
 import Select from "react-select";
 import { MdDelete } from "react-icons/md";
 import { Box, IconButton, Radio, Checkbox } from "@mui/material";
-import { MathText } from "../../utils/mathText";
+import { MathText } from "../../../utils/mathText";
 import "katex/dist/katex.min.css";
 
 import ReactQuill from "react-quill";
