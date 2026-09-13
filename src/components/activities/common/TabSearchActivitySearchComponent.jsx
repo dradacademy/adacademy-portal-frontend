@@ -48,6 +48,23 @@ const TabSearchActivitySearchComponent = ({
             Available Exams
           </button>
         )}
+        {/* "Attended" — every completed submission regardless of pass/fail.
+            Student-only: gives the four-category view (Available / Attended
+            / Qualified / NotQualified) asked for, without touching the
+            evaluator's own review-queue tabs below. */}
+        {currentUsertype === "student" && (
+          <button
+            onClick={() => setActiveTab("Attended")}
+            className={` cursor-pointer flex items-center gap-2 px-6 py-4 font-medium text-sm transition-colors ${
+              activeTab === "Attended"
+                ? "text-blue-600 border-b-2 border-blue-600"
+                : "text-gray-600 hover:text-blue-600"
+            }`}
+          >
+            <Layers className="h-4 w-4" />
+            Attended
+          </button>
+        )}
         <button
           onClick={() => setActiveTab("Previous Attempt")}
           className={` cursor-pointer flex items-center gap-2 px-6 py-4 font-medium text-sm transition-colors ${
@@ -57,7 +74,7 @@ const TabSearchActivitySearchComponent = ({
           }`}
         >
           <Clock className="h-4 w-4" />
-          Previously Attempted
+          {currentUsertype === "student" ? "Not Qualified" : "Previously Attempted"}
         </button>
         <button
           onClick={() => setActiveTab("Completed")}
@@ -68,7 +85,7 @@ const TabSearchActivitySearchComponent = ({
           }`}
         >
           <CheckCircle className="h-4 w-4" />
-          Completed Exams
+          {currentUsertype === "student" ? "Qualified" : "Completed Exams"}
         </button>
       </div>
       <div className="p-4 flex flex-col sm:flex-row gap-4 items-center justify-between font-poppins">
