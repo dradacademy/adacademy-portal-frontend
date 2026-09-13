@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { Dialog } from "@mui/material";
 import { MdClose } from "react-icons/md";
-import { Phone, MessageCircle } from "lucide-react";
+import { Phone, MessageCircle, PhoneCall } from "lucide-react";
 import toast from "react-hot-toast";
 import api from "../../../api/axios";
 
@@ -21,14 +21,24 @@ const TARGET_EXAM_OPTIONS = [
 ];
 
 const INITIAL_FORM = { studentName: "", mobileNumber: "", targetExam: "" };
+const INITIAL_CALLBACK_FORM = { studentName: "", mobileNumber: "" };
 
 const EnrollNowPopup = ({ open, onClose }) => {
   const [form, setForm] = useState(INITIAL_FORM);
   const [submitting, setSubmitting] = useState(false);
 
+  const [showCallbackForm, setShowCallbackForm] = useState(false);
+  const [callbackForm, setCallbackForm] = useState(INITIAL_CALLBACK_FORM);
+  const [callbackSubmitting, setCallbackSubmitting] = useState(false);
+
   const handleChange = (e) => {
     const { name, value } = e.target;
     setForm((prev) => ({ ...prev, [name]: value }));
+  };
+
+  const handleCallbackChange = (e) => {
+    const { name, value } = e.target;
+    setCallbackForm((prev) => ({ ...prev, [name]: value }));
   };
 
   const handleSubmit = async (e) => {
@@ -40,7 +50,10 @@ const EnrollNowPopup = ({ open, onClose }) => {
 
     setSubmitting(true);
     try {
-      const response = await api.post("/enrollment-leads", form);
+      const response = await api.post("/enrollment-leads", {
+        ...form,
+        source: "enroll_form",
+      });
       if (response.data.success) {
         toast.success(response.data.message || "Thanks! We'll reach out shortly.");
         setForm(INITIAL_FORM);
@@ -59,7 +72,48 @@ const EnrollNowPopup = ({ open, onClose }) => {
     }
   };
 
+  const handleCallbackSubmit = async (e) => {
+    e.preventDefault();
+    if (!callbackForm.studentName.trim() || !callbackForm.mobileNumber.trim()) {
+      toast.error("Please enter your name and mobile number.");
+      return;
+    }
+
+    setCallbackSubmitting(true);
+    try {
+      const response = await api.post("/enrollment-leads", {
+        ...callbackForm,
+        source: "callback_request",
+      });
+      if (response.data.success) {
+        toast.success(
+          response.data.message || "Thanks! We'll call you back shortly."
+        );
+        setCallbackForm(INITIAL_CALLBACK_FORM);
+        setShowCallbackForm(false);
+        onClose();
+      } else {
+        toast.error(response.data.message || "Something went wrong.");
+      }
+    } catch (error) {
+      console.error("Error submitting callback request:", error);
+      toast.error(
+        error?.response?.data?.message ||
+          "Something went wrong. Please call or WhatsApp us directly."
+      );
+    } finally {
+      setCallbackSubmitting(false);
+    }
+  };
+
   const handleClose = () => {
+    // The popup is kept mounted by its parents (only `open` toggles), so
+    // this component's state survives across open/close cycles unless we
+    // reset it explicitly here — otherwise a half-typed name/number would
+    // still be sitting in the form the next time someone opens it.
+    setShowCallbackForm(false);
+    setForm(INITIAL_FORM);
+    setCallbackForm(INITIAL_CALLBACK_FORM);
     onClose();
   };
 
@@ -128,9 +182,60 @@ const EnrollNowPopup = ({ open, onClose }) => {
           </a>
         </div>
 
+        {!showCallbackForm ? (
+          <button
+            type="button"
+            onClick={() => setShowCallbackForm(true)}
+            className="flex items-center justify-center gap-2 py-2.5 px-4 border border-gold text-navy-dark rounded-full text-sm font-medium hover:bg-gold/10 transition-colors cursor-pointer"
+          >
+            <PhoneCall className="w-4 h-4" />
+            Request a Callback
+          </button>
+        ) : (
+          <div className="border border-line rounded-lg p-4 bg-cream/60">
+            <h3 className="text-xs font-semibold tracking-wide uppercase text-gold font-inter mb-3">
+              Request a Callback
+            </h3>
+            <form onSubmit={handleCallbackSubmit} className="flex flex-col gap-3">
+              <input
+                type="text"
+                name="studentName"
+                value={callbackForm.studentName}
+                onChange={handleCallbackChange}
+                placeholder="Your Name"
+                className="w-full border border-line rounded-lg px-3.5 py-2.5 text-sm font-inter outline-none focus:border-navy transition-colors bg-white"
+              />
+              <input
+                type="tel"
+                name="mobileNumber"
+                value={callbackForm.mobileNumber}
+                onChange={handleCallbackChange}
+                placeholder="Mobile Number"
+                className="w-full border border-line rounded-lg px-3.5 py-2.5 text-sm font-inter outline-none focus:border-navy transition-colors bg-white"
+              />
+              <div className="flex gap-2.5">
+                <button
+                  type="submit"
+                  disabled={callbackSubmitting}
+                  className="flex-1 py-2.5 px-4 bg-gold text-navy-dark rounded-full text-sm font-semibold hover:bg-gold-light transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+                >
+                  {callbackSubmitting ? "Requesting..." : "Request Callback"}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowCallbackForm(false)}
+                  className="py-2.5 px-4 text-slate text-sm font-medium hover:text-navy-dark transition-colors cursor-pointer"
+                >
+                  Cancel
+                </button>
+              </div>
+            </form>
+          </div>
+        )}
+
         <div className="border-t border-line pt-5">
           <h3 className="text-xs font-semibold tracking-wide uppercase text-gold font-inter mb-3">
-            Or Request a Callback
+            Or Tell Us What You're Preparing For
           </h3>
           <form onSubmit={handleSubmit} className="flex flex-col gap-3">
             <input
