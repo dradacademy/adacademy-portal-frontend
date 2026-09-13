@@ -286,9 +286,20 @@ const StudentDetailedDashboard = ({ student, onBack }) => {
                 <div className=" grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2">
                   {exams.map((exam, idx) => (
                     <div key={idx} className="bg-gray-50 p-4 rounded-xl border">
-                      <p className="font-semibold">
-                        {exam.subTopic} • Order {exam.order}
-                      </p>
+                      <div className="flex items-center justify-between">
+                        <p className="font-semibold">
+                          {exam.subTopic} • Order {exam.order}
+                        </p>
+                        <span
+                          className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                            exam.pass
+                              ? "bg-emerald-100 text-emerald-700"
+                              : "bg-red-100 text-red-700"
+                          }`}
+                        >
+                          {exam.pass ? "Qualified" : "Not Qualified"}
+                        </span>
+                      </div>
 
                       <div className="grid grid-cols-4 gap-3 mt-3 text-sm">
                         <span className="text-green-700">✔ {exam.correct}</span>
@@ -297,6 +308,29 @@ const StudentDetailedDashboard = ({ student, onBack }) => {
                         </span>
                         <span className="text-red-700">✘ {exam.wrong}</span>
                         <span className="text-gray-600">⏭ {exam.skipped}</span>
+                      </div>
+
+                      <div className="mt-3 pt-3 border-t border-gray-200 text-xs text-gray-600 space-y-1">
+                        <p>
+                          Marks: <span className="font-semibold text-gray-800">{exam.marks}</span>
+                          {" / "}
+                          {exam.totalPossibleMarks?.toFixed?.(1) ?? exam.totalPossibleMarks}
+                          {" ("}{exam.percentage}%{")"}
+                        </p>
+                        <p>
+                          Rank: <span className="font-semibold text-gray-800">#{exam.rankByMarks ?? "—"}</span>
+                          {" by marks, "}
+                          <span className="font-semibold text-gray-800">#{exam.rankByCompletionTime ?? "—"}</span>
+                          {" by time"}
+                          {exam.totalParticipants ? ` (of ${exam.totalParticipants})` : ""}
+                        </p>
+                        <p>
+                          Attempt #{exam.attemptNumber} of {exam.maxAllowedAttempts}
+                          {" • "}
+                          {exam.completionTimeSeconds
+                            ? `${Math.floor(exam.completionTimeSeconds / 60)}m ${exam.completionTimeSeconds % 60}s`
+                            : "—"}
+                        </p>
                       </div>
                     </div>
                   ))}
