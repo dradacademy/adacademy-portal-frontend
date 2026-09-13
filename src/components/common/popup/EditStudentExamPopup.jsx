@@ -59,14 +59,26 @@ const EditStudentExamPopup = ({
                 ? "Manually Pass Exam"
                 : popupType === "rewrite"
                 ? "Rewrite Exam"
+                : popupType === "grant-attempt"
+                ? "Grant Extra Attempt"
                 : "Update Exam"}
             </h1>
             <p className=" text-sm text-stone-500 font-work-sans">
-              Select the user, subject, sub-topic, and exam to rewrite.
-              <br />
-              <span className=" text-red-500">
-                Note: This will overwrite the existing exam data for the user.
-              </span>
+              {popupType === "grant-attempt" ? (
+                <>
+                  Select the student and exam, then set how many total
+                  attempts they may make. This is the only way a student can
+                  ever attempt an exam more than once.
+                </>
+              ) : (
+                <>
+                  Select the user, subject, sub-topic, and exam to rewrite.
+                  <br />
+                  <span className=" text-red-500">
+                    Note: This will overwrite the existing exam data for the user.
+                  </span>
+                </>
+              )}
             </p>
           </div>
           <MdClose
@@ -156,6 +168,27 @@ const EditStudentExamPopup = ({
               </option>
             ))}
           </select>
+          {popupType === "grant-attempt" && (
+            <>
+              <label className=" text-sm font-medium text-stone-600 mt-1">
+                Total attempts allowed
+              </label>
+              <input
+                type="number"
+                min="1"
+                step="1"
+                placeholder="e.g. 2"
+                value={studentExamUpdateData.maxAllowedAttempts || ""}
+                onChange={(e) =>
+                  setStudentExamUpdateData({
+                    ...studentExamUpdateData,
+                    maxAllowedAttempts: e.target.value,
+                  })
+                }
+                className=" border border-stone-300 rounded-lg p-2 focus:outline-none"
+              />
+            </>
+          )}
         </div>
         <div className=" grid grid-cols-2 gap-1">
           <button
