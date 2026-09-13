@@ -12,6 +12,7 @@ import axios from "axios";
 import AttendExamconfirmPopup from "../../../components/common/popup/AttendExamconfirmPopup";
 import AvailableExamComponent from "../../../components/activities/student/AvailableExamComponent";
 import PreviousAttemptComponent from "../../../components/activities/common/PreviousAttemptComponent";
+import StudentTestIndexTable from "../../../components/activities/student/StudentTestIndexTable";
 import CompletedExam from "../../../components/activities/common/CompletedExam";
 import TabSearchActivitySearchComponent from "../../../components/activities/common/TabSearchActivitySearchComponent";
 import { FileText } from "lucide-react";
@@ -42,6 +43,8 @@ const StudentActivities = () => {
     previousAttempts: [],
     completed: [],
   });
+  const [testIndexData, setTestIndexData] = useState([]);
+  const [testIndexLoading, setTestIndexLoading] = useState(true);
   const [openExamPopup, setOpenExamPopup] = useState(false);
   const [popupExamDetails, setPopupExamDetails] = useState({});
   const [searchTerm, setSearchTerm] = useState("");
@@ -72,12 +75,18 @@ const StudentActivities = () => {
         // unlike the older previous-attempt/completed endpoints which could
         // include an in-progress "started" submission since its `pass`
         // field also defaults to false).
-        const [eligibleResponse, statusOverviewResponse] = await Promise.all([
-          axios.get(`${baseUrl}/exam-function/eligible-exam/${userData._id}`),
-          axios.get(
-            `${baseUrl}/exam-submission/status-overview/${userData._id}`
-          ),
-        ]);
+        const [eligibleResponse, statusOverviewResponse, testIndexResponse] =
+          await Promise.all([
+            axios.get(
+              `${baseUrl}/exam-function/eligible-exam/${userData._id}`
+            ),
+            axios.get(
+              `${baseUrl}/exam-submission/status-overview/${userData._id}`
+            ),
+            axios
+              .get(`${baseUrl}/test-tracking/student/${userData._id}`)
+              .catch(() => ({ data: { data: [] } })),
+          ]);
 
         const overview = statusOverviewResponse.data?.data || {};
 
@@ -87,9 +96,12 @@ const StudentActivities = () => {
           previousAttempts: overview.notQualified || [],
           completed: overview.qualified || [],
         });
+        setTestIndexData(testIndexResponse.data?.data || []);
       } catch (error) {
         console.error("Error fetching data:", error);
         toast.error("Error fetching user data");
+      } finally {
+        setTestIndexLoading(false);
       }
     };
 
@@ -311,7 +323,13 @@ const StudentActivities = () => {
           levels={uniqueLevels}
         />
         <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
-          {filteredExams.length === 0 ? (
+          {activeTab === "Test Index" ? (
+            <StudentTestIndexTable
+              data={testIndexData}
+              searchTerm={searchTerm}
+              loading={testIndexLoading}
+            />
+          ) : filteredExams.length === 0 ? (
             <ExamDataEmptyComponent />
           ) : activeTab === "Available" ? (
             filteredExams.map((exam, index) => (

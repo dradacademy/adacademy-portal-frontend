@@ -62,6 +62,7 @@ const CreateExamAdminPage = () => {
     subTopic: "",
     status: "active",
     passPercentage: null,
+    scheduledDate: "",
     questions: [],
   });
 
@@ -170,6 +171,11 @@ const CreateExamAdminPage = () => {
             ? existingExam.poolQuestions
             : existingExam.questions,
         passPercentage: existingExam.passPercentage,
+        status: existingExam.status || prev.status,
+        // Trim the ISO timestamp down to YYYY-MM-DD for the <input type="date">
+        scheduledDate: existingExam.scheduledDate
+          ? new Date(existingExam.scheduledDate).toISOString().slice(0, 10)
+          : "",
       }));
 
       const sourceQuestions = (

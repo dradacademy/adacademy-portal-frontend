@@ -325,6 +325,7 @@ import { IoAddCircle } from "react-icons/io5";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { AuthContext } from "../../../context/AuthContext";
 import { MdOutlineRateReview, MdRateReview } from "react-icons/md";
+import { MdOutlineFactCheck, MdFactCheck } from "react-icons/md";
 import axios from "axios";
 import toast from "react-hot-toast";
 
@@ -636,6 +637,46 @@ const Sidebar = () => {
                       )}
                       {!showCollapsed && (
                         <h2 className="font-medium text-lg">Controllers</h2>
+                      )}
+                    </Link>
+                  </div>
+
+                  {/* Test Tracking */}
+                  <div className="flex items-center">
+                    <div
+                      className={`h-10 w-2 ${
+                        location.pathname === "/dashboard/test-tracking" ||
+                        location.pathname === "/dashboard/test-tracking/"
+                          ? "bg-stone-50"
+                          : "bg-indigo-500"
+                      } rounded-tr-full rounded-br-full`}
+                    ></div>
+                    <Link
+                      to={"/dashboard/test-tracking"}
+                      className={`flex items-center gap-2 px-[17px] transition-all duration-300 ${
+                        location.pathname === "/dashboard/test-tracking" ||
+                        location.pathname === "/dashboard/test-tracking/"
+                          ? "text-stone-50"
+                          : "text-indigo-100 hover:opacity-80 duration-300"
+                      } ${showCollapsed ? "justify-center px-2" : ""}`}
+                      title={showCollapsed ? "Test Tracking" : ""}
+                    >
+                      {location.pathname === "/dashboard/test-tracking" ||
+                      location.pathname === "/dashboard/test-tracking/" ? (
+                        <MdFactCheck
+                          className={`${
+                            showCollapsed ? "text-xl sm:text-2xl" : "text-2xl"
+                          }`}
+                        />
+                      ) : (
+                        <MdOutlineFactCheck
+                          className={`${
+                            showCollapsed ? "text-xl sm:text-2xl" : "text-2xl"
+                          }`}
+                        />
+                      )}
+                      {!showCollapsed && (
+                        <h2 className="font-medium text-lg">Test Tracking</h2>
                       )}
                     </Link>
                   </div>

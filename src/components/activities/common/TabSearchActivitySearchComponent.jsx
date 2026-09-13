@@ -35,6 +35,23 @@ const TabSearchActivitySearchComponent = ({
   return (
     <div className="bg-white rounded-xl shadow-sm border border-gray-100 mb-8">
       <div className="flex border-b border-gray-100 font-poppins">
+        {/* "Test Index" — the single consolidated view: every test
+            assigned to this student (posted/scheduled/available dates,
+            completed-or-pending, attended date, score, on-time/late) in
+            one table, instead of split across the tabs below. */}
+        {currentUsertype === "student" && (
+          <button
+            onClick={() => setActiveTab("Test Index")}
+            className={` cursor-pointer flex items-center gap-2 px-6 py-4 font-medium text-sm transition-colors ${
+              activeTab === "Test Index"
+                ? "text-blue-600 border-b-2 border-blue-600"
+                : "text-gray-600 hover:text-blue-600"
+            }`}
+          >
+            <BarChart3 className="h-4 w-4" />
+            Test Index
+          </button>
+        )}
         {currentUsertype === "student" && (
           <button
             onClick={() => setActiveTab("Available")}

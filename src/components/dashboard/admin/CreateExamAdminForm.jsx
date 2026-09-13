@@ -163,6 +163,22 @@ const CreateExamAdminForm = ({
           required
         />
       </div>
+      <div className=" flex flex-col gap-1 w-full sm:w-1/2 sm:pr-1">
+        <label className="text-xs font-medium text-stone-500">
+          Scheduled Test Date{" "}
+          <span className="font-normal text-stone-400">
+            (tentative — shown to students and admin; used to mark a
+            completed attempt on-time vs late)
+          </span>
+        </label>
+        <input
+          type="date"
+          name="scheduledDate"
+          className=" border border-stone-300 py-[10px] px-4 focus:outline-none rounded-lg bg-white w-full"
+          value={formData.scheduledDate || ""}
+          onChange={handleChange}
+        />
+      </div>
 
       {newQuestions.length > 1 && bulkRangeConfig && (
         <div className="border border-indigo-200 bg-indigo-50/60 rounded-2xl p-4 flex flex-col gap-3">

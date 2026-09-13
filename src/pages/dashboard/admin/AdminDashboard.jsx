@@ -13,6 +13,7 @@ import CommentDashboard from "../common/CommentDashboard";
 import MarkAndDurationAdmin from "../../../components/dashboard/admin/MarkAndDurationAdmin";
 import ExamDashboard from "./subpages/ExamDashboard";
 import StudentDashboard from "./subpages/StudentDashboard";
+import TestTrackingAdminPage from "./subpages/TestTrackingAdminPage";
 
 const AdminDashboard = () => {
   return (
@@ -32,6 +33,7 @@ const AdminDashboard = () => {
               element={<ViewQuestionOfExamAdminPage />}
             />
             <Route path="/users" element={<UsersAdminPage />} />
+            <Route path="/test-tracking" element={<TestTrackingAdminPage />} />
             {/* <Route path="/trigger-mail" element={<TriggerMailAdminPage />} /> */}
             <Route path="/comment" element={<CommentDashboard />} />
             <Route path="/controllers" element={<MarkAndDurationAdmin />} />
