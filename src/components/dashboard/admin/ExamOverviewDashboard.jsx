@@ -10,21 +10,29 @@ import {
   FaTrophy,
   FaUsers,
 } from "react-icons/fa";
+import { EXAM_CATEGORY_OPTIONS } from "../../../constants/examCategories";
 
 const ExamOverviewDashboard = ({ onExamClick }) => {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  // Admin's category-organized workflow — view one exam category's exams
+  // at a time (GATE / TNPSC AE / TNPSC JDO / SSC JE-RRB JE) or "All".
+  const [activeCategory, setActiveCategory] = useState("all");
 
   useEffect(() => {
     fetchOverviewData();
-  }, []);
+  }, [activeCategory]);
 
   const fetchOverviewData = async () => {
     try {
       setLoading(true);
       const response = await axios.get(
-        `${import.meta.env.VITE_APP_API_URL}/dashboard/exams/overview`
+        `${import.meta.env.VITE_APP_API_URL}/dashboard/exams/overview`,
+        {
+          params:
+            activeCategory !== "all" ? { category: activeCategory } : {},
+        }
       );
       setData(response.data.data);
       setError(null);
@@ -76,6 +84,33 @@ const ExamOverviewDashboard = ({ onExamClick }) => {
           <p className="text-gray-600 text-base font-rubik">
             Overview of all examinations
           </p>
+        </div>
+
+        {/* Category tabs */}
+        <div className="flex flex-wrap items-center gap-2 mb-6">
+          <button
+            onClick={() => setActiveCategory("all")}
+            className={`py-1.5 px-4 rounded-full text-sm font-medium cursor-pointer duration-300 ${
+              activeCategory === "all"
+                ? "bg-indigo-600 text-white"
+                : "bg-white text-gray-500 border border-gray-200 hover:border-indigo-300"
+            }`}
+          >
+            All Categories
+          </button>
+          {EXAM_CATEGORY_OPTIONS.map((opt) => (
+            <button
+              key={opt.value}
+              onClick={() => setActiveCategory(opt.value)}
+              className={`py-1.5 px-4 rounded-full text-sm font-medium cursor-pointer duration-300 ${
+                activeCategory === opt.value
+                  ? "bg-indigo-600 text-white"
+                  : "bg-white text-gray-500 border border-gray-200 hover:border-indigo-300"
+              }`}
+            >
+              {opt.label}
+            </button>
+          ))}
         </div>
 
         {/* Statistics Cards - Bento Grid */}
@@ -183,7 +218,15 @@ const ExamOverviewDashboard = ({ onExamClick }) => {
                     <span className="text-xs font-semibold px-3 py-1 bg-white/20 rounded-full">
                       Order {exam.order}
                     </span>
-                    <FaBook className="text-lg opacity-80" />
+                    <span
+                      className={`text-xs font-semibold px-3 py-1 rounded-full ${
+                        exam.status === "active"
+                          ? "bg-emerald-400/90 text-emerald-950"
+                          : "bg-white/30 text-white"
+                      }`}
+                    >
+                      {exam.status === "active" ? "Published" : "Unpublished"}
+                    </span>
                   </div>
                   <h3 className="text-lg font-bold font-poppins">
                     {exam.examCode}
@@ -196,6 +239,16 @@ const ExamOverviewDashboard = ({ onExamClick }) => {
                     <p className="text-blue-200 text-sm mt-1">
                       <span className=" font-semibold">Subtopic:</span>{" "}
                       {exam.subTopic.name}
+                    </p>
+                  )}
+                  {exam.subject?.category && (
+                    <p className="text-blue-200 text-xs mt-1">
+                      <span className=" font-semibold">Category:</span>{" "}
+                      {
+                        EXAM_CATEGORY_OPTIONS.find(
+                          (opt) => opt.value === exam.subject.category
+                        )?.label
+                      }
                     </p>
                   )}
                 </div>
@@ -229,6 +282,35 @@ const ExamOverviewDashboard = ({ onExamClick }) => {
                       <p className="text-xs font-semibold text-gray-700">
                         {exam.lowestMark} - {exam.highestMark}
                       </p>
+                    </div>
+                  </div>
+
+                  {/* Completed / In-progress / Qualified / Not-qualified —
+                      item D's per-exam status breakdown */}
+                  <div className="grid grid-cols-4 gap-2 mb-4 text-center">
+                    <div className="bg-gray-50 rounded-lg py-2">
+                      <p className="text-sm font-bold text-gray-800">
+                        {exam.completedCount}
+                      </p>
+                      <p className="text-[10px] text-gray-500">Completed</p>
+                    </div>
+                    <div className="bg-amber-50 rounded-lg py-2">
+                      <p className="text-sm font-bold text-amber-700">
+                        {exam.inProgressCount}
+                      </p>
+                      <p className="text-[10px] text-amber-600">In Progress</p>
+                    </div>
+                    <div className="bg-emerald-50 rounded-lg py-2">
+                      <p className="text-sm font-bold text-emerald-700">
+                        {exam.qualifiedCount}
+                      </p>
+                      <p className="text-[10px] text-emerald-600">Qualified</p>
+                    </div>
+                    <div className="bg-red-50 rounded-lg py-2">
+                      <p className="text-sm font-bold text-red-700">
+                        {exam.notQualifiedCount}
+                      </p>
+                      <p className="text-[10px] text-red-600">Not Qualified</p>
                     </div>
                   </div>
 
