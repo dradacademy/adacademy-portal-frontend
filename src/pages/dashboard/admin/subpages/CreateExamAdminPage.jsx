@@ -19,6 +19,8 @@ import BulkQuestionUploadAdmin from "../../common/BulkQuestionUploadAdmin";
 import PdfQuestionImportAdmin from "../../common/PdfQuestionImportAdmin";
 import { useContext } from "react";
 import { ExamContext } from "../../../../context/ExamContext";
+import { EXAM_CATEGORY_OPTIONS } from "../../../../constants/examCategories";
+import Select from "react-select";
 
 const sampleExcelData = [
   ["Subject", "SubTopic", "Status", "PassPercentage"],
@@ -102,6 +104,29 @@ const CreateExamAdminPage = () => {
   const { subjects } = useContext(ExamContext);
   const [subtopics, setSubtopics] = useState([]);
   const [allExams, setAllExams] = useState([]);
+
+  // Category-aware subject filtering — "GATE has a separate way to input
+  // questions": the admin picks (or arrives via ?category=) the exam
+  // category first, and the Subject dropdown below only ever lists
+  // subjects belonging to that category, so a GATE exam can never
+  // accidentally get built under a TNPSC subject or vice versa.
+  const categoryFromUrl = searchParams.get("category") || "";
+  const [selectedCategory, setSelectedCategory] = useState(categoryFromUrl);
+
+  // If editing an existing exam, infer the category from its subject once
+  // subjects/exam data are loaded (covers deep-links that only pass
+  // subjectId/subTopicId, without a category param).
+  useEffect(() => {
+    if (selectedCategory || !formData.subject) return;
+    const matchedSubject = subjects.find((s) => s._id === formData.subject);
+    if (matchedSubject?.category) {
+      setSelectedCategory(matchedSubject.category);
+    }
+  }, [selectedCategory, formData.subject, subjects]);
+
+  const categoryFilteredSubjects = selectedCategory
+    ? subjects.filter((s) => s.category === selectedCategory)
+    : subjects;
 
   useEffect(() => {
     axios
@@ -933,6 +958,10 @@ const CreateExamAdminPage = () => {
   };
 
   const validateForm = () => {
+    if (!selectedCategory) {
+      toast.error("Please select an exam category!");
+      return false;
+    }
     if (!formData.subject) {
       toast.error("Please select any subject!");
       return false;
@@ -1167,6 +1196,44 @@ const CreateExamAdminPage = () => {
         </div>
       </div>
       <div className=" flex flex-col gap-4">
+        <div className=" flex flex-col gap-2 border border-stone-300 rounded-2xl p-3 bg-white max-w-md">
+          <label className=" text-sm font-medium text-stone-500 font-inter">
+            Exam Category
+          </label>
+          <Select
+            placeholder="Select the exam category"
+            value={
+              EXAM_CATEGORY_OPTIONS.find(
+                (opt) => opt.value === selectedCategory,
+              ) || null
+            }
+            onChange={(selectedOption) => {
+              setSelectedCategory(selectedOption.value);
+              // Changing category invalidates any subject/subtopic picked
+              // under the previous category — never let a stale subject
+              // from one category silently carry into another.
+              setFormData((prev) => ({ ...prev, subject: "", subTopic: "" }));
+            }}
+            options={EXAM_CATEGORY_OPTIONS}
+            isSearchable={false}
+            isDisabled={!!examId}
+            styles={{
+              control: (base) => ({
+                ...base,
+                borderRadius: "8px",
+                padding: "4px",
+                borderColor: "#ccc",
+                boxShadow: "none",
+                "&:hover": { borderColor: "#888" },
+              }),
+            }}
+          />
+          {examId && (
+            <p className=" text-xs text-stone-400">
+              Category is locked while editing an existing exam.
+            </p>
+          )}
+        </div>
         {formData.subject != "" && formData.subTopic != "" && (
             <BulkQuestionUploadAdmin
               fileData={fileData}
@@ -1189,7 +1256,7 @@ const CreateExamAdminPage = () => {
         )}
 
         <CreateExamAdminForm
-          subjects={subjects}
+          subjects={categoryFilteredSubjects}
           subtopics={subtopics}
           formData={formData}
           handleChange={handleChange}

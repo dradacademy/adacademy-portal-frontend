@@ -12,6 +12,10 @@ import PasswordChangeAdminPopup from "../../../../components/common/popup/Passwo
 import BulkUserUploadAdmin from "../../common/BulkUserUploadAdmin";
 import { AuthContext } from "../../../../context/AuthContext";
 import DeletePopup from "../../../../components/common/popup/DeletePopup";
+import {
+  EXAM_CATEGORY_OPTIONS,
+  getCategoryLabel,
+} from "../../../../constants/examCategories";
 
 const roleOptions = [
   { label: "Student", value: "student" },
@@ -26,7 +30,12 @@ const UsersAdminPage = () => {
     email: "",
     password: "",
     role: "student",
+    category: EXAM_CATEGORY_OPTIONS[0].value,
   });
+  // Category tab — view students one exam category at a time so it's
+  // immediately obvious who belongs to GATE vs. TNPSC vs. SSC/RRB.
+  const [activeCategory, setActiveCategory] = useState("all");
+  const [togglingUserId, setTogglingUserId] = useState(null);
   const [userPopupData, setUserPopupData] = useState({});
   const [userDeletePopupData, setUserDeletePopupData] = useState({});
   const [password, setPassword] = useState("");
@@ -69,7 +78,37 @@ const UsersAdminPage = () => {
       email: "",
       password: "",
       role: "student",
+      category: EXAM_CATEGORY_OPTIONS[0].value,
     });
+  };
+
+  const handleToggleActive = async (rowData) => {
+    setTogglingUserId(rowData._id);
+    try {
+      const response = await axios.patch(
+        `${import.meta.env.VITE_APP_API_URL}/users/${rowData._id}/toggle-active`,
+        { isDisabled: !rowData.isDisabled }
+      );
+      const updatedUser = response.data?.user || response.data?.data;
+      SetAllUsersData(
+        allUsersData.map((u) =>
+          u._id === rowData._id
+            ? { ...u, isDisabled: updatedUser?.isDisabled ?? !rowData.isDisabled }
+            : u
+        )
+      );
+      toast.success(
+        !rowData.isDisabled
+          ? "Student account disabled. They can no longer log in."
+          : "Student account re-enabled."
+      );
+    } catch (error) {
+      toast.error(
+        error?.response?.data?.message || "Failed to update account status"
+      );
+    } finally {
+      setTogglingUserId(null);
+    }
   };
 
   const handleChange = (e) => {
@@ -121,6 +160,11 @@ const UsersAdminPage = () => {
       return;
     }
 
+    if (userData.role === "student" && !userData.category) {
+      toast.error("Please select the exam category for this student.");
+      return;
+    }
+
     try {
       const dataToSend = {
         username: userData.username,
@@ -129,6 +173,7 @@ const UsersAdminPage = () => {
         role: userData.role,
         ...(userData.role === "student" && {
           registerNumber: userData.registerNumber,
+          category: userData.category,
         }),
       };
       const response = await axios.post(
@@ -144,7 +189,8 @@ const UsersAdminPage = () => {
           email: "",
           password: "",
           role: "student",
-        }); 
+          category: EXAM_CATEGORY_OPTIONS[0].value,
+        });
         toast.success("User added successfully");
         handleCloseUserPopup();
       }
@@ -163,6 +209,19 @@ const UsersAdminPage = () => {
         >
           Edit Password
         </button>
+        {rowData.role === "student" && (
+          <button
+            onClick={() => handleToggleActive(rowData)}
+            disabled={togglingUserId === rowData._id}
+            className={`px-3 py-1.5 rounded text-nowrap text-sm font-medium transition duration-300 cursor-pointer disabled:opacity-50 ${
+              rowData.isDisabled
+                ? "bg-emerald-500 text-stone-50 hover:bg-emerald-600"
+                : "bg-amber-500 text-stone-50 hover:bg-amber-600"
+            }`}
+          >
+            {rowData.isDisabled ? "Enable" : "Disable"}
+          </button>
+        )}
         {rowData.role !== "admin" && (
           <button
             onClick={() => handleOpenDeletePopup(rowData)}
@@ -174,6 +233,13 @@ const UsersAdminPage = () => {
       </div>
     );
   };
+
+  const visibleUsers =
+    activeCategory === "all"
+      ? allUsersData
+      : allUsersData.filter(
+          (u) => u.role !== "student" || u.category === activeCategory
+        );
 
   return (
     <div className="flex flex-col gap-8 w-full">
@@ -199,8 +265,37 @@ const UsersAdminPage = () => {
       </div>
       <BulkUserUploadAdmin />
 
+      {/* Category tabs — filter the student list by exam category so the
+          admin can, e.g., work with only GATE students at a time. Admin/
+          evaluator rows are unscoped and always shown. */}
+      <div className="flex flex-wrap items-center gap-2 font-inter">
+        <button
+          onClick={() => setActiveCategory("all")}
+          className={`py-1.5 px-4 rounded-full text-sm font-medium cursor-pointer duration-300 ${
+            activeCategory === "all"
+              ? "bg-indigo-500 text-white"
+              : "bg-stone-100 text-stone-500 hover:bg-stone-200"
+          }`}
+        >
+          All
+        </button>
+        {EXAM_CATEGORY_OPTIONS.map((opt) => (
+          <button
+            key={opt.value}
+            onClick={() => setActiveCategory(opt.value)}
+            className={`py-1.5 px-4 rounded-full text-sm font-medium cursor-pointer duration-300 ${
+              activeCategory === opt.value
+                ? "bg-indigo-500 text-white"
+                : "bg-stone-100 text-stone-500 hover:bg-stone-200"
+            }`}
+          >
+            {opt.label}
+          </button>
+        ))}
+      </div>
+
       <DataTable
-        value={allUsersData}
+        value={visibleUsers}
         stripedRows
         removableSort
         paginator
@@ -212,6 +307,34 @@ const UsersAdminPage = () => {
         <Column field="username" header="Username" sortable />
         <Column field="email" header="Email" sortable />
         <Column field="role" header="Role" sortable />
+        <Column
+          field="category"
+          header="Category"
+          sortable
+          body={(rowData) =>
+            rowData.role === "student" ? getCategoryLabel(rowData.category) : "—"
+          }
+        />
+        <Column
+          field="isDisabled"
+          header="Status"
+          sortable
+          body={(rowData) =>
+            rowData.role !== "student" ? (
+              "—"
+            ) : (
+              <span
+                className={`px-2 py-0.5 rounded-full text-xs font-medium ${
+                  rowData.isDisabled
+                    ? "bg-red-100 text-red-600"
+                    : "bg-emerald-100 text-emerald-600"
+                }`}
+              >
+                {rowData.isDisabled ? "Disabled" : "Active"}
+              </span>
+            )
+          }
+        />
         <Column
           field="createdAt"
           header="Created At"
@@ -286,6 +409,35 @@ const UsersAdminPage = () => {
                 onChange={handleChange}
                 value={userData.registerNumber}
                 required
+              />
+            )}
+            {userData.role === "student" && (
+              <Select
+                className="w-full"
+                placeholder="Exam Category"
+                options={EXAM_CATEGORY_OPTIONS}
+                value={
+                  EXAM_CATEGORY_OPTIONS.find(
+                    (opt) => opt.value === userData.category
+                  ) || null
+                }
+                onChange={(selectedOption) =>
+                  setUserData({ ...userData, category: selectedOption.value })
+                }
+                isSearchable={false}
+                styles={{
+                  control: (base) => ({
+                    ...base,
+                    borderRadius: "15px",
+                    padding: "4px",
+                    borderColor: "#ccc",
+                    boxShadow: "none",
+                    "&:hover": { borderColor: "#888" },
+                  }),
+                  menuPortal: (base) => ({ ...base, zIndex: 9999 }),
+                }}
+                menuPortalTarget={document.body}
+                menuPosition="absolute"
               />
             )}
             <input

@@ -7,15 +7,32 @@ import { FaBook, FaChevronUp } from "react-icons/fa";
 import { TbBuildingCog, TbBuildingPlus } from "react-icons/tb";
 import { ExamContext } from "../../../../context/ExamContext";
 import { useContext } from "react";
+import {
+  EXAM_CATEGORY_OPTIONS,
+  getCategoryLabel,
+} from "../../../../constants/examCategories";
 
 function SubjectsAdminPage() {
   const [openSubjectPopup, setOpenSubjectPopup] = useState(false);
   const [subjectName, setSubjectName] = useState("");
+  const [subjectCategory, setSubjectCategory] = useState(
+    EXAM_CATEGORY_OPTIONS[0].value
+  );
   const [subtopics, setSubtopics] = useState([{ name: "" }]);
   const { subjects, setSubjects } = useContext(ExamContext);
   const [openDeletePopup, setOpenDeletePopup] = useState(false);
   const [selectedSubject, setSelectedSubject] = useState(null);
   const [isEditing, setIsEditing] = useState(false);
+  // Category tab: this is the "GATE has a separate way to input questions"
+  // requirement — subjects (and therefore the questions/exams built under
+  // them) are organized per category so the admin only works within one
+  // category's content at a time, never a mixed list.
+  const [activeCategory, setActiveCategory] = useState("all");
+
+  const visibleSubjects =
+    activeCategory === "all"
+      ? subjects
+      : subjects.filter((subject) => subject.category === activeCategory);
 
   const handleOpenDeleteDialog = (subject) => {
     setSelectedSubject(subject);
@@ -29,6 +46,7 @@ function SubjectsAdminPage() {
 
   const handleEditSubject = (subject) => {
     setSubjectName(subject.name);
+    setSubjectCategory(subject.category || EXAM_CATEGORY_OPTIONS[0].value);
     setSubtopics(subject.subtopics);
     setSelectedSubject(subject);
     setIsEditing(true);
@@ -67,6 +85,9 @@ function SubjectsAdminPage() {
 
   const handleClickOpenSubjectPopup = () => {
     setSubjectName("");
+    setSubjectCategory(
+      activeCategory !== "all" ? activeCategory : EXAM_CATEGORY_OPTIONS[0].value
+    );
     setSubtopics([{ name: "" }]);
     setIsEditing(false);
     setOpenSubjectPopup(true);
@@ -91,8 +112,13 @@ function SubjectsAdminPage() {
   };
 
   const handleSubmit = () => {
+    if (!subjectCategory) {
+      toast.error("Please select an exam category");
+      return;
+    }
     const newSubject = {
       name: subjectName,
+      category: subjectCategory,
       subtopics: subtopics.filter(
         (subtopic) => subtopic.name !== "" && subtopic.levels !== ""
       ),
@@ -150,8 +176,38 @@ function SubjectsAdminPage() {
           Create Subject
         </button>
       </div>
+
+      {/* Category tabs — isolation-by-workflow: the admin works within one
+          exam category's subjects at a time (or "All" to see everything),
+          so GATE and TNPSC content are never presented mixed together. */}
+      <div className="flex flex-wrap items-center gap-2 font-inter">
+        <button
+          onClick={() => setActiveCategory("all")}
+          className={`py-1.5 px-4 rounded-full text-sm font-medium cursor-pointer duration-300 ${
+            activeCategory === "all"
+              ? "bg-indigo-500 text-white"
+              : "bg-stone-100 text-stone-500 hover:bg-stone-200"
+          }`}
+        >
+          All
+        </button>
+        {EXAM_CATEGORY_OPTIONS.map((opt) => (
+          <button
+            key={opt.value}
+            onClick={() => setActiveCategory(opt.value)}
+            className={`py-1.5 px-4 rounded-full text-sm font-medium cursor-pointer duration-300 ${
+              activeCategory === opt.value
+                ? "bg-indigo-500 text-white"
+                : "bg-stone-100 text-stone-500 hover:bg-stone-200"
+            }`}
+          >
+            {opt.label}
+          </button>
+        ))}
+      </div>
+
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 w-full">
-        {subjects.map((subject) => (
+        {visibleSubjects.map((subject) => (
           <div
             key={subject.name}
             className=" bg-white border border-indigo-400 rounded-xl overflow-hidden hover:shadow transition-all duration-300 group h-fit"
@@ -166,7 +222,10 @@ function SubjectsAdminPage() {
                     {subject.name}
                   </h2>
                   <p className="text-sm text-stone-400">
-                    {subject.subtopics.length} topics
+                    {subject.subtopics.length} topics ·{" "}
+                    <span className="text-indigo-400 font-medium">
+                      {getCategoryLabel(subject.category)}
+                    </span>
                   </p>
                 </div>
               </div>
@@ -247,6 +306,18 @@ function SubjectsAdminPage() {
               onChange={(e) => setSubjectName(e.target.value)}
               required
             />
+            <select
+              className=" border border-stone-300 py-[10px] px-4 focus:outline-none rounded-xl bg-white text-stone-700"
+              value={subjectCategory}
+              onChange={(e) => setSubjectCategory(e.target.value)}
+              required
+            >
+              {EXAM_CATEGORY_OPTIONS.map((opt) => (
+                <option key={opt.value} value={opt.value}>
+                  {opt.label}
+                </option>
+              ))}
+            </select>
             {subtopics.map((subtopic, index) => (
               <>
                 <div key={index} className=" flex gap-1">
