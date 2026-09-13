@@ -16,6 +16,7 @@ const MarkAndDurationAdmin = () => {
     subjectId: "",
     subTopicId: "",
     examId: "",
+    maxAllowedAttempts: "",
   });
   const [popupType, setPopupType] = useState("");
 
@@ -31,6 +32,7 @@ const MarkAndDurationAdmin = () => {
       subjectId: "",
       subTopicId: "",
       examId: "",
+      maxAllowedAttempts: "",
     });
     setPopupType("");
   };
@@ -45,6 +47,24 @@ const MarkAndDurationAdmin = () => {
         !studentExamUpdateData.examId
       ) {
         toast.error("Please fill all fields");
+        return;
+      }
+
+      if (popupType === "grant-attempt") {
+        if (!studentExamUpdateData.maxAllowedAttempts) {
+          toast.error("Please enter the total number of attempts allowed");
+          return;
+        }
+        const response = await axios.patch(
+          `${import.meta.env.VITE_APP_API_URL}/exam-function/grant-extra-attempt`,
+          {
+            userId: studentExamUpdateData.userId,
+            examId: studentExamUpdateData.examId,
+            maxAllowedAttempts: studentExamUpdateData.maxAllowedAttempts,
+          }
+        );
+        toast.success(response.data.message || "Attempt permission updated");
+        handleCloseStudentExamUpdatePopup();
         return;
       }
 
@@ -67,7 +87,7 @@ const MarkAndDurationAdmin = () => {
       toast.success(response.data.message || "Exam rewritten successfully");
       handleCloseStudentExamUpdatePopup();
     } catch (error) {
-      toast.error(error.response?.data?.message || "Failed to rewrite exam");
+      toast.error(error.response?.data?.message || "Failed to update exam");
     }
   };
 
@@ -79,9 +99,10 @@ const MarkAndDurationAdmin = () => {
             Controllers
           </h1>
           <p className=" text-stone-500">
-            Here you can update the exam duration, marks, or rewrite any exam
-            for a student. Please ensure that the student has already passed the
-            exam before rewriting it.
+            Update exam duration/marks, rewrite a passed exam, or grant a
+            student an extra attempt on an exam they've already used up. To
+            create/edit/publish exams, manage subjects per category, or
+            enable/disable a student account, use the Exam and Users pages.
           </p>
         </div>
         <div className=" flex items-center gap-3">
@@ -108,6 +129,12 @@ const MarkAndDurationAdmin = () => {
             className=" bg-indigo-500 font-medium text-white py-2 px-4 rounded-md cursor-pointer hover:opacity-85 duration-300"
           >
             Rewrite passed exam
+          </button>
+          <button
+            onClick={() => handleOpenStudentExamUpdatePopup("grant-attempt")}
+            className=" bg-amber-500 font-medium text-white py-2 px-4 rounded-md cursor-pointer hover:opacity-85 duration-300"
+          >
+            Grant Extra Attempt
           </button>
         </div>
       </div>
