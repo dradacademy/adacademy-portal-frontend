@@ -82,10 +82,21 @@ const DetailedExamDashboard = ({ exam, onBack }) => {
     summary,
     performanceDistribution,
     topPerformers,
+    studentPerformance,
     subTopicAnalysis,
     mostMistakenTopic,
     keyInsights,
   } = data;
+
+  const formatDateTime = (value) =>
+    value ? new Date(value).toLocaleString("en-GB") : "—";
+
+  const formatDuration = (seconds) => {
+    if (!seconds && seconds !== 0) return "—";
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins}m ${secs}s`;
+  };
 
   const performanceData = [
     {
@@ -297,6 +308,104 @@ const DetailedExamDashboard = ({ exam, onBack }) => {
                     </td>
                   </tr>
                 ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        {/* C2. All Students - Individual Performance */}
+        <div className="bg-white rounded-2xl shadow-lg p-6 mb-6 border border-purple-100">
+          <div className="flex items-center mb-6">
+            <div className="w-1 h-8 bg-gradient-to-b from-blue-600 to-indigo-600 mr-4 rounded-full"></div>
+            <h2 className="text-lg font-bold text-gray-900 font-poppins">
+              Students → Individual Performance
+            </h2>
+          </div>
+          <div className="overflow-x-auto max-h-[700px]">
+            <table className="w-full">
+              <thead>
+                <tr className="border-b-2 border-indigo-100">
+                  <th className="px-4 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">
+                    Rank (Marks)
+                  </th>
+                  <th className="px-4 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">
+                    Rank (Time)
+                  </th>
+                  <th className="px-4 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">
+                    Name / Email
+                  </th>
+                  <th className="px-4 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">
+                    Status
+                  </th>
+                  <th className="px-4 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">
+                    Marks
+                  </th>
+                  <th className="px-4 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">
+                    Time Taken
+                  </th>
+                  <th className="px-4 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">
+                    Attempt
+                  </th>
+                  <th className="px-4 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">
+                    Submitted At
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {studentPerformance && studentPerformance.length > 0 ? (
+                  studentPerformance.map((s) => (
+                    <tr
+                      key={s.submissionId}
+                      className="border-b border-gray-100 hover:bg-indigo-50 transition-colors"
+                    >
+                      <td className="px-4 py-4 text-xs font-bold text-gray-700">
+                        {s.rankByMarks ?? "—"}
+                      </td>
+                      <td className="px-4 py-4 text-xs font-bold text-gray-700">
+                        {s.rankByCompletionTime ?? "—"}
+                      </td>
+                      <td className="px-4 py-4 text-xs text-gray-900">
+                        <p className="font-semibold">{s.name}</p>
+                        <p className="text-gray-500">{s.email}</p>
+                      </td>
+                      <td className="px-4 py-4">
+                        <span
+                          className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-bold ${
+                            s.status !== "completed"
+                              ? "bg-amber-100 text-amber-800"
+                              : s.pass
+                              ? "bg-emerald-100 text-emerald-800"
+                              : "bg-red-100 text-red-800"
+                          }`}
+                        >
+                          {s.status !== "completed"
+                            ? "In Progress"
+                            : s.pass
+                            ? "Qualified"
+                            : "Not Qualified"}
+                        </span>
+                      </td>
+                      <td className="px-4 py-4 text-xs font-semibold text-gray-900">
+                        {s.marks} / {s.totalPossibleMarks.toFixed(1)}
+                      </td>
+                      <td className="px-4 py-4 text-xs text-gray-700">
+                        {formatDuration(s.timetaken)}
+                      </td>
+                      <td className="px-4 py-4 text-xs text-gray-700">
+                        #{s.attemptNumber} of {s.maxAllowedAttempts}
+                      </td>
+                      <td className="px-4 py-4 text-xs text-gray-500">
+                        {formatDateTime(s.submittedAt)}
+                      </td>
+                    </tr>
+                  ))
+                ) : (
+                  <tr>
+                    <td colSpan={8} className="px-4 py-6 text-center text-sm text-gray-500">
+                      No submissions yet.
+                    </td>
+                  </tr>
+                )}
               </tbody>
             </table>
           </div>
