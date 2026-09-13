@@ -220,6 +220,15 @@ const AttendExamStudent = () => {
         }
       } catch (error) {
         console.error(error);
+        // Attempt-limit (403 from the /attend-exam guard) or any other
+        // failure to start the exam — surface it instead of leaving the
+        // student stuck on a perpetual loading screen, and send them back
+        // to their activities list.
+        toast.error(
+          error?.response?.data?.message || "Unable to start this exam."
+        );
+        setIsEligible(false);
+        navigate("/activities");
       }
     };
 
