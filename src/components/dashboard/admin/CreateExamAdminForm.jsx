@@ -8,6 +8,26 @@ import "katex/dist/katex.min.css";
 import ReactQuill from "react-quill";
 import "react-quill/dist/quill.snow.css";
 
+// Lets any of the image upload spots below accept a pasted screenshot
+// (Ctrl+V) in addition to browsing for a saved file — handy when the admin
+// just took a screenshot (e.g. of a diagram from a PDF) and wants to drop
+// it straight in without saving it to disk first. `onImage` receives the
+// pasted File, exactly like a file-input's onChange would.
+const handleImagePaste = (e, onImage) => {
+  const items = e.clipboardData?.items;
+  if (!items) return;
+  for (let i = 0; i < items.length; i++) {
+    if (items[i].type && items[i].type.indexOf("image") !== -1) {
+      const file = items[i].getAsFile();
+      if (file) {
+        onImage(file);
+        e.preventDefault();
+      }
+      return;
+    }
+  }
+};
+
 const CreateExamAdminForm = ({
   subjects,
   subtopics,
@@ -400,12 +420,25 @@ const CreateExamAdminForm = ({
             ) : (
               "No image"
             )}
-            <input
-              type="file"
-              accept="image/*"
-              onChange={(e) => handleImageChange(qIndex, e)}
-              className=" w-full border-2 border-dashed border-stone-300 py-4 px-6 font-medium rounded-xl text-center flex items-center justify-center bg-white"
-            />
+            <div
+              tabIndex={0}
+              onPaste={(e) =>
+                handleImagePaste(e, (file) =>
+                  handleImageChange(qIndex, { target: { files: [file] } })
+                )
+              }
+              className="flex flex-col gap-1 border-2 border-dashed border-stone-300 rounded-xl p-2 bg-white focus:outline-none focus:border-indigo-400"
+            >
+              <input
+                type="file"
+                accept="image/*"
+                onChange={(e) => handleImageChange(qIndex, e)}
+                className=" w-full py-2 px-2 font-medium text-center flex items-center justify-center"
+              />
+              <span className="text-[10px] text-stone-400 text-center">
+                or click here and paste (Ctrl+V) a screenshot
+              </span>
+            </div>
           </div>
           {(question.questionType === "MCQ" ||
             question.questionType === "MSQ") && (
@@ -454,12 +487,25 @@ const CreateExamAdminForm = ({
                         required
                       />
                       <div className="flex items-center gap-2">
-                        <input
-                          type="file"
-                          accept="image/*"
-                          onChange={(e) => handleOptionImageChange(qIndex, optIndex, e)}
-                          className="text-xs"
-                        />
+                        <div
+                          tabIndex={0}
+                          onPaste={(e) =>
+                            handleImagePaste(e, (file) =>
+                              handleOptionImageChange(qIndex, optIndex, {
+                                target: { files: [file] },
+                              })
+                            )
+                          }
+                          className="flex items-center gap-1 focus:outline-none"
+                          title="Click here and paste (Ctrl+V) a screenshot"
+                        >
+                          <input
+                            type="file"
+                            accept="image/*"
+                            onChange={(e) => handleOptionImageChange(qIndex, optIndex, e)}
+                            className="text-xs"
+                          />
+                        </div>
                         {optionImage && (
                           <img
                             src={
@@ -561,16 +607,29 @@ const CreateExamAdminForm = ({
               <div className="grid grid-cols-2 gap-3 mt-2">
                 <div>
                   <label className="text-xs text-stone-500 mb-1 block">Answer Key Image</label>
-                  <input
-                    type="file"
-                    accept="image/*"
-                    onChange={(e) => {
-                      if (e.target.files && e.target.files[0]) {
-                        handleAnswerKeyChange(qIndex, "answerKeyImage", e.target.files[0]);
-                      }
-                    }}
-                    className="w-full border-2 border-dashed border-stone-300 py-2 px-4 font-medium rounded-xl text-center text-sm flex items-center justify-center bg-white cursor-pointer hover:border-indigo-400 duration-300"
-                  />
+                  <div
+                    tabIndex={0}
+                    onPaste={(e) =>
+                      handleImagePaste(e, (file) =>
+                        handleAnswerKeyChange(qIndex, "answerKeyImage", file)
+                      )
+                    }
+                    className="flex flex-col gap-1 border-2 border-dashed border-stone-300 rounded-xl p-1 bg-white focus:outline-none focus:border-indigo-400"
+                  >
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={(e) => {
+                        if (e.target.files && e.target.files[0]) {
+                          handleAnswerKeyChange(qIndex, "answerKeyImage", e.target.files[0]);
+                        }
+                      }}
+                      className="w-full py-1 px-3 font-medium text-center text-sm flex items-center justify-center cursor-pointer duration-300"
+                    />
+                    <span className="text-[10px] text-stone-400 text-center">
+                      or click here and paste (Ctrl+V) a screenshot
+                    </span>
+                  </div>
                 </div>
                 {question.answerKeyImage ? (
                   <img
