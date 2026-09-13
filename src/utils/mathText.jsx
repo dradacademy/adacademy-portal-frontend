@@ -51,22 +51,36 @@ const DELIMITED_RE = /\\\[([\s\S]+?)\\\]|\\\(([\s\S]+?)\\\)/g;
 const BARE_TOKEN_RE =
   /\\[a-zA-Z]+(?:\{[^{}]*\})*(?:[_^]\{[^{}]*\})*|[A-Za-z0-9]+(?:[_^](?:\{[^{}]*\}|[A-Za-z0-9]))+/g;
 
+// A stray, unpaired \( \) \[ \] that DELIMITED_RE couldn't match into a
+// complete pair — e.g. a closing delimiter dropped by truncated/malformed
+// AI extraction, or a mismatched brace count inside the expression that
+// breaks the non-greedy pair match. Without this, such a marker has no
+// letter/digit after the backslash, so BARE_TOKEN_RE never touches it and
+// it falls through to plain text, showing up to the reader as a literal
+// "\(" or "\)". Stripping it here is a quiet degrade — same philosophy as
+// renderMathFallback below — the reader sees prose text/loose symbols
+// instead of raw delimiter noise; it never affects a text that had its
+// delimiters matched correctly upstream in splitMathSegments.
+const STRAY_DELIMITER_RE = /\\[()[\]]/g;
+
 function splitBareTokens(text) {
-  if (!text || !/[\\^_]/.test(text)) return text ? [text] : [];
+  if (!text) return [];
+  const cleaned = text.replace(STRAY_DELIMITER_RE, "");
+  if (!/[\\^_]/.test(cleaned)) return cleaned ? [cleaned] : [];
 
   const segments = [];
   let lastIndex = 0;
   let match;
   const re = new RegExp(BARE_TOKEN_RE);
-  while ((match = re.exec(text)) !== null) {
+  while ((match = re.exec(cleaned)) !== null) {
     if (match.index > lastIndex) {
-      segments.push(text.slice(lastIndex, match.index));
+      segments.push(cleaned.slice(lastIndex, match.index));
     }
     segments.push({ math: match[0] });
     lastIndex = match.index + match[0].length;
   }
-  if (lastIndex < text.length) {
-    segments.push(text.slice(lastIndex));
+  if (lastIndex < cleaned.length) {
+    segments.push(cleaned.slice(lastIndex));
   }
   return segments;
 }
