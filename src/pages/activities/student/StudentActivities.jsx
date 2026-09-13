@@ -38,6 +38,7 @@ const StudentActivities = () => {
   const [activeTab, setActiveTab] = useState("Available");
   const [examData, setExamData] = useState({
     eligible: [],
+    attended: [],
     previousAttempts: [],
     completed: [],
   });
@@ -66,19 +67,25 @@ const StudentActivities = () => {
       try {
         const baseUrl = import.meta.env.VITE_APP_API_URL;
 
-        const [eligibleResponse, previousAttemptsResponse, completedResponse] =
-          await Promise.all([
-            axios.get(`${baseUrl}/exam-function/eligible-exam/${userData._id}`),
-            axios.get(
-              `${baseUrl}/exam-submission/previous-attempt/${userData._id}`
-            ),
-            axios.get(`${baseUrl}/exam-submission/completed/${userData._id}`),
-          ]);
+        // "Attended"/"Qualified"/"Not Qualified" all come from the single
+        // status-overview endpoint (only ever counts COMPLETED submissions,
+        // unlike the older previous-attempt/completed endpoints which could
+        // include an in-progress "started" submission since its `pass`
+        // field also defaults to false).
+        const [eligibleResponse, statusOverviewResponse] = await Promise.all([
+          axios.get(`${baseUrl}/exam-function/eligible-exam/${userData._id}`),
+          axios.get(
+            `${baseUrl}/exam-submission/status-overview/${userData._id}`
+          ),
+        ]);
+
+        const overview = statusOverviewResponse.data?.data || {};
 
         setExamData({
           eligible: eligibleResponse.data || [],
-          previousAttempts: previousAttemptsResponse.data || [],
-          completed: completedResponse.data || [],
+          attended: overview.attended || [],
+          previousAttempts: overview.notQualified || [],
+          completed: overview.qualified || [],
         });
       } catch (error) {
         console.error("Error fetching data:", error);
@@ -92,6 +99,11 @@ const StudentActivities = () => {
   const { uniqueSubjects, uniqueTopics, uniqueLevels } = useMemo(() => {
     const allExams = [
       ...examData.eligible,
+      ...examData.attended.map((e) => ({
+        subjectName: e.examId.subject?.name,
+        subTopicName: e.examId.subTopicName,
+        order: e.examId.order,
+      })),
       ...examData.previousAttempts.map((e) => ({
         subjectName: e.examId.subject?.name,
         subTopicName: e.examId.subTopicName,
@@ -119,6 +131,9 @@ const StudentActivities = () => {
     switch (activeTab) {
       case "Available":
         exams = examData.eligible;
+        break;
+      case "Attended":
+        exams = examData.attended;
         break;
       case "Previous Attempt":
         exams = examData.previousAttempts;
@@ -305,6 +320,17 @@ const StudentActivities = () => {
                 index={index}
                 exam={exam}
                 handleOpenExamDialog={handleOpenExamDialog}
+                formatDate={formatDate}
+              />
+            ))
+          ) : activeTab === "Attended" ? (
+            filteredExams.map((exam, index) => (
+              <PreviousAttemptComponent
+                key={index}
+                currentUsertype={"student"}
+                index={index}
+                exam={exam}
+                totalPossibleMarks={totalPossibleMarksForExam(exam.examId)}
                 formatDate={formatDate}
               />
             ))
