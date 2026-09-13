@@ -1,65 +1,58 @@
 import React from "react";
-import { CheckCircle, BarChart3, FileText } from "lucide-react";
+
+const STEPS = [
+  {
+    number: "01",
+    title: "Enroll with the Academy",
+    description:
+      "Your admin sets up your student account and gives you access to your subjects.",
+  },
+  {
+    number: "02",
+    title: "Practice Topic-wise Tests",
+    description:
+      "Work through structured, timed tests for each topic in your syllabus.",
+  },
+  {
+    number: "03",
+    title: "Track Your Performance",
+    description:
+      "See your marks, accuracy, and time spent the moment each test ends.",
+  },
+  {
+    number: "04",
+    title: "Unlock the Next Level",
+    description:
+      "Pass one exam to unlock the next, so your preparation always builds forward.",
+  },
+];
 
 const HowItWorks = () => {
   return (
-    <section id="how-it-works" className="py-16 bg-gray-50">
+    <section id="how-it-works" className="py-16 bg-cream rounded-xl">
       <div className="container mx-auto px-4">
-        <div className="text-center max-w-2xl mx-auto mb-12">
-          <h2 className="text-3xl font-bold mb-4 text-gray-900 font-poppins">
-            How Our Platform Works
+        <div className="max-w-2xl">
+          <span className="text-gold text-xs font-semibold tracking-wide uppercase font-inter">
+            How It Works
+          </span>
+          <h2 className="font-newsreader text-3xl sm:text-4xl text-navy-dark mt-3 leading-snug">
+            A clear path from enrollment to exam-ready.
           </h2>
-          <p className="text-gray-600 font-inter">
-            A simple three-step process designed specifically for academy
-            students.
-          </p>
         </div>
-        <div className="relative">
-          <div className="hidden md:block absolute top-1/2 left-0 right-0 h-1 bg-gray-200 transform -translate-y-1/2 z-0"></div>
-          <div className="grid md:grid-cols-3 gap-8 relative z-10">
-            {[
-              {
-                step: "01",
-                title: "Select Your Exam",
-                description:
-                  "Choose from exams assigned by your academy instructors based on your current courses.",
-                icon: <FileText className="h-6 w-6 text-blue-600" />,
-              },
-              {
-                step: "02",
-                title: "Complete the Assessment",
-                description:
-                  "Answer questions within the time limit and submit your responses for evaluation.",
-                icon: <CheckCircle className="h-6 w-6 text-blue-600" />,
-              },
-              {
-                step: "03",
-                title: "Review & Improve",
-                description:
-                  "Receive detailed feedback from your instructors and track your progress over time.",
-                icon: <BarChart3 className="h-6 w-6 text-blue-600" />,
-              },
-            ].map((step, index) => (
-              <div key={index} className="relative group">
-                <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100 h-full transition-transform duration-300 group-hover:-translate-y-2">
-                  <div className="absolute -top-5 left-6 w-10 h-10 rounded-full bg-blue-600 flex items-center justify-center text-white font-bold font-manrope">
-                    {step.step}
-                  </div>
-                  <div className="pt-6 space-y-4">
-                    <div className="p-3 bg-blue-50 rounded-lg w-fit">
-                      {step.icon}
-                    </div>
-                    <h3 className="text-xl font-bold text-gray-900 font-inter">
-                      {step.title}
-                    </h3>
-                    <p className="text-gray-600 font-inter">
-                      {step.description}
-                    </p>
-                  </div>
-                </div>
+        <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-8 mt-12">
+          {STEPS.map(({ number, title, description }) => (
+            <div key={number}>
+              <div className="font-newsreader text-3xl sm:text-4xl font-semibold text-gold">
+                {number}
               </div>
-            ))}
-          </div>
+              <h3 className="text-base font-semibold text-navy-dark mt-3 font-inter">
+                {title}
+              </h3>
+              <p className="text-sm text-slate leading-relaxed mt-2 font-inter">
+                {description}
+              </p>
+            </div>
+          ))}
         </div>
       </div>
     </section>

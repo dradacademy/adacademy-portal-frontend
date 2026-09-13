@@ -52,79 +52,79 @@ const Navbar = ({ dashboard }) => {
   };
 
   return (
-    <header className="w-full bg-white border-b border-gray-50 rounded-xl py-0.5 px-2 sm:px-6 lg:px-2 xl:px-10 shadow-sm">
+    <header className="w-full bg-white border-b border-line rounded-xl py-0.5 px-2 sm:px-6 lg:px-2 xl:px-10 shadow-sm">
       <div className="container mx-auto">
         <div className=" flex h-16 items-center justify-between">
           {/* Logo Section */}
           {!dashboard && (
-            <Link to={"/"} className="flex items-center sm:gap-2 font-manrope">
+            <Link to={"/"} className="flex items-center sm:gap-2 font-newsreader">
               <img className="w-fit h-fit max-w-16" src={logo} alt="" />
-              <span className="text-lg sm:text-xl lg:text-2xl font-black text-gray-900 hidden sm:block">
-                Dr. A. D. Academy of Excellence
+              <span className="text-lg sm:text-xl lg:text-2xl font-bold text-navy-dark hidden sm:block">
+                Dr. A.D. Academy of Excellence
               </span>
-              <span className="text-lg font-black text-gray-900 sm:hidden">
-                Dr. A. D. Academy
+              <span className="text-lg font-bold text-navy-dark sm:hidden">
+                Dr. A.D. Academy
               </span>
             </Link>
           )}
 
           {/* Desktop Navigation */}
-          <nav className="hidden lg:flex items-center gap-8 font-poppins font-medium text-gray-600">
+          <nav className="hidden lg:flex items-center gap-8 font-poppins font-medium text-slate">
             {userData != null ? (
               <>
                 <Link
                   to={"/"}
-                  className="font-medium hover:text-blue-600 transition-colors relative group"
+                  className="font-medium hover:text-navy transition-colors relative group"
                 >
                   Home
-                  <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-blue-600 transition-all group-hover:w-full"></span>
+                  <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-gold transition-all group-hover:w-full"></span>
                 </Link>
                 <Link
                   to={"/activities"}
-                  className="font-medium hover:text-blue-600 transition-colors relative group"
+                  className="font-medium hover:text-navy transition-colors relative group"
                 >
                   Activities
-                  <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-blue-600 transition-all group-hover:w-full"></span>
+                  <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-gold transition-all group-hover:w-full"></span>
                 </Link>
                 {userData?.role !== "student" && (
                   <Link
                     to={"/dashboard"}
-                    className="font-medium hover:text-blue-600 transition-colors relative group"
+                    className="font-medium hover:text-navy transition-colors relative group"
                   >
                     Dashboard
-                    <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-blue-600 transition-all group-hover:w-full"></span>
+                    <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-gold transition-all group-hover:w-full"></span>
                   </Link>
                 )}
               </>
             ) : (
               <>
                 <a
-                  href="#how-it-works"
-                  className="font-medium hover:text-blue-600 transition-colors relative group"
+                  href="#exams"
+                  className="font-medium hover:text-navy transition-colors relative group"
                 >
-                  How It Works
-                  <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-blue-600 transition-all group-hover:w-full"></span>
+                  Exams We Cover
+                  <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-gold transition-all group-hover:w-full"></span>
                 </a>
                 <a
-                  href="#subjects"
-                  className="font-medium hover:text-blue-600 transition-colors relative group"
+                  href="#test-series"
+                  className="font-medium hover:text-navy transition-colors relative group"
                 >
-                  Subjects
-                  <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-blue-600 transition-all group-hover:w-full"></span>
+                  Test Series
+                  <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-gold transition-all group-hover:w-full"></span>
                 </a>
                 <a
-                  href="#guidelines"
-                  className="font-medium hover:text-blue-600 transition-colors relative group"
+                  href="#about"
+                  className="font-medium hover:text-navy transition-colors relative group"
                 >
-                  Guidelines
-                  <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-blue-600 transition-all group-hover:w-full"></span>
+                  About
+                  <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-gold transition-all group-hover:w-full"></span>
                 </a>
                 <a
                   href="#faq"
-                  className="font-medium hover:text-blue-600 transition-colors relative group"
+                  className="font-medium hover:text-navy transition-colors relative group"
                 >
                   FAQ
-                  <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-blue-600 transition-all group-hover:w-full"></span>
+                  <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-gold transition-all group-hover:w-full"></span>
                 </a>
               </>
             )}
@@ -155,7 +155,7 @@ const Navbar = ({ dashboard }) => {
                       aria-controls={open ? "account-menu" : undefined}
                       aria-haspopup="true"
                       aria-expanded={open ? "true" : undefined}
-                      className=" bg-blue-600 rounded-full py-1.5 px-[12px] font-medium text-slate-50 cursor-pointer"
+                      className=" bg-navy rounded-full py-1.5 px-[12px] font-medium text-slate-50 cursor-pointer"
                     >
                       <div sx={{ width: 32, height: 32, fontWeight: 500 }}>
                         {userData?.username?.slice(0, 1)?.toUpperCase()}
@@ -221,7 +221,7 @@ const Navbar = ({ dashboard }) => {
             ) : (
               <Link
                 to={"/login"}
-                className="px-4 py-[10px] border border-gray-200 rounded-full text-sm font-medium transition-colors hover:border-blue-600 hover:text-blue-600"
+                className="px-4 py-[10px] border border-gray-200 rounded-full text-sm font-medium transition-colors hover:border-navy hover:text-navy"
               >
                 Log In
               </Link>
@@ -231,7 +231,7 @@ const Navbar = ({ dashboard }) => {
           {/* Mobile Menu Button */}
           <button
             onClick={toggleMenu}
-            className="lg:hidden text-gray-700 hover:text-blue-600 transition-colors p-2 cursor-pointer"
+            className="lg:hidden text-gray-700 hover:text-navy transition-colors p-2 cursor-pointer"
             aria-label="Toggle menu"
           >
             {isMenuOpen ? (
@@ -251,14 +251,14 @@ const Navbar = ({ dashboard }) => {
                   <Link
                     to={"/"}
                     onClick={closeMenu}
-                    className="block px-6 py-3 text-gray-600 hover:text-blue-600 hover:bg-gray-50 transition-colors font-medium"
+                    className="block px-6 py-3 text-gray-600 hover:text-navy hover:bg-gray-50 transition-colors font-medium"
                   >
                     Home
                   </Link>
                   <Link
                     to={"/activities"}
                     onClick={closeMenu}
-                    className="block px-6 py-3 text-gray-600 hover:text-blue-600 hover:bg-gray-50 transition-colors font-medium"
+                    className="block px-6 py-3 text-gray-600 hover:text-navy hover:bg-gray-50 transition-colors font-medium"
                   >
                     Activities
                   </Link>
@@ -266,7 +266,7 @@ const Navbar = ({ dashboard }) => {
                     <Link
                       to={"/dashboard"}
                       onClick={closeMenu}
-                      className="block px-6 py-3 text-gray-600 hover:text-blue-600 hover:bg-gray-50 transition-colors font-medium"
+                      className="block px-6 py-3 text-gray-600 hover:text-navy hover:bg-gray-50 transition-colors font-medium"
                     >
                       Dashboard
                     </Link>
@@ -277,7 +277,7 @@ const Navbar = ({ dashboard }) => {
                         handleLogout();
                         closeMenu();
                       }}
-                      className="block w-full text-left px-6 py-3 text-blue-600 hover:bg-gray-50 transition-colors font-medium"
+                      className="block w-full text-left px-6 py-3 text-navy hover:bg-gray-50 transition-colors font-medium"
                     >
                       Logout
                     </button>
@@ -286,30 +286,30 @@ const Navbar = ({ dashboard }) => {
               ) : (
                 <>
                   <a
-                    href="#how-it-works"
+                    href="#exams"
                     onClick={closeMenu}
-                    className="block px-6 py-3 text-gray-600 hover:text-blue-600 hover:bg-gray-50 transition-colors font-medium"
+                    className="block px-6 py-3 text-gray-600 hover:text-navy hover:bg-gray-50 transition-colors font-medium"
                   >
-                    How It Works
+                    Exams We Cover
                   </a>
                   <a
-                    href="#subjects"
+                    href="#test-series"
                     onClick={closeMenu}
-                    className="block px-6 py-3 text-gray-600 hover:text-blue-600 hover:bg-gray-50 transition-colors font-medium"
+                    className="block px-6 py-3 text-gray-600 hover:text-navy hover:bg-gray-50 transition-colors font-medium"
                   >
-                    Subjects
+                    Test Series
                   </a>
                   <a
-                    href="#guidelines"
+                    href="#about"
                     onClick={closeMenu}
-                    className="block px-6 py-3 text-gray-600 hover:text-blue-600 hover:bg-gray-50 transition-colors font-medium"
+                    className="block px-6 py-3 text-gray-600 hover:text-navy hover:bg-gray-50 transition-colors font-medium"
                   >
-                    Guidelines
+                    About
                   </a>
                   <a
                     href="#faq"
                     onClick={closeMenu}
-                    className="block px-6 py-3 text-gray-600 hover:text-blue-600 hover:bg-gray-50 transition-colors font-medium"
+                    className="block px-6 py-3 text-gray-600 hover:text-navy hover:bg-gray-50 transition-colors font-medium"
                   >
                     FAQ
                   </a>
@@ -317,7 +317,7 @@ const Navbar = ({ dashboard }) => {
                     <Link
                       to={"/login"}
                       onClick={closeMenu}
-                      className="block px-6 py-3 text-blue-600 hover:bg-gray-50 transition-colors font-medium"
+                      className="block px-6 py-3 text-navy hover:bg-gray-50 transition-colors font-medium"
                     >
                       Log In
                     </Link>

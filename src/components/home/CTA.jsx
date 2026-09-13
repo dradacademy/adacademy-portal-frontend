@@ -1,28 +1,33 @@
 import React from "react";
-import { Link } from "react-router-dom";
 
 const CTA = () => {
   return (
-    <section className="py-16 bg-white">
-      <div className="container mx-auto px-4">
-        <div className="max-w-4xl mx-auto bg-gradient-to-b from-blue-700 to-blue-800 rounded-xl overflow-hidden shadow-sm">
-          <div className="p-8 md:p-12 text-white text-center">
-            <h2 className="text-3xl font-bold mb-4 font-poppins">
-              Ready to Improve Your Exam Performance?
-            </h2>
-            <p className="mb-8 text-blue-100 max-w-2xl mx-auto font-inter">
-              Access your academy's specialized exam platform and start tracking
-              your progress today.
-            </p>
-            <div className="flex flex-col sm:flex-row gap-4 justify-center font-inter">
-              <Link to={"/login"} className="px-6 py-3 bg-white text-blue-600 rounded-full font-medium hover:bg-blue-50 transition-colors">
-                Sign In Now
-              </Link>
-              <button className="px-6 py-3 bg-transparent border border-white text-white rounded-full font-medium hover:bg-blue-700 transition-colors">
-                Learn More
-              </button>
-            </div>
-          </div>
+    <section
+      id="cta"
+      className="py-16 sm:py-20 bg-navy-dark text-center rounded-xl"
+    >
+      <div className="container mx-auto px-4 max-w-xl">
+        <h2 className="font-newsreader text-3xl sm:text-4xl text-white">
+          Ready to start your preparation?
+        </h2>
+        <p className="text-[15.5px] text-[#C9D2DE] mt-3.5 font-inter">
+          Enroll with Dr. A.D. Academy of Excellence and start practicing
+          across topic-wise, subject-wise, mixed-subject, and full-length
+          tests today.
+        </p>
+        <div className="flex flex-wrap justify-center gap-4 mt-8 font-inter">
+          <a
+            href="mailto:dradacademy@gmail.com?subject=Enrollment%20Enquiry"
+            className="px-6 py-3 bg-gold text-navy-dark rounded-full font-semibold hover:bg-gold-light transition-colors"
+          >
+            Enroll Now
+          </a>
+          <a
+            href="mailto:dradacademy@gmail.com"
+            className="px-6 py-3 border border-white/30 text-white rounded-full font-medium hover:bg-white/10 transition-colors"
+          >
+            Contact the Academy
+          </a>
         </div>
       </div>
     </section>

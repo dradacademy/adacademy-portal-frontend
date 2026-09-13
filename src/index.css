@@ -1,4 +1,4 @@
-@import url("https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&family=Manrope:wght@200..800&family=Poppins:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&family=Rubik:ital,wght@0,300..900;1,300..900&family=Work+Sans:ital,wght@0,100..900;1,100..900&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&family=Manrope:wght@200..800&family=Newsreader:ital,opsz,wght@0,6..72,200..800;1,6..72,200..800&family=Poppins:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&family=Rubik:ital,wght@0,300..900;1,300..900&family=Work+Sans:ital,wght@0,100..900;1,100..900&display=swap");
 
 @import "tailwindcss";
 
@@ -9,6 +9,9 @@
   --font-manrope: "Manrope", serif;
 }
 @theme {
+  --font-newsreader: "Newsreader", serif;
+}
+@theme {
   --font-poppins: "Poppins", sans-serif;
 }
 @theme {
@@ -16,6 +19,18 @@
 }
 @theme {
   --font-work-sans: "Work Sans", sans-serif;
+}
+
+/* Brand palette — Dr. A.D. Academy of Excellence (navy/gold, from the academy logo) */
+@theme {
+  --color-navy: #0f2a4a;
+  --color-navy-dark: #0a1e36;
+  --color-gold: #c9971f;
+  --color-gold-light: #e8b94a;
+  --color-cream: #fbf7ec;
+  --color-ink: #1c2530;
+  --color-slate: #5b6675;
+  --color-line: #e7e1d2;
 }
 
 html {
