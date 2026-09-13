@@ -1,6 +1,9 @@
-import React from "react";
+import React, { useState } from "react";
+import EnrollNowPopup from "../common/popup/EnrollNowPopup";
 
 const CTA = () => {
+  const [showEnrollModal, setShowEnrollModal] = useState(false);
+
   return (
     <section
       id="cta"
@@ -16,12 +19,13 @@ const CTA = () => {
           tests today.
         </p>
         <div className="flex flex-wrap justify-center gap-4 mt-8 font-inter">
-          <a
-            href="mailto:dradacademy@gmail.com?subject=Enrollment%20Enquiry"
-            className="px-6 py-3 bg-gold text-navy-dark rounded-full font-semibold hover:bg-gold-light transition-colors"
+          <button
+            type="button"
+            onClick={() => setShowEnrollModal(true)}
+            className="px-6 py-3 bg-gold text-navy-dark rounded-full font-semibold hover:bg-gold-light transition-colors cursor-pointer"
           >
             Enroll Now
-          </a>
+          </button>
           <a
             href="mailto:dradacademy@gmail.com"
             className="px-6 py-3 border border-white/30 text-white rounded-full font-medium hover:bg-white/10 transition-colors"
@@ -30,6 +34,10 @@ const CTA = () => {
           </a>
         </div>
       </div>
+      <EnrollNowPopup
+        open={showEnrollModal}
+        onClose={() => setShowEnrollModal(false)}
+      />
     </section>
   );
 };

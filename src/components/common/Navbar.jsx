@@ -12,11 +12,13 @@ import Divider from "@mui/material/Divider";
 import IconButton from "@mui/material/IconButton";
 import Tooltip from "@mui/material/Tooltip";
 import { FiLogOut } from "react-icons/fi";
+import PortalSelectorPopup from "./popup/PortalSelectorPopup";
 
 const Navbar = ({ dashboard }) => {
   const location = useLocation();
   const navigate = useNavigate();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [showPortalSelector, setShowPortalSelector] = useState(false);
 
   const [anchorEl, setAnchorEl] = useState(null);
   const open = Boolean(anchorEl);
@@ -219,12 +221,13 @@ const Navbar = ({ dashboard }) => {
                 </Menu>
               </React.Fragment>
             ) : (
-              <Link
-                to={"/login"}
-                className="px-4 py-[10px] border border-gray-200 rounded-full text-sm font-medium transition-colors hover:border-navy hover:text-navy"
+              <button
+                type="button"
+                onClick={() => setShowPortalSelector(true)}
+                className="px-4 py-[10px] border border-gray-200 rounded-full text-sm font-medium transition-colors hover:border-navy hover:text-navy cursor-pointer"
               >
                 Log In
-              </Link>
+              </button>
             )}
           </div>
 
@@ -314,13 +317,16 @@ const Navbar = ({ dashboard }) => {
                     FAQ
                   </a>
                   <div className="border-t border-gray-200 mt-4 pt-4">
-                    <Link
-                      to={"/login"}
-                      onClick={closeMenu}
-                      className="block px-6 py-3 text-navy hover:bg-gray-50 transition-colors font-medium"
+                    <button
+                      type="button"
+                      onClick={() => {
+                        closeMenu();
+                        setShowPortalSelector(true);
+                      }}
+                      className="block w-full text-left px-6 py-3 text-navy hover:bg-gray-50 transition-colors font-medium"
                     >
                       Log In
-                    </Link>
+                    </button>
                   </div>
                 </>
               )}
@@ -328,6 +334,10 @@ const Navbar = ({ dashboard }) => {
           </div>
         )}
       </div>
+      <PortalSelectorPopup
+        open={showPortalSelector}
+        onClose={() => setShowPortalSelector(false)}
+      />
     </header>
   );
 };

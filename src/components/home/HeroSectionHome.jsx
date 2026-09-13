@@ -1,7 +1,12 @@
-import React from "react";
+import React, { useState } from "react";
 import { Anchor, Clock3, LineChart } from "lucide-react";
+import EnrollNowPopup from "../common/popup/EnrollNowPopup";
+import PortalSelectorPopup from "../common/popup/PortalSelectorPopup";
 
 const HeroSectionHome = () => {
+  const [showEnrollModal, setShowEnrollModal] = useState(false);
+  const [showPortalSelector, setShowPortalSelector] = useState(false);
+
   return (
     <section className="relative overflow-hidden bg-navy-dark rounded-xl">
       <div
@@ -28,18 +33,20 @@ const HeroSectionHome = () => {
               real exam-pattern marking, from Dr. A. Dinesh, Ph.D.
             </p>
             <div className="flex flex-wrap gap-4 mt-9 font-inter">
-              <a
-                href="#cta"
-                className="px-6 py-3 bg-gold text-navy-dark rounded-full font-semibold transition-colors hover:bg-gold-light"
+              <button
+                type="button"
+                onClick={() => setShowEnrollModal(true)}
+                className="px-6 py-3 bg-gold text-navy-dark rounded-full font-semibold transition-colors hover:bg-gold-light cursor-pointer"
               >
                 Enroll Now
-              </a>
-              <a
-                href="#test-series"
-                className="px-6 py-3 border border-white/30 text-white rounded-full font-medium transition-colors hover:bg-white/10"
+              </button>
+              <button
+                type="button"
+                onClick={() => setShowPortalSelector(true)}
+                className="px-6 py-3 border border-white/30 text-white rounded-full font-medium transition-colors hover:bg-white/10 cursor-pointer"
               >
                 Explore Test Series
-              </a>
+              </button>
             </div>
             <div className="flex flex-wrap gap-7 mt-11 pt-7 border-t border-white/15">
               <div className="flex items-center gap-2.5">
@@ -104,6 +111,14 @@ const HeroSectionHome = () => {
           </div>
         </div>
       </div>
+      <EnrollNowPopup
+        open={showEnrollModal}
+        onClose={() => setShowEnrollModal(false)}
+      />
+      <PortalSelectorPopup
+        open={showPortalSelector}
+        onClose={() => setShowPortalSelector(false)}
+      />
     </section>
   );
 };
