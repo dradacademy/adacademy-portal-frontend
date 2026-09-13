@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import axios from "axios";
 import toast from "react-hot-toast";
 import "katex/dist/katex.min.css";
-import { MathText } from "../../utils/mathText";
+import { MathText } from "../../../utils/mathText";
 import {
   CheckCircle2,
   FileText,
