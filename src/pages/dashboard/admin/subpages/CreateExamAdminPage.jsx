@@ -761,6 +761,75 @@ const CreateExamAdminPage = () => {
     });
   };
 
+  // Bulk "apply to a range of questions" tool — e.g. Q1-6 = Level 1,
+  // Q7-10 = Level 2 — lets the admin set level/marks/negative mark/duration
+  // across a block of questions in one action instead of editing each
+  // question individually. Individual per-question editing (above) is
+  // untouched and can still be used afterward to fine-tune any single
+  // question within (or outside) the range.
+  const [bulkRangeConfig, setBulkRangeConfig] = useState({
+    start: "",
+    end: "",
+    level: "",
+    marks: "",
+    negativeMark: "",
+    duration: "",
+  });
+
+  const handleBulkRangeChange = (e) => {
+    const { name, value } = e.target;
+    setBulkRangeConfig((prev) => ({ ...prev, [name]: value }));
+  };
+
+  const handleApplyBulkRange = () => {
+    const start = parseInt(bulkRangeConfig.start, 10);
+    const end = parseInt(bulkRangeConfig.end, 10);
+
+    if (
+      !start ||
+      !end ||
+      start < 1 ||
+      end < start ||
+      end > newQuestions.length
+    ) {
+      toast.error(
+        `Enter a valid question range between 1 and ${newQuestions.length}`
+      );
+      return;
+    }
+
+    const hasLevel = bulkRangeConfig.level !== "";
+    const hasMarks = bulkRangeConfig.marks !== "";
+    const hasNegativeMark = bulkRangeConfig.negativeMark !== "";
+    const hasDuration = bulkRangeConfig.duration !== "";
+
+    if (!hasLevel && !hasMarks && !hasNegativeMark && !hasDuration) {
+      toast.error(
+        "Set at least one field (Level / Marks / Negative Mark / Duration) to apply"
+      );
+      return;
+    }
+
+    setNewQuestions((prev) => {
+      const updated = [...prev];
+      for (let i = start - 1; i <= end - 1; i++) {
+        if (!updated[i]) continue;
+        if (hasLevel) updated[i].level = parseInt(bulkRangeConfig.level, 10);
+        if (hasMarks) updated[i].marks = Number(bulkRangeConfig.marks);
+        if (hasNegativeMark)
+          updated[i].negativeMark = Number(bulkRangeConfig.negativeMark);
+        if (hasDuration) updated[i].duration = Number(bulkRangeConfig.duration);
+      }
+      return updated;
+    });
+
+    toast.success(
+      `Applied to Question ${start}–${end} (${end - start + 1} question${
+        end - start + 1 > 1 ? "s" : ""
+      })`
+    );
+  };
+
   const handleAddOption = (qIndex) => {
     setNewQuestions((prev) => {
       const updated = [...prev];
@@ -1274,6 +1343,9 @@ const CreateExamAdminPage = () => {
           handleDeleteKeyword={handleDeleteKeyword}
           handleKeywordKeyDown={handleKeywordKeyDown}
           handleAnswerKeyChange={handleAnswerKeyChange}
+          bulkRangeConfig={bulkRangeConfig}
+          handleBulkRangeChange={handleBulkRangeChange}
+          handleApplyBulkRange={handleApplyBulkRange}
         />
 
         <div className=" flex items-center max-w-96">

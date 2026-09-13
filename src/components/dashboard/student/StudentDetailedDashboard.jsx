@@ -123,6 +123,7 @@ const StudentDetailedDashboard = ({ student, onBack }) => {
     overallPerformance,
     examGroupedBySubject,
     subjectChartData,
+    topicChartData,
     attemptSummary,
     keyInsights,
   } = data;
@@ -260,84 +261,191 @@ const StudentDetailedDashboard = ({ student, onBack }) => {
             Note: In evaluation, Since partial mark is allowed, There can be
             slight differences in the calculated percentage.
           </p>
-          <p className="text-gray-700 my-6 font-medium text-base">
-            For each subject:{" "}
-          </p>
 
-          <div className="mb-8">
-            <ResponsiveContainer width="100%" height={350}>
-              <BarChart data={subjectChartData}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="subject" />
-                <YAxis />
-                <Tooltip />
-                <Bar dataKey="percentage" fill="#6366f1" />
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
+          {Object.keys(examGroupedBySubject).length === 0 ? (
+            <div className="text-center text-gray-500 py-10 mt-4 border-2 border-dashed border-gray-200 rounded-xl">
+              No exams attempted yet. This section fills in as soon as the
+              student completes an exam.
+            </div>
+          ) : (
+            <>
+              <p className="text-gray-700 my-6 font-medium text-base">
+                By subject and topic:
+              </p>
 
-          <div className="space-y-4 mt-6">
-            {Object.entries(examGroupedBySubject).map(([subject, exams]) => (
-              <div key={subject} className="mb-6">
-                <h3 className="text-lg font-bold text-indigo-700 mb-3">
-                  {subject} ({exams.length} exams)
-                </h3>
-
-                <div className=" grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2">
-                  {exams.map((exam, idx) => (
-                    <div key={idx} className="bg-gray-50 p-4 rounded-xl border">
-                      <div className="flex items-center justify-between">
-                        <p className="font-semibold">
-                          {exam.subTopic} • Order {exam.order}
-                        </p>
-                        <span
-                          className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
-                            exam.pass
-                              ? "bg-emerald-100 text-emerald-700"
-                              : "bg-red-100 text-red-700"
-                          }`}
-                        >
-                          {exam.pass ? "Qualified" : "Not Qualified"}
-                        </span>
-                      </div>
-
-                      <div className="grid grid-cols-4 gap-3 mt-3 text-sm">
-                        <span className="text-green-700">✔ {exam.correct}</span>
-                        <span className="text-yellow-700">
-                          ≈ {exam.partial}
-                        </span>
-                        <span className="text-red-700">✘ {exam.wrong}</span>
-                        <span className="text-gray-600">⏭ {exam.skipped}</span>
-                      </div>
-
-                      <div className="mt-3 pt-3 border-t border-gray-200 text-xs text-gray-600 space-y-1">
-                        <p>
-                          Marks: <span className="font-semibold text-gray-800">{exam.marks}</span>
-                          {" / "}
-                          {exam.totalPossibleMarks?.toFixed?.(1) ?? exam.totalPossibleMarks}
-                          {" ("}{exam.percentage}%{")"}
-                        </p>
-                        <p>
-                          Rank: <span className="font-semibold text-gray-800">#{exam.rankByMarks ?? "—"}</span>
-                          {" by marks, "}
-                          <span className="font-semibold text-gray-800">#{exam.rankByCompletionTime ?? "—"}</span>
-                          {" by time"}
-                          {exam.totalParticipants ? ` (of ${exam.totalParticipants})` : ""}
-                        </p>
-                        <p>
-                          Attempt #{exam.attemptNumber} of {exam.maxAllowedAttempts}
-                          {" • "}
-                          {exam.completionTimeSeconds
-                            ? `${Math.floor(exam.completionTimeSeconds / 60)}m ${exam.completionTimeSeconds % 60}s`
-                            : "—"}
-                        </p>
-                      </div>
-                    </div>
-                  ))}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+                <div>
+                  <p className="text-sm font-semibold text-gray-600 mb-2">
+                    By Subject
+                  </p>
+                  <ResponsiveContainer width="100%" height={300}>
+                    <BarChart data={subjectChartData}>
+                      <CartesianGrid strokeDasharray="3 3" />
+                      <XAxis dataKey="subject" tick={{ fontSize: 11 }} />
+                      <YAxis />
+                      <Tooltip />
+                      <Bar dataKey="percentage" fill="#6366f1" />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+                <div>
+                  <p className="text-sm font-semibold text-gray-600 mb-2">
+                    By Topic
+                  </p>
+                  <ResponsiveContainer width="100%" height={300}>
+                    <BarChart data={topicChartData}>
+                      <CartesianGrid strokeDasharray="3 3" />
+                      <XAxis
+                        dataKey="topic"
+                        tick={{ fontSize: 10 }}
+                        interval={0}
+                        angle={-20}
+                        textAnchor="end"
+                        height={60}
+                      />
+                      <YAxis />
+                      <Tooltip />
+                      <Bar dataKey="percentage" fill="#8b5cf6" />
+                    </BarChart>
+                  </ResponsiveContainer>
                 </div>
               </div>
-            ))}
-          </div>
+
+              <div className="space-y-8 mt-6">
+                {Object.entries(examGroupedBySubject).map(
+                  ([subject, topics]) => (
+                    <div key={subject}>
+                      <h3 className="text-lg font-bold text-indigo-700 mb-4">
+                        {subject} (
+                        {topics.reduce((sum, t) => sum + t.examsCount, 0)}{" "}
+                        exams)
+                      </h3>
+
+                      <div className="space-y-5">
+                        {topics.map((topic, tIdx) => (
+                          <div
+                            key={tIdx}
+                            className="bg-indigo-50/50 border border-indigo-100 rounded-xl p-4"
+                          >
+                            <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
+                              <h4 className="font-semibold text-gray-800">
+                                {topic.subTopic}{" "}
+                                <span className="text-gray-500 font-normal text-sm">
+                                  ({topic.examsCount} exam
+                                  {topic.examsCount !== 1 ? "s" : ""})
+                                </span>
+                              </h4>
+                              <span className="text-sm font-bold text-indigo-700">
+                                Topic avg: {topic.avgPercentage}%
+                              </span>
+                            </div>
+
+                            <div className="flex flex-wrap gap-2 mb-4 text-xs font-medium">
+                              <span className="bg-green-100 text-green-700 px-2 py-1 rounded-full">
+                                ✔ Correct {topic.attemptSummary.correct} (
+                                {topic.attemptSummary.correctPercentage}%)
+                              </span>
+                              <span className="bg-yellow-100 text-yellow-700 px-2 py-1 rounded-full">
+                                ≈ Partial {topic.attemptSummary.partial} (
+                                {topic.attemptSummary.partialPercentage}%)
+                              </span>
+                              <span className="bg-red-100 text-red-700 px-2 py-1 rounded-full">
+                                ✘ Wrong {topic.attemptSummary.wrong} (
+                                {topic.attemptSummary.wrongPercentage}%)
+                              </span>
+                              <span className="bg-gray-100 text-gray-600 px-2 py-1 rounded-full">
+                                ⏭ Skipped {topic.attemptSummary.skipped} (
+                                {topic.attemptSummary.skippedPercentage}%)
+                              </span>
+                            </div>
+
+                            <div className=" grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2">
+                              {topic.exams.map((exam, idx) => (
+                                <div
+                                  key={idx}
+                                  className="bg-white p-4 rounded-xl border"
+                                >
+                                  <div className="flex items-center justify-between">
+                                    <p className="font-semibold">
+                                      Order {exam.order}
+                                    </p>
+                                    <span
+                                      className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                                        exam.pass
+                                          ? "bg-emerald-100 text-emerald-700"
+                                          : "bg-red-100 text-red-700"
+                                      }`}
+                                    >
+                                      {exam.pass ? "Qualified" : "Not Qualified"}
+                                    </span>
+                                  </div>
+
+                                  <div className="grid grid-cols-4 gap-3 mt-3 text-sm">
+                                    <span className="text-green-700">
+                                      ✔ {exam.correct}
+                                    </span>
+                                    <span className="text-yellow-700">
+                                      ≈ {exam.partial}
+                                    </span>
+                                    <span className="text-red-700">
+                                      ✘ {exam.wrong}
+                                    </span>
+                                    <span className="text-gray-600">
+                                      ⏭ {exam.skipped}
+                                    </span>
+                                  </div>
+
+                                  <div className="mt-3 pt-3 border-t border-gray-200 text-xs text-gray-600 space-y-1">
+                                    <p>
+                                      Marks:{" "}
+                                      <span className="font-semibold text-gray-800">
+                                        {exam.marks}
+                                      </span>
+                                      {" / "}
+                                      {exam.totalPossibleMarks?.toFixed?.(1) ??
+                                        exam.totalPossibleMarks}
+                                      {" ("}
+                                      {exam.percentage}%{")"}
+                                    </p>
+                                    <p>
+                                      Rank:{" "}
+                                      <span className="font-semibold text-gray-800">
+                                        #{exam.rankByMarks ?? "—"}
+                                      </span>
+                                      {" by marks, "}
+                                      <span className="font-semibold text-gray-800">
+                                        #{exam.rankByCompletionTime ?? "—"}
+                                      </span>
+                                      {" by time"}
+                                      {exam.totalParticipants
+                                        ? ` (of ${exam.totalParticipants})`
+                                        : ""}
+                                    </p>
+                                    <p>
+                                      Attempt #{exam.attemptNumber} of{" "}
+                                      {exam.maxAllowedAttempts}
+                                      {" • "}
+                                      {exam.completionTimeSeconds
+                                        ? `${Math.floor(
+                                            exam.completionTimeSeconds / 60,
+                                          )}m ${
+                                            exam.completionTimeSeconds % 60
+                                          }s`
+                                        : "—"}
+                                    </p>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  ),
+                )}
+              </div>
+            </>
+          )}
         </div>
 
         {/* D. Attempt Summary */}
@@ -482,6 +590,45 @@ const StudentDetailedDashboard = ({ student, onBack }) => {
                   </p>
                   <p className="text-red-600 font-semibold text-base">
                     {keyInsights.weakestSubject.percentage.toFixed(1)}%
+                    performance
+                  </p>
+                  <p className="text-sm text-gray-600 mt-2 italic">
+                    Focus area for improvement
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-gradient-to-r from-teal-50 to-emerald-50 rounded-xl p-6 border border-teal-200">
+              <div className="flex items-start">
+                <FaStar className="text-teal-600 text-2xl mr-4 mt-1" />
+                <div>
+                  <p className="text-gray-700 font-medium mb-2">
+                    Student's Strongest Topic:
+                  </p>
+                  <p className="text-xl font-bold text-teal-700 mb-1">
+                    {keyInsights.strongestTopic?.name ?? "N/A"}
+                  </p>
+                  <p className="text-teal-600 font-semibold text-base">
+                    {(keyInsights.strongestTopic?.percentage ?? 0).toFixed(1)}%
+                    performance
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-gradient-to-r from-orange-50 to-amber-50 rounded-xl p-6 border border-orange-200">
+              <div className="flex items-start">
+                <FaExclamationTriangle className="text-orange-600 text-2xl mr-4 mt-1" />
+                <div>
+                  <p className="text-gray-700 font-medium mb-2">
+                    Student's Weakest Topic:
+                  </p>
+                  <p className="text-xl font-bold text-orange-700 mb-1">
+                    {keyInsights.weakestTopic?.name ?? "N/A"}
+                  </p>
+                  <p className="text-orange-600 font-semibold text-base">
+                    {(keyInsights.weakestTopic?.percentage ?? 0).toFixed(1)}%
                     performance
                   </p>
                   <p className="text-sm text-gray-600 mt-2 italic">

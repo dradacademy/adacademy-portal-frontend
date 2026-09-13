@@ -27,6 +27,9 @@ const CreateExamAdminForm = ({
   handleDeleteKeyword,
   handleKeywordKeyDown,
   handleAnswerKeyChange,
+  bulkRangeConfig,
+  handleBulkRangeChange,
+  handleApplyBulkRange,
 }) => {
   return (
     <div className="flex flex-col gap-4 border border-stone-300 rounded-2xl p-3 bg-white">
@@ -140,6 +143,106 @@ const CreateExamAdminForm = ({
           required
         />
       </div>
+
+      {newQuestions.length > 1 && bulkRangeConfig && (
+        <div className="border border-indigo-200 bg-indigo-50/60 rounded-2xl p-4 flex flex-col gap-3">
+          <h4 className="font-semibold text-indigo-700 text-sm">
+            Bulk Apply — set Level / Marks / Negative Mark / Duration for a
+            range of questions at once (e.g. Q1–6, then Q7–10 separately).
+            Leave a field blank to leave it unchanged; individual question
+            fields above can still be fine-tuned afterward.
+          </h4>
+          <div className="grid grid-cols-2 sm:grid-cols-6 gap-2">
+            <div className="flex flex-col gap-1">
+              <label className="text-xs text-stone-500">From Q#</label>
+              <input
+                type="number"
+                name="start"
+                min={1}
+                max={newQuestions.length}
+                placeholder="1"
+                className="border border-stone-300 py-[9px] px-3 focus:outline-none rounded-lg bg-white w-full"
+                value={bulkRangeConfig.start}
+                onChange={handleBulkRangeChange}
+                onWheel={(e) => e.target.blur()}
+              />
+            </div>
+            <div className="flex flex-col gap-1">
+              <label className="text-xs text-stone-500">To Q#</label>
+              <input
+                type="number"
+                name="end"
+                min={1}
+                max={newQuestions.length}
+                placeholder={`${newQuestions.length}`}
+                className="border border-stone-300 py-[9px] px-3 focus:outline-none rounded-lg bg-white w-full"
+                value={bulkRangeConfig.end}
+                onChange={handleBulkRangeChange}
+                onWheel={(e) => e.target.blur()}
+              />
+            </div>
+            <div className="flex flex-col gap-1">
+              <label className="text-xs text-stone-500">Level</label>
+              <select
+                name="level"
+                className="border border-stone-300 py-[9px] px-2 focus:outline-none rounded-lg bg-white w-full text-sm"
+                value={bulkRangeConfig.level}
+                onChange={handleBulkRangeChange}
+              >
+                <option value="">— No change —</option>
+                {[1, 2, 3, 4].map((lvl) => (
+                  <option key={lvl} value={lvl}>
+                    Level {lvl}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="flex flex-col gap-1">
+              <label className="text-xs text-stone-500">Marks</label>
+              <input
+                type="number"
+                name="marks"
+                placeholder="Unchanged"
+                className="border border-stone-300 py-[9px] px-3 focus:outline-none rounded-lg bg-white w-full"
+                value={bulkRangeConfig.marks}
+                onChange={handleBulkRangeChange}
+                onWheel={(e) => e.target.blur()}
+              />
+            </div>
+            <div className="flex flex-col gap-1">
+              <label className="text-xs text-stone-500">Negative Mark</label>
+              <input
+                type="number"
+                name="negativeMark"
+                placeholder="Unchanged"
+                className="border border-stone-300 py-[9px] px-3 focus:outline-none rounded-lg bg-white w-full"
+                value={bulkRangeConfig.negativeMark}
+                onChange={handleBulkRangeChange}
+                onWheel={(e) => e.target.blur()}
+              />
+            </div>
+            <div className="flex flex-col gap-1">
+              <label className="text-xs text-stone-500">Duration (s)</label>
+              <input
+                type="number"
+                name="duration"
+                placeholder="Unchanged"
+                className="border border-stone-300 py-[9px] px-3 focus:outline-none rounded-lg bg-white w-full"
+                value={bulkRangeConfig.duration}
+                onChange={handleBulkRangeChange}
+                onWheel={(e) => e.target.blur()}
+              />
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={handleApplyBulkRange}
+            className="self-start text-sm bg-indigo-500 text-white font-medium py-2 px-4 rounded-lg cursor-pointer hover:opacity-85 duration-300"
+          >
+            Apply to Range
+          </button>
+        </div>
+      )}
 
       {newQuestions.map((question, qIndex) => (
         <div

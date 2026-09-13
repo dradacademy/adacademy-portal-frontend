@@ -11,6 +11,7 @@ import {
   FaUsers,
 } from "react-icons/fa";
 import { EXAM_CATEGORY_OPTIONS } from "../../../constants/examCategories";
+import TopicPerformanceOverview from "./TopicPerformanceOverview";
 
 const ExamOverviewDashboard = ({ onExamClick }) => {
   const [data, setData] = useState(null);
@@ -199,6 +200,9 @@ const ExamOverviewDashboard = ({ onExamClick }) => {
             </div>
           </div>
         </div>
+
+        {/* Topic-wise Performance — who's leading/struggling per topic */}
+        <TopicPerformanceOverview category={activeCategory} />
 
         {/* Exams Grid - Bento Style Cards */}
         <div className="mb-8">
