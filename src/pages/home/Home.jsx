@@ -3,13 +3,18 @@ import Navbar from "../../components/common/Navbar";
 import Footer from "../../components/common/Footer";
 import HeroSectionHome from "../../components/home/HeroSectionHome";
 import TrackRecord from "../../components/home/TrackRecord";
-import ExamsWeCover from "../../components/home/ExamsWeCover";
+import Courses from "../../components/home/Courses";
 import TestSeries from "../../components/home/TestSeries";
 import WhatYouGet from "../../components/home/WhatYouGet";
 import AboutFounder from "../../components/home/AboutFounder";
 import HowItWorks from "../../components/home/HowItWorks";
-import FAQ from "../../components/home/FAQ";
 import Achievers from "../../components/home/Achievers";
+import Testimonials from "../../components/home/Testimonials";
+import Gallery from "../../components/home/Gallery";
+import Announcements from "../../components/home/Announcements";
+import FreeResources from "../../components/home/FreeResources";
+import FAQ from "../../components/home/FAQ";
+import Contact from "../../components/home/Contact";
 import FollowUs from "../../components/home/FollowUs";
 import CTA from "../../components/home/CTA";
 
@@ -20,13 +25,18 @@ const Home = () => {
       <div className="flex flex-col gap-6 mt-5">
         <HeroSectionHome />
         <TrackRecord />
-        <ExamsWeCover />
+        <Courses />
         <TestSeries />
         <WhatYouGet />
         <AboutFounder />
         <HowItWorks />
-        <FAQ />
         <Achievers />
+        <Testimonials />
+        <Gallery />
+        <Announcements />
+        <FreeResources />
+        <FAQ />
+        <Contact />
         <FollowUs />
         <CTA />
       </div>

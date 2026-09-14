@@ -2,7 +2,7 @@ import React, { useContext, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { AuthContext } from "../../context/AuthContext";
 import logo from "../../assets/images/common/logo.png";
-import { Menu as MenuIcon, X } from "lucide-react";
+import { Menu as MenuIcon, X, ChevronDown } from "lucide-react";
 import Box from "@mui/material/Box";
 import Avatar from "@mui/material/Avatar";
 import Menu from "@mui/material/Menu";
@@ -13,6 +13,25 @@ import IconButton from "@mui/material/IconButton";
 import Tooltip from "@mui/material/Tooltip";
 import { FiLogOut } from "react-icons/fi";
 import PortalSelectorPopup from "./popup/PortalSelectorPopup";
+
+const EXAM_LINKS = [
+  { name: "GATE Civil", to: "/exams/gate" },
+  { name: "IES/ESE Civil", to: "/exams/ese" },
+  { name: "TNPSC AE Civil", to: "/exams/tnpsc-ae" },
+  { name: "TNPSC JDO Civil", to: "/exams/tnpsc-jdo" },
+  { name: "SSC JE Civil", to: "/exams/ssc-je" },
+  { name: "RRB JE Civil", to: "/exams/rrb-je" },
+];
+
+const NAV_LINKS = [
+  { name: "Home", href: "/" },
+  { name: "About", href: "/#about" },
+  { name: "Courses", href: "/#courses" },
+  { name: "Achievers", href: "/#achievers" },
+  { name: "Gallery", href: "/#gallery" },
+  { name: "Updates", href: "/#updates" },
+  { name: "Contact", href: "/#contact" },
+];
 
 const Navbar = ({ dashboard }) => {
   const location = useLocation();
@@ -29,21 +48,10 @@ const Navbar = ({ dashboard }) => {
     setAnchorEl(null);
   };
 
-  const { userData, setUserData, handleLogout } = useContext(AuthContext);
+  const [examsAnchorEl, setExamsAnchorEl] = useState(null);
+  const examsOpen = Boolean(examsAnchorEl);
 
-  // const handleLogout = async () => {
-  //   try {
-  //     const response = await axios.post(
-  //       `${import.meta.env.VITE_APP_API_URL}/users/logout`,
-  //       {},
-  //       { withCredentials: true }
-  //     );
-  //     setUserData(null);
-  //     navigate("/login");
-  //   } catch (error) {
-  //     toast.error("Logout failed");
-  //   }
-  // };
+  const { userData, setUserData, handleLogout } = useContext(AuthContext);
 
   const toggleMenu = () => {
     setIsMenuOpen(!isMenuOpen);
@@ -100,34 +108,49 @@ const Navbar = ({ dashboard }) => {
               </>
             ) : (
               <>
-                <a
-                  href="#exams"
-                  className="font-medium hover:text-navy transition-colors relative group"
+                {NAV_LINKS.map((link) => (
+                  <a
+                    key={link.name}
+                    href={link.href}
+                    className="font-medium hover:text-navy transition-colors relative group"
+                  >
+                    {link.name}
+                    <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-gold transition-all group-hover:w-full"></span>
+                  </a>
+                ))}
+                <div
+                  onMouseEnter={(e) => setExamsAnchorEl(e.currentTarget)}
+                  onMouseLeave={() => setExamsAnchorEl(null)}
+                  className="relative"
                 >
-                  Exams We Cover
-                  <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-gold transition-all group-hover:w-full"></span>
-                </a>
-                <a
-                  href="#test-series"
-                  className="font-medium hover:text-navy transition-colors relative group"
-                >
-                  Test Series
-                  <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-gold transition-all group-hover:w-full"></span>
-                </a>
-                <a
-                  href="#about"
-                  className="font-medium hover:text-navy transition-colors relative group"
-                >
-                  About
-                  <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-gold transition-all group-hover:w-full"></span>
-                </a>
-                <a
-                  href="#faq"
-                  className="font-medium hover:text-navy transition-colors relative group"
-                >
-                  FAQ
-                  <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-gold transition-all group-hover:w-full"></span>
-                </a>
+                  <button
+                    type="button"
+                    onClick={(e) => setExamsAnchorEl(e.currentTarget)}
+                    className="font-medium hover:text-navy transition-colors relative group flex items-center gap-1 cursor-pointer"
+                  >
+                    Exams
+                    <ChevronDown className="w-3.5 h-3.5" />
+                    <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-gold transition-all group-hover:w-full"></span>
+                  </button>
+                  <Menu
+                    anchorEl={examsAnchorEl}
+                    open={examsOpen}
+                    onClose={() => setExamsAnchorEl(null)}
+                    MenuListProps={{ onMouseLeave: () => setExamsAnchorEl(null) }}
+                    disableAutoFocusItem
+                  >
+                    {EXAM_LINKS.map((link) => (
+                      <MenuItem
+                        key={link.to}
+                        component={Link}
+                        to={link.to}
+                        onClick={() => setExamsAnchorEl(null)}
+                      >
+                        {link.name}
+                      </MenuItem>
+                    ))}
+                  </Menu>
+                </div>
               </>
             )}
           </nav>
@@ -135,12 +158,6 @@ const Navbar = ({ dashboard }) => {
           {/* Desktop Action Buttons */}
           <div className="hidden lg:flex items-center gap-4 font-poppins">
             {userData != null ? (
-              // <button
-              //   onClick={handleLogout}
-              //   className="border border-blue-600 bg-transparent text-blue-600 text-sm font-medium py-2 px-5 rounded-full font-poppins cursor-pointer hover:opacity-85 duration-300"
-              // >
-              //   Logout
-              // </button>
               <React.Fragment>
                 <Box
                   sx={{
@@ -247,7 +264,7 @@ const Navbar = ({ dashboard }) => {
 
         {/* Mobile Menu */}
         {isMenuOpen && (
-          <div className="lg:hidden absolute left-4 right-4 top-20 bg-white border border-gray-200 rounded-lg shadow-lg z-50">
+          <div className="lg:hidden absolute left-4 right-4 top-20 bg-white border border-gray-200 rounded-lg shadow-lg z-50 max-h-[75vh] overflow-y-auto">
             <div className="py-4">
               {userData != null ? (
                 <>
@@ -288,34 +305,29 @@ const Navbar = ({ dashboard }) => {
                 </>
               ) : (
                 <>
-                  <a
-                    href="#exams"
-                    onClick={closeMenu}
-                    className="block px-6 py-3 text-gray-600 hover:text-navy hover:bg-gray-50 transition-colors font-medium"
-                  >
-                    Exams We Cover
-                  </a>
-                  <a
-                    href="#test-series"
-                    onClick={closeMenu}
-                    className="block px-6 py-3 text-gray-600 hover:text-navy hover:bg-gray-50 transition-colors font-medium"
-                  >
-                    Test Series
-                  </a>
-                  <a
-                    href="#about"
-                    onClick={closeMenu}
-                    className="block px-6 py-3 text-gray-600 hover:text-navy hover:bg-gray-50 transition-colors font-medium"
-                  >
-                    About
-                  </a>
-                  <a
-                    href="#faq"
-                    onClick={closeMenu}
-                    className="block px-6 py-3 text-gray-600 hover:text-navy hover:bg-gray-50 transition-colors font-medium"
-                  >
-                    FAQ
-                  </a>
+                  {NAV_LINKS.map((link) => (
+                    <a
+                      key={link.name}
+                      href={link.href}
+                      onClick={closeMenu}
+                      className="block px-6 py-3 text-gray-600 hover:text-navy hover:bg-gray-50 transition-colors font-medium"
+                    >
+                      {link.name}
+                    </a>
+                  ))}
+                  <div className="px-6 pt-2 pb-1 text-xs font-semibold text-slate uppercase tracking-wide">
+                    Exams
+                  </div>
+                  {EXAM_LINKS.map((link) => (
+                    <Link
+                      key={link.to}
+                      to={link.to}
+                      onClick={closeMenu}
+                      className="block px-6 py-2.5 text-gray-600 hover:text-navy hover:bg-gray-50 transition-colors text-sm"
+                    >
+                      {link.name}
+                    </Link>
+                  ))}
                   <div className="border-t border-gray-200 mt-4 pt-4">
                     <button
                       type="button"

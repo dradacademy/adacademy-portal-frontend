@@ -3,9 +3,39 @@ import { HelpCircle } from "lucide-react";
 
 const FAQS = [
   {
+    question: "Which exams/courses do you cover?",
+    answer:
+      "GATE Civil, IES/ESE Civil, TNPSC AE Civil, TNPSC JDO Civil, SSC JE Civil, and RRB JE Civil.",
+  },
+  {
+    question: "What are your fees?",
+    answer:
+      "Fees vary by course and batch. Call or WhatsApp us at +91 95668 18665 for current pricing.",
+  },
+  {
+    question: "Are classes online or offline?",
+    answer:
+      "We run a hybrid model — both online and offline — so you can choose whichever works for you. Current batch timings are 6:00 PM – 8:30 PM.",
+  },
+  {
+    question: "What kinds of tests are included?",
+    answer:
+      "Topic-wise, subject-wise, mixed-subject, and full-length mock tests, plus dedicated previous-year-question practice — all with real exam-pattern marking and live performance tracking.",
+  },
+  {
+    question: "Do you provide study materials?",
+    answer:
+      "Study material PDFs, previous-year question papers, sample tests, and prep notes are being added to our Free Resources section — check back soon.",
+  },
+  {
+    question: "How do I register or enroll?",
+    answer:
+      "There's no public self-signup — accounts are created by the academy after you enroll. Use the Enroll Now form on this site, or call/WhatsApp us directly, and we'll set up your account.",
+  },
+  {
     question: "How do I get access to the academy portal?",
     answer:
-      "Accounts are created by the academy admin. Once enrolled, you'll receive login details to access your subjects and start practicing.",
+      "Once enrolled, you'll receive login details to access your subjects and start practicing.",
   },
   {
     question: "Is negative marking applied the same way as the real exam?",

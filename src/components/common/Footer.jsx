@@ -10,13 +10,22 @@ const SOCIAL_LINKS = [
   { name: "YouTube", href: "https://www.youtube.com/@DrADAcademy", icon: Youtube },
 ];
 
+const COURSE_LINKS = [
+  { name: "GATE Civil", to: "/exams/gate" },
+  { name: "IES/ESE Civil", to: "/exams/ese" },
+  { name: "TNPSC AE Civil", to: "/exams/tnpsc-ae" },
+  { name: "TNPSC JDO Civil", to: "/exams/tnpsc-jdo" },
+  { name: "SSC JE Civil", to: "/exams/ssc-je" },
+  { name: "RRB JE Civil", to: "/exams/rrb-je" },
+];
+
 const Footer = () => {
   const { userData } = useContext(AuthContext);
 
   return (
     <footer className="bg-navy-dark pt-16 pb-8 px-6 rounded-2xl">
       <div className="container mx-auto px-4">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-12 mb-12">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-12 mb-12">
           <div className="md:col-span-2">
             <div className="flex items-center gap-3 mb-6 font-newsreader">
               <img className=" w-fit h-fit max-w-16" src={logo} alt="" />
@@ -26,7 +35,7 @@ const Footer = () => {
             </div>
             <p className="text-gray-400 mb-6 max-w-md font-poppins">
               Concept clarity for serious civil engineering aspirants — GATE,
-              IES/ESE, TNPSC AE, TNPSC JDO, and SSC JE preparation.
+              IES/ESE, TNPSC AE, TNPSC JDO, SSC JE, and RRB JE preparation.
             </p>
             <div className="flex gap-4 mb-6">
               {SOCIAL_LINKS.map(({ name, href, icon: Icon }) => (
@@ -80,40 +89,21 @@ const Footer = () => {
               {[
                 ...(userData != null
                   ? [
-                      {
-                        name: "Home",
-                        to: "/",
-                      },
-                      {
-                        name: "Activities",
-                        to: "/activities",
-                      },
+                      { name: "Home", to: "/" },
+                      { name: "Activities", to: "/activities" },
                       ...(userData?.role !== "student"
-                        ? [
-                            {
-                              name: "Dashboard",
-                              to: "/dashboard",
-                            },
-                          ]
+                        ? [{ name: "Dashboard", to: "/dashboard" }]
                         : []),
                     ]
                   : [
-                      {
-                        name: "Exams We Cover",
-                        to: "#exams",
-                      },
-                      {
-                        name: "Test Series",
-                        to: "#test-series",
-                      },
-                      {
-                        name: "About",
-                        to: "#about",
-                      },
-                      {
-                        name: "FAQ",
-                        to: "#faq",
-                      },
+                      { name: "Home", to: "/" },
+                      { name: "About", to: "/#about" },
+                      { name: "Courses", to: "/#courses" },
+                      { name: "Exams", to: "/#courses" },
+                      { name: "Achievers", to: "/#achievers" },
+                      { name: "Gallery", to: "/#gallery" },
+                      { name: "Updates", to: "/#updates" },
+                      { name: "Contact", to: "/#contact" },
                     ]),
               ].map((link) => (
                 <li key={link.name}>
@@ -127,12 +117,59 @@ const Footer = () => {
               ))}
             </ul>
           </div>
+          <div>
+            <h3 className="font-bold text-white mb-6 text-lg font-poppins">
+              Courses
+            </h3>
+            <ul className="space-y-4">
+              {COURSE_LINKS.map((link) => (
+                <li key={link.name}>
+                  <Link
+                    to={link.to}
+                    className="text-gray-400 hover:text-white transition-colors flex items-center gap-2 group font-inter ml-1"
+                  >
+                    {link.name}
+                  </Link>
+                </li>
+              ))}
+              <li>
+                <Link
+                  to="/online-test-series"
+                  className="text-gray-400 hover:text-white transition-colors flex items-center gap-2 group font-inter ml-1"
+                >
+                  Online Test Series
+                </Link>
+              </li>
+              <li>
+                <Link
+                  to="/careers"
+                  className="text-gray-400 hover:text-white transition-colors flex items-center gap-2 group font-inter ml-1"
+                >
+                  Careers
+                </Link>
+              </li>
+            </ul>
+          </div>
         </div>
         <div className="border-t border-white/10 pt-8 flex flex-col md:flex-row justify-between items-center gap-4">
           <p className="text-gray-500 text-sm font-inter">
             &copy; {new Date().getFullYear()} Dr. A.D. Academy of Excellence.
-            All rights reserved.
+            All rights reserved. Built for the next generation of engineers.
           </p>
+          <div className="flex gap-5">
+            <Link
+              to="/privacy-policy"
+              className="text-gray-500 hover:text-white text-sm font-inter transition-colors"
+            >
+              Privacy Policy
+            </Link>
+            <Link
+              to="/terms-and-conditions"
+              className="text-gray-500 hover:text-white text-sm font-inter transition-colors"
+            >
+              Terms and Conditions
+            </Link>
+          </div>
         </div>
       </div>
     </footer>

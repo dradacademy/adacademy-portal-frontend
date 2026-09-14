@@ -8,7 +8,10 @@ const STATS = [
 
 const TrackRecord = () => {
   return (
-    <section className="bg-white border-b border-line py-10 rounded-xl">
+    <section
+      id="achievements"
+      className="bg-white border-b border-line py-10 rounded-xl"
+    >
       <div className="container mx-auto px-4">
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 text-center">
           {STATS.map((stat) => (

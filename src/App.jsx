@@ -15,6 +15,15 @@ import CompletedExamSubmissionDetail from "./pages/activities/examDetailedView/C
 const AdminDashboard = lazy(
   () => import("./pages/dashboard/admin/AdminDashboard"),
 );
+const ExamDetailPage = lazy(() => import("./pages/exams/ExamDetailPage"));
+const Careers = lazy(() => import("./pages/careers/Careers"));
+const OnlineTestSeries = lazy(
+  () => import("./pages/onlineTestSeries/OnlineTestSeries"),
+);
+const PrivacyPolicy = lazy(() => import("./pages/legal/PrivacyPolicy"));
+const TermsAndConditions = lazy(
+  () => import("./pages/legal/TermsAndConditions"),
+);
 
 function App() {
   const { userData, loading } = useContext(AuthContext);
@@ -78,6 +87,14 @@ function App() {
         />
         <Route path="/login" element={<Login />} />
         <Route path="/signup" element={<Signup />} />
+        <Route path="/exams/:examSlug" element={<ExamDetailPage />} />
+        <Route path="/careers" element={<Careers />} />
+        <Route path="/online-test-series" element={<OnlineTestSeries />} />
+        <Route path="/privacy-policy" element={<PrivacyPolicy />} />
+        <Route
+          path="/terms-and-conditions"
+          element={<TermsAndConditions />}
+        />
       </Routes>
       <Toaster />
     </div>

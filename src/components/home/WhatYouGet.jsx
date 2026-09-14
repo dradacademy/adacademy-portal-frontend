@@ -6,6 +6,9 @@ import {
   Layers,
   Anchor,
   Smartphone,
+  Repeat,
+  MessageCircleQuestion,
+  UserCheck,
 } from "lucide-react";
 
 const FEATURES = [
@@ -22,10 +25,16 @@ const FEATURES = [
       "Negative marking and question weightage that mirror the actual exam, so your practice score means something.",
   },
   {
-    icon: BarChart3,
-    title: "Instant Results & Analytics",
+    icon: Repeat,
+    title: "Topic-wise, Subject-wise & Mock Tests",
     description:
-      "See your score, accuracy, and weak topics the moment you submit — no waiting for evaluation.",
+      "Topic-wise, subject-wise, mixed-subject, and full-length mock tests, plus dedicated previous-year-question practice.",
+  },
+  {
+    icon: BarChart3,
+    title: "Real Performance Tracking",
+    description:
+      "Every test result, completion time, and on-time/late status is tracked — for you and for the academy — not just a final score.",
   },
   {
     icon: Layers,
@@ -40,6 +49,18 @@ const FEATURES = [
       "Guidance from Dr. A. Dinesh, Ph.D. — not a generic question bank, but a curriculum built by someone who teaches this subject.",
   },
   {
+    icon: MessageCircleQuestion,
+    title: "Doubt-Clearing Support",
+    description:
+      "Reach out directly whenever a concept doesn't click — you're never left guessing between tests.",
+  },
+  {
+    icon: UserCheck,
+    title: "Personalized Guidance",
+    description:
+      "Progress is monitored per student, so guidance is based on where you actually stand, not a one-size-fits-all pace.",
+  },
+  {
     icon: Smartphone,
     title: "Practice Anywhere",
     description:
@@ -49,11 +70,11 @@ const FEATURES = [
 
 const WhatYouGet = () => {
   return (
-    <section className="py-16 bg-white rounded-xl">
+    <section id="why-us" className="py-16 bg-white rounded-xl">
       <div className="container mx-auto px-4">
         <div className="max-w-2xl">
           <span className="text-gold text-xs font-semibold tracking-wide uppercase font-inter">
-            What You Get
+            Why Choose Our Academy
           </span>
           <h2 className="font-newsreader text-3xl sm:text-4xl text-navy-dark mt-3 leading-snug">
             A test platform built the way real exams are structured.

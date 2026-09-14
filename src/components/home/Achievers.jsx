@@ -1,22 +1,27 @@
 import React from "react";
 
-const QuoteMark = () => (
-  <svg width="28" height="22" viewBox="0 0 28 22" fill="#C9971F">
-    <path d="M0 22V13.2C0 8.8 1.2 5.4 3.6 3 6 .6 9 -0.4 12.6 0v5.4c-2 0-3.5.5-4.5 1.5S6.6 9 6.6 11h6V22H0zm15.4 0V13.2c0-4.4 1.2-7.8 3.6-10.2C21.4.6 24.4-.4 28 0v5.4c-2 0-3.5.5-4.5 1.5S22 9 22 11h6V22H15.4z" />
-  </svg>
-);
-
-const TESTIMONIALS = [
+// Real achievers only — do not add placeholder/fabricated entries here.
+// Update this list as the academy shares new results.
+const ACHIEVERS = [
   {
-    quote:
-      "The structured revision cycles made formula mastery feel natural instead of rushed.",
-    name: "Shri Hari Varsha S",
-    detail: "GATE 2026, Civil Engineering",
+    photo: "/achievers/priya-darsini-a.png",
+    name: "Priya Darsini A",
+    branch: "Civil Engineering",
+    exam: "GATE 2026",
+    year: "2026",
+    achievement: "GATE Qualified",
+    story:
+      "Received an NIT offer in the first round of CCMT 2026 counselling.",
   },
   {
-    quote: "Every mock became a clear conversation with my preparation.",
-    name: "Priya Darsini A",
-    detail: "GATE 2026, Civil Engineering",
+    photo: "/achievers/shri-hari-varsha-s.png",
+    name: "Shri Hari Varsha S",
+    branch: "Civil Engineering",
+    exam: "GATE 2026",
+    year: "2026",
+    achievement: "GATE Qualified",
+    story:
+      "Received an NIT offer in the first round of CCMT 2026 counselling.",
   },
 ];
 
@@ -29,23 +34,32 @@ const Achievers = () => {
             Achievers
           </span>
           <h2 className="font-newsreader text-3xl sm:text-4xl text-navy-dark mt-3 leading-snug">
-            From our students, in their own words.
+            Real results from our GATE 2026 batch.
           </h2>
         </div>
-        <div className="grid sm:grid-cols-2 gap-6 mt-12">
-          {TESTIMONIALS.map(({ quote, name, detail }) => (
+        <div className="grid sm:grid-cols-2 gap-6 mt-12 max-w-2xl">
+          {ACHIEVERS.map(({ photo, name, branch, exam, achievement, story }) => (
             <div
               key={name}
-              className="bg-white rounded-xl border border-line p-7 shadow-sm"
+              className="bg-white rounded-xl border border-line shadow-sm overflow-hidden"
             >
-              <QuoteMark />
-              <p className="text-[15px] text-ink leading-relaxed mt-4 italic font-inter">
-                "{quote}"
-              </p>
-              <p className="text-sm font-semibold text-navy-dark mt-4 font-inter">
-                {name}
-              </p>
-              <p className="text-xs text-slate mt-0.5 font-inter">{detail}</p>
+              <img
+                src={photo}
+                alt={name}
+                className="w-full aspect-[4/3] object-cover"
+              />
+              <div className="p-5">
+                <span className="inline-block text-[11px] font-semibold tracking-wide uppercase text-gold bg-gold/10 rounded-full px-2.5 py-1">
+                  {achievement} · {exam}
+                </span>
+                <h3 className="text-base font-semibold text-navy-dark mt-3 font-inter">
+                  {name}
+                </h3>
+                <p className="text-xs text-slate font-inter">{branch}</p>
+                <p className="text-sm text-ink leading-relaxed mt-2.5 font-inter">
+                  {story}
+                </p>
+              </div>
             </div>
           ))}
         </div>

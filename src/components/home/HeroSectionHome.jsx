@@ -1,11 +1,9 @@
 import React, { useState } from "react";
 import { Anchor, Clock3, LineChart } from "lucide-react";
 import EnrollNowPopup from "../common/popup/EnrollNowPopup";
-import PortalSelectorPopup from "../common/popup/PortalSelectorPopup";
 
 const HeroSectionHome = () => {
   const [showEnrollModal, setShowEnrollModal] = useState(false);
-  const [showPortalSelector, setShowPortalSelector] = useState(false);
 
   return (
     <section className="relative overflow-hidden bg-navy-dark rounded-xl">
@@ -20,7 +18,8 @@ const HeroSectionHome = () => {
         <div className="grid gap-12 lg:grid-cols-[1.15fr_0.85fr] items-center py-16 lg:py-20">
           <div>
             <span className="inline-block text-gold-light text-xs sm:text-sm font-semibold tracking-wide uppercase font-inter">
-              GATE Civil &nbsp;•&nbsp; IES/ESE &nbsp;•&nbsp; TNPSC AE &nbsp;•&nbsp; TNPSC JDO &nbsp;•&nbsp; SSC JE
+              GATE Civil &nbsp;•&nbsp; IES/ESE &nbsp;•&nbsp; TNPSC AE
+              &nbsp;•&nbsp; TNPSC JDO &nbsp;•&nbsp; SSC JE &nbsp;•&nbsp; RRB JE
             </span>
             <h1 className="text-white text-4xl sm:text-5xl font-newsreader font-semibold mt-5 leading-tight tracking-tight">
               Build Your Rank.
@@ -28,9 +27,9 @@ const HeroSectionHome = () => {
               Engineer Your Future.
             </h1>
             <p className="text-[#C9D2DE] text-lg leading-relaxed max-w-lg mt-6 font-inter">
-              Concept clarity for serious civil aspirants — topic-wise,
-              subject-wise, mixed-subject, and full-length test series with
-              real exam-pattern marking, from Dr. A. Dinesh, Ph.D.
+              Clear concepts. Practical problem solving. Complete guidance for
+              GATE, ESE, TNPSC AE, TNPSC JDO, SSC JE, and RRB JE — from Dr. A.
+              Dinesh, Ph.D.
             </p>
             <div className="flex flex-wrap gap-4 mt-9 font-inter">
               <button
@@ -38,15 +37,14 @@ const HeroSectionHome = () => {
                 onClick={() => setShowEnrollModal(true)}
                 className="px-6 py-3 bg-gold text-navy-dark rounded-full font-semibold transition-colors hover:bg-gold-light cursor-pointer"
               >
-                Enroll Now
+                Get Started
               </button>
-              <button
-                type="button"
-                onClick={() => setShowPortalSelector(true)}
-                className="px-6 py-3 border border-white/30 text-white rounded-full font-medium transition-colors hover:bg-white/10 cursor-pointer"
+              <a
+                href="#courses"
+                className="px-6 py-3 border border-white/30 text-white rounded-full font-medium transition-colors hover:bg-white/10"
               >
-                Explore Test Series
-              </button>
+                Explore Courses
+              </a>
             </div>
             <div className="flex flex-wrap gap-7 mt-11 pt-7 border-t border-white/15">
               <div className="flex items-center gap-2.5">
@@ -114,10 +112,6 @@ const HeroSectionHome = () => {
       <EnrollNowPopup
         open={showEnrollModal}
         onClose={() => setShowEnrollModal(false)}
-      />
-      <PortalSelectorPopup
-        open={showPortalSelector}
-        onClose={() => setShowPortalSelector(false)}
       />
     </section>
   );
