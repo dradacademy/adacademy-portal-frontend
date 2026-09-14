@@ -14,10 +14,6 @@ const CREDENTIALS = [
     strong: "B.E., Civil Engineering",
     rest: " — First Class",
   },
-  {
-    strong: "Former faculty",
-    rest: ", Sri Ramakrishna Engineering College",
-  },
 ];
 
 const DIFFERENTIATORS = [
