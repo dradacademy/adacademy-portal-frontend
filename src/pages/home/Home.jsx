@@ -1,6 +1,7 @@
 import React from "react";
 import Navbar from "../../components/common/Navbar";
 import Footer from "../../components/common/Footer";
+import PromoBannerCarousel from "../../components/home/PromoBannerCarousel";
 import HeroSectionHome from "../../components/home/HeroSectionHome";
 import TrackRecord from "../../components/home/TrackRecord";
 import Courses from "../../components/home/Courses";
@@ -23,6 +24,7 @@ const Home = () => {
     <div className=" p-5">
       <Navbar />
       <div className="flex flex-col gap-6 mt-5">
+        <PromoBannerCarousel />
         <HeroSectionHome />
         <TrackRecord />
         <Courses />
