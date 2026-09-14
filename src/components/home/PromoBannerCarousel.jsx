@@ -62,7 +62,7 @@ const PromoBannerCarousel = () => {
       <img
         src={slide.image}
         alt={slide.alt}
-        className="w-full h-full object-contain"
+        className="w-full h-full object-cover"
         draggable={false}
       />
     );
@@ -105,7 +105,7 @@ const PromoBannerCarousel = () => {
       onMouseEnter={() => setPaused(true)}
       onMouseLeave={() => setPaused(false)}
     >
-      <div className="relative w-full h-[170px] sm:h-[260px] md:h-[340px] lg:h-[420px]">
+      <div className="relative w-full aspect-[2.7/1]">
         {SLIDES.map((slide, i) => (
           <div
             key={slide.key}
