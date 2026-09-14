@@ -1,0 +1,31 @@
+{
+  "name": "Dr. A.D. Academy of Excellence",
+  "short_name": "AD Academy",
+  "description": "Coaching for civil engineering aspirants — GATE, IES/ESE, TNPSC AE, TNPSC JDO, and SSC JE/RRB JE preparation with real exam-pattern test series.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#0f2a4a",
+  "theme_color": "#0f2a4a",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ]
+}
