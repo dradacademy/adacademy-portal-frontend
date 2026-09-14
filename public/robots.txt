@@ -1,0 +1,9 @@
+User-agent: *
+Allow: /
+Disallow: /dashboard/
+Disallow: /activities/
+Disallow: /attend-exam/
+Disallow: /login
+Disallow: /signup
+
+Sitemap: https://www.dradacademy.com/sitemap.xml

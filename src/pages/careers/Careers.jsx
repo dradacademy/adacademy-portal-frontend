@@ -1,7 +1,9 @@
 import React, { useState } from "react";
+import axios from "axios";
 import toast from "react-hot-toast";
 import Navbar from "../../components/common/Navbar";
 import Footer from "../../components/common/Footer";
+import api from "../../api/axios";
 
 const SUBJECT_OPTIONS = [
   "Structural Engineering",
@@ -28,9 +30,34 @@ const INITIAL_FORM = {
   subjects: [],
 };
 
+// Resumes upload directly to Cloudinary from the browser (unsigned preset,
+// same account already used for exam/content images — see
+// ContentManagementAdminPage.jsx) as a "raw" resource, since a resume is a
+// PDF/DOC, not an image. This is best-effort: if it fails for any reason
+// (network hiccup, or the preset not permitting raw uploads), the
+// application still submits without a resume link rather than blocking the
+// applicant — handleSubmit below catches this and tells them to email it
+// separately as a fallback.
+const uploadResumeToCloudinary = async (file) => {
+  const data = new FormData();
+  data.append("file", file);
+  data.append("upload_preset", import.meta.env.VITE_APP_CLOUDINARY_UPLOAD_PRESET);
+  data.append("cloud_name", import.meta.env.VITE_APP_CLOUDINARY_CLOUD_NAME);
+  const cloudinaryAxios = axios.create({
+    headers: { "Content-Type": "multipart/form-data" },
+  });
+  delete cloudinaryAxios.defaults.headers.common["Authorization"];
+  const res = await cloudinaryAxios.post(
+    `https://api.cloudinary.com/v1_1/${import.meta.env.VITE_APP_CLOUDINARY_CLOUD_NAME}/raw/upload`,
+    data
+  );
+  return res.data.secure_url || res.data.url;
+};
+
 const Careers = () => {
   const [form, setForm] = useState(INITIAL_FORM);
   const [submitted, setSubmitted] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -50,20 +77,59 @@ const Careers = () => {
     }));
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     if (!form.fullName.trim() || !form.contactNumber.trim() || !form.email.trim()) {
       toast.error("Please fill in your name, contact number, and email.");
       return;
     }
-    // TODO: no backend endpoint exists yet for career applications. Once
-    // one is added (e.g. POST /api/career-applications, mirroring the
-    // enrollment-leads pattern), wire this up the same way EnrollNowPopup
-    // submits to /enrollment-leads, including the resume as a file upload.
-    console.log("Career application (not yet submitted anywhere real):", form);
-    toast.success("Thanks — we'll be in touch!");
-    setSubmitted(true);
-    setForm(INITIAL_FORM);
+
+    setSubmitting(true);
+    let resumeUrl = null;
+    let resumeUploadFailed = false;
+
+    if (form.resume) {
+      try {
+        resumeUrl = await uploadResumeToCloudinary(form.resume);
+      } catch (error) {
+        console.error("Resume upload failed:", error);
+        resumeUploadFailed = true;
+      }
+    }
+
+    try {
+      const response = await api.post("/career-applications", {
+        fullName: form.fullName.trim(),
+        contactNumber: form.contactNumber.trim(),
+        email: form.email.trim(),
+        qualification: form.qualification.trim(),
+        college: form.college.trim(),
+        cgpa: form.cgpa.trim(),
+        resumeUrl,
+        gateQualified: form.gateQualified === "yes",
+        gateScore: form.gateScore.trim(),
+        experience: form.experience.trim(),
+        subjects: form.subjects,
+      });
+
+      if (resumeUploadFailed) {
+        toast.success(
+          `${response.data.message} (Your resume didn't upload — please email it to dradacademy@gmail.com separately.)`,
+          { duration: 8000 }
+        );
+      } else {
+        toast.success(response.data.message);
+      }
+      setSubmitted(true);
+      setForm(INITIAL_FORM);
+    } catch (error) {
+      const message =
+        error.response?.data?.message ||
+        "Something went wrong. Please call or WhatsApp us directly.";
+      toast.error(message);
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
@@ -260,9 +326,10 @@ const Careers = () => {
 
           <button
             type="submit"
-            className="w-full py-3 px-4 bg-gold text-navy-dark rounded-full text-sm font-semibold hover:bg-gold-light transition-colors cursor-pointer"
+            disabled={submitting}
+            className="w-full py-3 px-4 bg-gold text-navy-dark rounded-full text-sm font-semibold hover:bg-gold-light transition-colors cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
           >
-            Submit Application
+            {submitting ? "Submitting..." : "Submit Application"}
           </button>
         </form>
       </div>
