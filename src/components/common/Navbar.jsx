@@ -77,19 +77,33 @@ const Navbar = ({ dashboard }) => {
         <div className=" flex h-16 items-center justify-between">
           {/* Logo Section */}
           {!dashboard && (
-            <Link to={"/"} className="flex items-center sm:gap-2 font-newsreader">
-              <img className="w-fit h-fit max-w-16" src={logo} alt="" />
-              <span className="text-lg sm:text-xl lg:text-2xl font-bold text-navy-dark hidden sm:block">
+            <Link
+              to={"/"}
+              className="flex items-center sm:gap-2 font-newsreader min-w-0 shrink"
+            >
+              <img
+                className="w-fit h-fit max-w-16 shrink-0"
+                src={logo}
+                alt=""
+              />
+              {/* min-w-0 + truncate: lets this text box shrink smaller than
+                  its own content width (flex items refuse to by default)
+                  and shows an ellipsis on one line instead of wrapping
+                  onto multiple lines and overflowing the header — this
+                  matters most at medium desktop widths (~1024px+) where
+                  the full nav is already visible and squeezing the
+                  available space, including in an installed PWA window. */}
+              <span className="text-lg sm:text-xl lg:text-2xl font-bold text-navy-dark hidden sm:block truncate min-w-0">
                 Dr. A.D. Academy of Excellence
               </span>
-              <span className="text-lg font-bold text-navy-dark sm:hidden">
+              <span className="text-lg font-bold text-navy-dark sm:hidden truncate min-w-0">
                 Dr. A.D. Academy
               </span>
             </Link>
           )}
 
           {/* Desktop Navigation */}
-          <nav className="hidden lg:flex items-center gap-8 font-poppins font-medium text-slate">
+          <nav className="hidden lg:flex items-center gap-8 font-poppins font-medium text-slate shrink-0">
             {userData != null ? (
               <>
                 <Link
@@ -177,7 +191,7 @@ const Navbar = ({ dashboard }) => {
           </nav>
 
           {/* Desktop Action Buttons */}
-          <div className="hidden lg:flex items-center gap-4 font-poppins">
+          <div className="hidden lg:flex items-center gap-4 font-poppins shrink-0">
             {userData != null ? (
               <React.Fragment>
                 <Box
@@ -283,10 +297,16 @@ const Navbar = ({ dashboard }) => {
           </button>
         </div>
 
-        {/* Mobile Menu */}
+        {/* Mobile Menu — the scrollable link list and the primary action
+            (Log In / Logout) are split into two flex children on purpose:
+            with 7 nav links + 6 exam links, the action button used to be
+            the very last row of one long scrolling list, so it was easy to
+            miss unless you scrolled all the way down. Now it sits in its
+            own non-scrolling footer at the bottom of the panel, always
+            visible the moment the menu opens, no scrolling required. */}
         {isMenuOpen && (
-          <div className="lg:hidden absolute left-4 right-4 top-20 bg-white border border-gray-200 rounded-lg shadow-lg z-50 max-h-[75vh] overflow-y-auto">
-            <div className="py-4">
+          <div className="lg:hidden absolute left-4 right-4 top-20 bg-white border border-gray-200 rounded-lg shadow-lg z-50 max-h-[75vh] flex flex-col overflow-hidden">
+            <div className="py-4 overflow-y-auto">
               {userData != null ? (
                 <>
                   <Link
@@ -312,17 +332,6 @@ const Navbar = ({ dashboard }) => {
                       Dashboard
                     </Link>
                   )}
-                  <div className="border-t border-gray-200 mt-4 pt-4">
-                    <button
-                      onClick={() => {
-                        handleLogout();
-                        closeMenu();
-                      }}
-                      className="block w-full text-left px-6 py-3 text-navy hover:bg-gray-50 transition-colors font-medium"
-                    >
-                      Logout
-                    </button>
-                  </div>
                 </>
               ) : (
                 <>
@@ -360,19 +369,34 @@ const Navbar = ({ dashboard }) => {
                       {link.name}
                     </Link>
                   ))}
-                  <div className="border-t border-gray-200 mt-4 pt-4">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        closeMenu();
-                        setShowPortalSelector(true);
-                      }}
-                      className="block w-full text-left px-6 py-3 text-navy hover:bg-gray-50 transition-colors font-medium"
-                    >
-                      Log In
-                    </button>
-                  </div>
                 </>
+              )}
+            </div>
+
+            {/* Always-visible action footer — never part of the scrolling
+                area above, so it never needs to be scrolled to. */}
+            <div className="border-t border-gray-200 px-6 py-3 shrink-0 bg-white">
+              {userData != null ? (
+                <button
+                  onClick={() => {
+                    handleLogout();
+                    closeMenu();
+                  }}
+                  className="block w-full text-left text-navy hover:bg-gray-50 transition-colors font-medium py-1"
+                >
+                  Logout
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => {
+                    closeMenu();
+                    setShowPortalSelector(true);
+                  }}
+                  className="block w-full text-center bg-navy text-white rounded-full py-2.5 font-medium hover:bg-navy-dark transition-colors"
+                >
+                  Log In
+                </button>
               )}
             </div>
           </div>
