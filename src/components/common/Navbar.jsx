@@ -31,7 +31,17 @@ const NAV_LINKS = [
   { name: "Gallery", href: "/#gallery" },
   { name: "Updates", href: "/#updates" },
   { name: "Contact", href: "/#contact" },
+  // A real page route, not a homepage-section anchor — rendered as a
+  // react-router Link below (see isAnchorLink), unlike the entries above.
+  { name: "Careers", href: "/careers" },
 ];
+
+// The links above are a mix of homepage-section anchors ("/#about", which
+// only make sense as a plain <a> so the browser jumps to that section) and
+// real page routes like "/careers" (which should use react-router's Link
+// so navigating away from the homepage actually works, including when
+// you're not currently on "/").
+const isAnchorLink = (href) => href.includes("#");
 
 const Navbar = ({ dashboard }) => {
   const location = useLocation();
@@ -108,16 +118,27 @@ const Navbar = ({ dashboard }) => {
               </>
             ) : (
               <>
-                {NAV_LINKS.map((link) => (
-                  <a
-                    key={link.name}
-                    href={link.href}
-                    className="font-medium hover:text-navy transition-colors relative group"
-                  >
-                    {link.name}
-                    <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-gold transition-all group-hover:w-full"></span>
-                  </a>
-                ))}
+                {NAV_LINKS.map((link) =>
+                  isAnchorLink(link.href) ? (
+                    <a
+                      key={link.name}
+                      href={link.href}
+                      className="font-medium hover:text-navy transition-colors relative group"
+                    >
+                      {link.name}
+                      <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-gold transition-all group-hover:w-full"></span>
+                    </a>
+                  ) : (
+                    <Link
+                      key={link.name}
+                      to={link.href}
+                      className="font-medium hover:text-navy transition-colors relative group"
+                    >
+                      {link.name}
+                      <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-gold transition-all group-hover:w-full"></span>
+                    </Link>
+                  )
+                )}
                 <div
                   onMouseEnter={(e) => setExamsAnchorEl(e.currentTarget)}
                   onMouseLeave={() => setExamsAnchorEl(null)}
@@ -305,16 +326,27 @@ const Navbar = ({ dashboard }) => {
                 </>
               ) : (
                 <>
-                  {NAV_LINKS.map((link) => (
-                    <a
-                      key={link.name}
-                      href={link.href}
-                      onClick={closeMenu}
-                      className="block px-6 py-3 text-gray-600 hover:text-navy hover:bg-gray-50 transition-colors font-medium"
-                    >
-                      {link.name}
-                    </a>
-                  ))}
+                  {NAV_LINKS.map((link) =>
+                    isAnchorLink(link.href) ? (
+                      <a
+                        key={link.name}
+                        href={link.href}
+                        onClick={closeMenu}
+                        className="block px-6 py-3 text-gray-600 hover:text-navy hover:bg-gray-50 transition-colors font-medium"
+                      >
+                        {link.name}
+                      </a>
+                    ) : (
+                      <Link
+                        key={link.name}
+                        to={link.href}
+                        onClick={closeMenu}
+                        className="block px-6 py-3 text-gray-600 hover:text-navy hover:bg-gray-50 transition-colors font-medium"
+                      >
+                        {link.name}
+                      </Link>
+                    )
+                  )}
                   <div className="px-6 pt-2 pb-1 text-xs font-semibold text-slate uppercase tracking-wide">
                     Exams
                   </div>

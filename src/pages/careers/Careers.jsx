@@ -14,7 +14,14 @@ const SUBJECT_OPTIONS = [
   "Surveying",
   "Construction Materials & Management",
   "General Aptitude",
+  "General Studies",
+  "Language",
 ];
+
+// A checkbox choice, not a real subject name — checking it reveals a free-text
+// box (otherSubject below) so an applicant can name a subject that isn't in
+// the fixed list above, rather than being stuck with no way to say it.
+const OTHERS_OPTION = "Others";
 
 const INITIAL_FORM = {
   fullName: "",
@@ -28,6 +35,7 @@ const INITIAL_FORM = {
   gateScore: "",
   experience: "",
   subjects: [],
+  otherSubject: "",
 };
 
 // Resumes upload directly to Cloudinary from the browser (unsigned preset,
@@ -97,6 +105,20 @@ const Careers = () => {
       }
     }
 
+    // Replace the "Others" checkbox value with what the applicant actually
+    // typed (if anything) — so the admin sees the real subject name instead
+    // of the literal word "Others" in the saved application/notification.
+    const otherSubjectText = form.otherSubject.trim();
+    const finalSubjects = form.subjects
+      .map((s) =>
+        s === OTHERS_OPTION
+          ? otherSubjectText
+            ? otherSubjectText
+            : null // "Others" checked but left blank — drop it rather than submit a meaningless label
+          : s
+      )
+      .filter(Boolean);
+
     try {
       const response = await api.post("/career-applications", {
         fullName: form.fullName.trim(),
@@ -109,7 +131,7 @@ const Careers = () => {
         gateQualified: form.gateQualified === "yes",
         gateScore: form.gateScore.trim(),
         experience: form.experience.trim(),
-        subjects: form.subjects,
+        subjects: finalSubjects,
       });
 
       if (resumeUploadFailed) {
@@ -321,7 +343,25 @@ const Careers = () => {
                   {subject}
                 </label>
               ))}
+              <label className="flex items-center gap-2 text-sm font-inter">
+                <input
+                  type="checkbox"
+                  checked={form.subjects.includes(OTHERS_OPTION)}
+                  onChange={() => handleSubjectToggle(OTHERS_OPTION)}
+                />
+                Others
+              </label>
             </div>
+            {form.subjects.includes(OTHERS_OPTION) && (
+              <input
+                type="text"
+                name="otherSubject"
+                placeholder="Please specify the subject"
+                value={form.otherSubject}
+                onChange={handleChange}
+                className="w-full border border-line rounded-lg px-3.5 py-2.5 text-sm font-inter outline-none focus:border-navy transition-colors mt-3"
+              />
+            )}
           </div>
 
           <button
