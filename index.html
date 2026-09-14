@@ -2,6 +2,15 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
+    <!-- Preconnect: opens the connection (DNS + TLS handshake) to the API
+         and image CDN as soon as the page starts loading, instead of
+         waiting until the first fetch/image request needs them — shaves a
+         real round-trip off the first thing the app does after opening,
+         especially noticeable on mobile data. -->
+    <link rel="preconnect" href="https://adacademy-portal-backend-production.up.railway.app" crossorigin />
+    <link rel="dns-prefetch" href="https://adacademy-portal-backend-production.up.railway.app" />
+    <link rel="preconnect" href="https://res.cloudinary.com" crossorigin />
+    <link rel="dns-prefetch" href="https://res.cloudinary.com" />
     <link rel="icon" type="image/png" href="/logo.png" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
     <link rel="manifest" href="/manifest.webmanifest" />
