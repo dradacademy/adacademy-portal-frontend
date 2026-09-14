@@ -1,11 +1,12 @@
-import React, { useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
+import axios from "axios";
 import { ImageOff } from "lucide-react";
 
-// Only "Facility" has real photos right now. The rest are shown as
-// selectable categories so the gallery is ready to grow, but they honestly
-// say "coming soon" rather than showing placeholder/fake images.
-const CATEGORIES = [
-  "All",
+// The category tabs are shown even for a category with no photos yet, so
+// visitors know what's coming — matches the original hand-written gallery.
+// Any category name an admin adds via Content Management that isn't in
+// this list still shows up too (see categories below).
+const BASE_CATEGORIES = [
   "Facility",
   "Classroom Sessions",
   "Faculty",
@@ -16,18 +17,39 @@ const CATEGORIES = [
   "Achievers",
 ];
 
-const FACILITY_PHOTOS = [
-  { src: "/gallery/reception-entrance.png", alt: "Reception / Entrance" },
-  { src: "/gallery/classroom.png", alt: "Classroom" },
-  { src: "/gallery/meeting-room.png", alt: "Meeting Room" },
-  { src: "/gallery/faculty-room.png", alt: "Faculty Room" },
-  { src: "/gallery/digital-classroom.png", alt: "Digital Classroom" },
-];
-
+// Content is managed from the admin dashboard's Content Management page
+// (Phase 3 CMS) — see backend/controllers/contentController.js.
 const Gallery = () => {
+  const [photos, setPhotos] = useState([]);
+  const [loaded, setLoaded] = useState(false);
   const [active, setActive] = useState("All");
 
-  const showFacility = active === "All" || active === "Facility";
+  useEffect(() => {
+    let cancelled = false;
+    axios
+      .get(`${import.meta.env.VITE_APP_API_URL}/content/public/gallery`)
+      .then((res) => {
+        if (!cancelled) setPhotos(res.data?.data || []);
+      })
+      .catch(() => {})
+      .finally(() => {
+        if (!cancelled) setLoaded(true);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const categories = useMemo(() => {
+    const fromPhotos = photos.map((p) => p.subtitle).filter(Boolean);
+    const merged = Array.from(new Set([...BASE_CATEGORIES, ...fromPhotos]));
+    return ["All", ...merged];
+  }, [photos]);
+
+  const visiblePhotos =
+    active === "All" ? photos : photos.filter((p) => p.subtitle === active);
+
+  if (!loaded) return null;
 
   return (
     <section id="gallery" className="py-16 bg-cream rounded-xl">
@@ -42,7 +64,7 @@ const Gallery = () => {
         </div>
 
         <div className="flex flex-wrap gap-2.5 mt-8">
-          {CATEGORIES.map((cat) => (
+          {categories.map((cat) => (
             <button
               key={cat}
               type="button"
@@ -58,16 +80,16 @@ const Gallery = () => {
           ))}
         </div>
 
-        {showFacility ? (
+        {visiblePhotos.length > 0 ? (
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5 mt-10">
-            {FACILITY_PHOTOS.map(({ src, alt }) => (
+            {visiblePhotos.map(({ _id, image, title }) => (
               <div
-                key={src}
+                key={_id}
                 className="rounded-xl overflow-hidden border border-line shadow-sm bg-white"
               >
                 <img
-                  src={src}
-                  alt={alt}
+                  src={image}
+                  alt={title}
                   className="w-full aspect-[4/3] object-cover"
                 />
               </div>

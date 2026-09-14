@@ -1,4 +1,5 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
+import axios from "axios";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 
 const QuoteMark = () => (
@@ -7,32 +8,38 @@ const QuoteMark = () => (
   </svg>
 );
 
-// Same two students as the Achievers section, shown here in their own
-// words — real quotes, carried over from the academy's existing site.
-const TESTIMONIALS = [
-  {
-    quote:
-      "The structured revision cycles made formula mastery feel natural instead of rushed.",
-    name: "Shri Hari Varsha S",
-    detail: "GATE 2026, Civil Engineering",
-  },
-  {
-    quote:
-      "Every mock became a clear conversation with my preparation. I knew exactly what to fix next.",
-    name: "Priya Darsini A",
-    detail: "GATE 2026, Civil Engineering",
-  },
-];
-
+// Content is managed from the admin dashboard's Content Management page
+// (Phase 3 CMS) — see backend/controllers/contentController.js.
 const Testimonials = () => {
+  const [testimonials, setTestimonials] = useState([]);
+  const [loaded, setLoaded] = useState(false);
   const [index, setIndex] = useState(0);
-  const total = TESTIMONIALS.length;
+
+  useEffect(() => {
+    let cancelled = false;
+    axios
+      .get(`${import.meta.env.VITE_APP_API_URL}/content/public/testimonial`)
+      .then((res) => {
+        if (!cancelled) setTestimonials(res.data?.data || []);
+      })
+      .catch(() => {})
+      .finally(() => {
+        if (!cancelled) setLoaded(true);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const total = testimonials.length;
 
   const go = (delta) => {
     setIndex((prev) => (prev + delta + total) % total);
   };
 
-  const current = TESTIMONIALS[index];
+  if (!loaded || total === 0) return null;
+
+  const current = testimonials[index];
 
   return (
     <section id="testimonials" className="py-16 bg-white rounded-xl">
@@ -50,14 +57,16 @@ const Testimonials = () => {
           <div className="bg-cream rounded-xl border border-line p-8 sm:p-10 text-center min-h-[220px] flex flex-col items-center justify-center">
             <QuoteMark />
             <p className="text-[17px] text-ink leading-relaxed mt-5 italic font-inter max-w-xl">
-              "{current.quote}"
+              "{current.body}"
             </p>
             <p className="text-sm font-semibold text-navy-dark mt-5 font-inter">
-              {current.name}
+              {current.title}
             </p>
-            <p className="text-xs text-slate mt-0.5 font-inter">
-              {current.detail}
-            </p>
+            {current.subtitle && (
+              <p className="text-xs text-slate mt-0.5 font-inter">
+                {current.subtitle}
+              </p>
+            )}
           </div>
 
           {total > 1 && (
@@ -71,9 +80,9 @@ const Testimonials = () => {
                 <ChevronLeft className="w-4 h-4" />
               </button>
               <div className="flex gap-2">
-                {TESTIMONIALS.map((t, i) => (
+                {testimonials.map((t, i) => (
                   <button
-                    key={t.name}
+                    key={t._id}
                     type="button"
                     aria-label={`Go to testimonial ${i + 1}`}
                     onClick={() => setIndex(i)}
