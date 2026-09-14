@@ -2,7 +2,14 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/logo.png" />
+    <link rel="icon" type="image/png" href="/logo.png" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <meta name="theme-color" content="#0f2a4a" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="AD Academy" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Dr. A.D. Academy of Excellence | Coaching for Civil Engineering Aspirants</title>
     <meta
@@ -15,10 +22,25 @@
       content="Coaching for civil engineering aspirants — GATE, IES/ESE, TNPSC AE, TNPSC JDO, and SSC JE/RRB JE preparation with real exam-pattern test series."
     />
     <meta property="og:type" content="website" />
+
+    <!-- Google Analytics (GA4) — carried over from the dradacademy.com
+         site being retired; same measurement ID, so historical data in
+         GA4 stays under one continuous property. -->
+    <script
+      async
+      src="https://www.googletagmanager.com/gtag/js?id=G-RM628R5034"
+    ></script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag() {
+        dataLayer.push(arguments);
+      }
+      gtag("js", new Date());
+      gtag("config", "G-RM628R5034");
+    </script>
   </head>
   <body>
     <div id="root"></div>
     <script type="module" src="/src/main.jsx"></script>
   </body>
 </html>
-
