@@ -52,17 +52,7 @@ const PrivacyPolicy = () => {
             </h2>
             <p>
               If you're a student of Dr. A.D. Academy of Excellence and would
-              like your account and data deleted, email{" "}
-              
-                href="mailto:dradacademy@gmail.com"
-                className="text-navy hover:text-gold underline"
-              >
-                dradacademy@gmail.com
-              </a>{" "}
-              or WhatsApp/call us at{" "}
-              <strong className="font-semibold">+91 95668 18665</strong> with
-              your registered name and phone number, along with a request to
-              delete your account.
+              like your account and data deleted, email <a href="mailto:dradacademy@gmail.com" className="text-navy hover:text-gold underline">dradacademy@gmail.com</a> or WhatsApp/call us at <strong className="font-semibold">+91 95668 18665</strong> with your registered name and phone number, along with a request to delete your account.
             </p>
             <p className="mt-3">
               We will delete your name, phone number, email address, login
@@ -112,17 +102,7 @@ const PrivacyPolicy = () => {
               Contact us
             </h2>
             <p>
-              If you'd like to know what information we hold about you, or
-              want it corrected or removed, call or WhatsApp us at{" "}
-              <strong className="font-semibold">+91 95668 18665</strong> or
-              email{" "}
-              
-                href="mailto:dradacademy@gmail.com"
-                className="text-navy hover:text-gold underline"
-              >
-                dradacademy@gmail.com
-              </a>
-              .
+              If you'd like to know what information we hold about you, or want it corrected or removed, call or WhatsApp us at <strong className="font-semibold">+91 95668 18665</strong> or email <a href="mailto:dradacademy@gmail.com" className="text-navy hover:text-gold underline">dradacademy@gmail.com</a>.
             </p>
           </div>
         </div>
