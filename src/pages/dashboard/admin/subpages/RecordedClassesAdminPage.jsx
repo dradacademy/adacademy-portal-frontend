@@ -4,7 +4,7 @@ import toast from "react-hot-toast";
 import { Dialog } from "@mui/material";
 import Select from "react-select";
 import { MdClose } from "react-icons/md";
-import { UploadCloud, Video, Trash2, RefreshCw } from "lucide-react";
+import { Youtube, Video, Trash2, Pencil } from "lucide-react";
 import {
   EXAM_CATEGORY_OPTIONS,
   getCategoryLabel,
@@ -19,50 +19,32 @@ const formatDateTime = (value) => {
   });
 };
 
-const StatusPill = ({ status, active }) => {
-  if (!active) {
-    return (
-      <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-gray-200 text-gray-600">
-        Retired
-      </span>
-    );
-  }
-  const map = {
-    ready: "bg-emerald-100 text-emerald-700",
-    processing: "bg-amber-100 text-amber-700",
-    uploading: "bg-sky-100 text-sky-700",
-    error: "bg-rose-100 text-rose-700",
-  };
-  return (
-    <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${map[status] || "bg-gray-100 text-gray-600"}`}>
-      {status}
-    </span>
-  );
+const EMPTY_FORM = {
+  title: "",
+  description: "",
+  category: EXAM_CATEGORY_OPTIONS[0].value,
+  recordedDate: new Date().toISOString().slice(0, 10),
+  youtubeUrl: "",
+  durationMinutes: "",
 };
 
-// Admin management for the in-app recorded-class video system (Cloudflare
-// Stream). Upload goes STRAIGHT from the admin's browser to Cloudflare
-// (never through our own server) — essential for multi-hour class
-// recordings; see requestUploadUrl in recordedClassController.js for why.
+// Admin management for the in-app recorded-class list. The admin uploads
+// the actual class recording to their own YouTube account (as Unlisted —
+// not publicly searchable) and pastes the link here; this page only ever
+// stores the video ID + metadata, never a file. Playback/access is still
+// gated in-app by category + course enrollment (see videoPlaybackController
+// on the backend) — what changed from the earlier Cloudflare Stream design
+// is that once a student presses play it's an ordinary YouTube embed, with
+// no true anti-download protection.
 const RecordedClassesAdminPage = () => {
   const [recordings, setRecordings] = useState([]);
   const [loading, setLoading] = useState(true);
   const [activeCategory, setActiveCategory] = useState("all");
 
-  const [openUploadPopup, setOpenUploadPopup] = useState(false);
-  const [uploadForm, setUploadForm] = useState({
-    title: "",
-    description: "",
-    category: EXAM_CATEGORY_OPTIONS[0].value,
-    recordedDate: new Date().toISOString().slice(0, 10),
-  });
-  const [videoFile, setVideoFile] = useState(null);
-  const [uploadProgress, setUploadProgress] = useState(0);
-  const [uploading, setUploading] = useState(false);
-
-  const [retentionDays, setRetentionDays] = useState("");
-  const [retentionLoading, setRetentionLoading] = useState(false);
-  const [sweepRunning, setSweepRunning] = useState(false);
+  const [openFormPopup, setOpenFormPopup] = useState(false);
+  const [editingId, setEditingId] = useState(null);
+  const [form, setForm] = useState(EMPTY_FORM);
+  const [saving, setSaving] = useState(false);
 
   const fetchRecordings = async () => {
     try {
@@ -79,89 +61,81 @@ const RecordedClassesAdminPage = () => {
     }
   };
 
-  const fetchRetentionSetting = async () => {
-    try {
-      const response = await axios.get(
-        `${import.meta.env.VITE_APP_API_URL}/recorded-classes/settings/retention`
-      );
-      const days = response.data?.data?.videoRetentionDays;
-      setRetentionDays(days ? String(days) : "");
-    } catch (error) {
-      // Non-fatal — settings panel just stays blank/default.
-    }
-  };
-
   useEffect(() => {
     fetchRecordings();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeCategory]);
 
-  useEffect(() => {
-    fetchRetentionSetting();
-  }, []);
-
-  const handleCloseUploadPopup = () => {
-    setOpenUploadPopup(false);
-    setVideoFile(null);
-    setUploadProgress(0);
-    setUploadForm({
-      title: "",
-      description: "",
-      category: EXAM_CATEGORY_OPTIONS[0].value,
-      recordedDate: new Date().toISOString().slice(0, 10),
-    });
+  const handleClosePopup = () => {
+    setOpenFormPopup(false);
+    setEditingId(null);
+    setForm(EMPTY_FORM);
   };
 
-  const handleUpload = async () => {
-    if (!uploadForm.title || !uploadForm.category || !uploadForm.recordedDate) {
-      toast.error("Please fill in the title, category, and recorded date.");
-      return;
-    }
-    if (!videoFile) {
-      toast.error("Please choose a video file to upload.");
+  const handleOpenAdd = () => {
+    setEditingId(null);
+    setForm(EMPTY_FORM);
+    setOpenFormPopup(true);
+  };
+
+  const handleOpenEdit = (rec) => {
+    setEditingId(rec._id);
+    setForm({
+      title: rec.title,
+      description: rec.description || "",
+      category: rec.category,
+      recordedDate: rec.recordedDate
+        ? new Date(rec.recordedDate).toISOString().slice(0, 10)
+        : new Date().toISOString().slice(0, 10),
+      youtubeUrl: `https://youtu.be/${rec.youtubeVideoId}`,
+      durationMinutes: rec.durationSeconds
+        ? String(Math.round(rec.durationSeconds / 60))
+        : "",
+    });
+    setOpenFormPopup(true);
+  };
+
+  const handleSave = async () => {
+    if (!form.title || !form.category || !form.recordedDate || !form.youtubeUrl) {
+      toast.error("Please fill in the title, category, recorded date, and YouTube link.");
       return;
     }
 
-    setUploading(true);
-    setUploadProgress(0);
+    setSaving(true);
     try {
-      // 1. Ask our backend for a one-time Cloudflare Stream direct-upload
-      //    URL + create the metadata row.
-      const { data } = await axios.post(
-        `${import.meta.env.VITE_APP_API_URL}/recorded-classes/upload-url`,
-        uploadForm
-      );
+      const payload = {
+        title: form.title,
+        description: form.description,
+        category: form.category,
+        recordedDate: form.recordedDate,
+        youtubeUrl: form.youtubeUrl,
+        durationSeconds: form.durationMinutes
+          ? Number(form.durationMinutes) * 60
+          : null,
+      };
 
-      // 2. Upload the actual file STRAIGHT to Cloudflare — bypasses our own
-      //    server entirely, so a multi-hour recording never hits our
-      //    backend's request size/timeout limits. Uses a bare axios
-      //    instance (not the shared `axios` import) so our own Bearer
-      //    token — set as a global default header for calls to our own
-      //    API — is never sent along to Cloudflare's URL.
-      const formData = new FormData();
-      formData.append("file", videoFile);
+      if (editingId) {
+        await axios.patch(
+          `${import.meta.env.VITE_APP_API_URL}/recorded-classes/${editingId}`,
+          payload
+        );
+        toast.success("Recording updated.");
+      } else {
+        await axios.post(
+          `${import.meta.env.VITE_APP_API_URL}/recorded-classes`,
+          payload
+        );
+        toast.success("Recording added — students in this category can now see it.");
+      }
 
-      const uploadClient = axios.create();
-      await uploadClient.post(data.uploadUrl, formData, {
-        onUploadProgress: (evt) => {
-          if (evt.total) {
-            setUploadProgress(Math.round((evt.loaded / evt.total) * 100));
-          }
-        },
-      });
-
-      toast.success(
-        "Upload complete. Cloudflare is now processing the video — it will show as \"ready\" here once done."
-      );
-      handleCloseUploadPopup();
+      handleClosePopup();
       fetchRecordings();
     } catch (error) {
       toast.error(
-        error?.response?.data?.message ||
-          "Upload failed. If Cloudflare Stream isn't configured yet, an admin needs to complete that setup first."
+        error?.response?.data?.message || "Failed to save the recording."
       );
     } finally {
-      setUploading(false);
+      setSaving(false);
     }
   };
 
@@ -181,7 +155,7 @@ const RecordedClassesAdminPage = () => {
   const handleDelete = async (recording) => {
     if (
       !window.confirm(
-        `Permanently delete "${recording.title}" from Cloudflare Stream storage? This cannot be undone.`
+        `Remove "${recording.title}" from the app? The video itself stays on YouTube — this only removes it from here.`
       )
     ) {
       return;
@@ -190,54 +164,10 @@ const RecordedClassesAdminPage = () => {
       await axios.delete(
         `${import.meta.env.VITE_APP_API_URL}/recorded-classes/${recording._id}`
       );
-      toast.success("Recording deleted from storage.");
+      toast.success("Recording removed.");
       fetchRecordings();
     } catch (error) {
-      toast.error("Failed to delete recording.");
-    }
-  };
-
-  const handleSaveRetention = async () => {
-    setRetentionLoading(true);
-    try {
-      const value = retentionDays ? Number(retentionDays) : null;
-      await axios.patch(
-        `${import.meta.env.VITE_APP_API_URL}/recorded-classes/settings/retention`,
-        { videoRetentionDays: value }
-      );
-      toast.success(
-        value
-          ? `Recordings older than ${value} days will now be auto-deleted from storage.`
-          : "Automatic deletion disabled — recordings are kept forever."
-      );
-    } catch (error) {
-      toast.error(error?.response?.data?.message || "Failed to update retention setting");
-    } finally {
-      setRetentionLoading(false);
-    }
-  };
-
-  const handleRunSweepNow = async () => {
-    setSweepRunning(true);
-    try {
-      const response = await axios.post(
-        `${import.meta.env.VITE_APP_API_URL}/recorded-classes/settings/retention/run-now`
-      );
-      const result = response.data?.data;
-      if (result?.skipped) {
-        toast("No retention window configured — nothing to delete.", { icon: "ℹ️" });
-      } else {
-        toast.success(
-          `Sweep complete: ${result.deleted.length} deleted${
-            result.failed?.length ? `, ${result.failed.length} failed` : ""
-          }.`
-        );
-      }
-      fetchRecordings();
-    } catch (error) {
-      toast.error("Failed to run retention sweep.");
-    } finally {
-      setSweepRunning(false);
+      toast.error("Failed to remove recording.");
     }
   };
 
@@ -249,53 +179,17 @@ const RecordedClassesAdminPage = () => {
             Recorded Classes
           </h1>
           <p className="text-stone-400 font-medium">
-            Upload and manage in-app recorded classes. Students can only
-            stream these (no download) and only while their course
+            Upload the class recording to YouTube as Unlisted, then paste
+            the link here. Students only see it while their course
             enrollment is active.
           </p>
         </div>
         <button
-          onClick={() => setOpenUploadPopup(true)}
+          onClick={handleOpenAdd}
           className="flex items-center gap-2 text-nowrap bg-indigo-500 text-stone-50 font-medium py-2 px-5 rounded-2xl font-poppins cursor-pointer hover:opacity-85 duration-300"
         >
-          <UploadCloud className="h-4 w-4" /> Upload Recording
+          <Youtube className="h-4 w-4" /> Add Recording
         </button>
-      </div>
-
-      {/* Retention / cost-control settings */}
-      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 flex flex-wrap items-end gap-4">
-        <div className="flex flex-col gap-1">
-          <label className="text-sm font-medium text-gray-600">
-            Auto-delete recordings after (days)
-          </label>
-          <input
-            type="number"
-            min="1"
-            placeholder="Never (kept forever)"
-            value={retentionDays}
-            onChange={(e) => setRetentionDays(e.target.value)}
-            className="border border-gray-200 rounded-lg px-3 py-2 text-sm w-56 focus:outline-none focus:border-indigo-400"
-          />
-        </div>
-        <button
-          onClick={handleSaveRetention}
-          disabled={retentionLoading}
-          className="px-4 py-2 rounded-lg text-sm font-medium bg-indigo-500 text-white hover:opacity-85 disabled:opacity-50"
-        >
-          Save
-        </button>
-        <button
-          onClick={handleRunSweepNow}
-          disabled={sweepRunning}
-          className="flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-medium border border-gray-200 text-gray-600 hover:border-indigo-300 disabled:opacity-50"
-        >
-          <RefreshCw className={`h-3.5 w-3.5 ${sweepRunning ? "animate-spin" : ""}`} />
-          Run sweep now
-        </button>
-        <p className="text-xs text-gray-400 w-full">
-          Leave blank to keep every recording forever. Deletion removes the
-          video from Cloudflare Stream storage permanently — it cannot be undone.
-        </p>
       </div>
 
       {/* Category tabs */}
@@ -348,7 +242,7 @@ const RecordedClassesAdminPage = () => {
             ) : recordings.length === 0 ? (
               <tr>
                 <td colSpan={6} className="text-center text-gray-400 py-10">
-                  No recordings uploaded yet.
+                  No recordings added yet.
                 </td>
               </tr>
             ) : (
@@ -381,10 +275,25 @@ const RecordedClassesAdminPage = () => {
                       : "—"}
                   </td>
                   <td className="px-4 py-3">
-                    <StatusPill status={rec.status} active={rec.active} />
+                    <span
+                      className={`px-2 py-0.5 rounded-full text-xs font-medium ${
+                        rec.active
+                          ? "bg-emerald-100 text-emerald-700"
+                          : "bg-gray-200 text-gray-600"
+                      }`}
+                    >
+                      {rec.active ? "Active" : "Retired"}
+                    </span>
                   </td>
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => handleOpenEdit(rec)}
+                        className="p-1.5 rounded bg-indigo-50 text-indigo-600 hover:bg-indigo-100"
+                        title="Edit"
+                      >
+                        <Pencil className="h-4 w-4" />
+                      </button>
                       <button
                         onClick={() => handleToggleActive(rec)}
                         className={`px-3 py-1.5 rounded text-xs font-medium transition duration-300 cursor-pointer ${
@@ -398,7 +307,7 @@ const RecordedClassesAdminPage = () => {
                       <button
                         onClick={() => handleDelete(rec)}
                         className="p-1.5 rounded bg-rose-50 text-rose-600 hover:bg-rose-100"
-                        title="Delete forever"
+                        title="Remove"
                       >
                         <Trash2 className="h-4 w-4" />
                       </button>
@@ -411,22 +320,22 @@ const RecordedClassesAdminPage = () => {
         </table>
       </div>
 
-      {/* Upload dialog */}
-      <Dialog open={openUploadPopup} onClose={uploading ? undefined : handleCloseUploadPopup}>
+      {/* Add/edit dialog */}
+      <Dialog open={openFormPopup} onClose={saving ? undefined : handleClosePopup}>
         <div className="flex flex-col gap-5 sm:min-w-[500px] p-5">
           <div className="flex items-start justify-between gap-6 w-full">
             <div className="flex flex-col gap-1">
               <h1 className="text-2xl font-bold text-stone-700 font-poppins">
-                Upload Recording
+                {editingId ? "Edit Recording" : "Add Recording"}
               </h1>
               <p className="text-sm text-stone-500 font-work-sans">
-                Uploads directly from your browser to Cloudflare Stream —
-                large multi-hour files are fine.
+                Upload the class to YouTube as Unlisted first, then paste
+                its link below.
               </p>
             </div>
-            {!uploading && (
+            {!saving && (
               <MdClose
-                onClick={handleCloseUploadPopup}
+                onClick={handleClosePopup}
                 className="text-stone-500 font-medium text-4xl cursor-pointer hover:opacity-80 duration-300"
               />
             )}
@@ -436,27 +345,27 @@ const RecordedClassesAdminPage = () => {
               type="text"
               placeholder="Class Title"
               className="border border-stone-300 py-[10px] px-4 focus:outline-stone-300 rounded-2xl bg-white"
-              value={uploadForm.title}
-              onChange={(e) => setUploadForm({ ...uploadForm, title: e.target.value })}
-              disabled={uploading}
+              value={form.title}
+              onChange={(e) => setForm({ ...form, title: e.target.value })}
+              disabled={saving}
             />
             <textarea
               placeholder="Description (optional)"
               className="border border-stone-300 py-[10px] px-4 focus:outline-stone-300 rounded-2xl bg-white resize-none"
               rows={2}
-              value={uploadForm.description}
-              onChange={(e) => setUploadForm({ ...uploadForm, description: e.target.value })}
-              disabled={uploading}
+              value={form.description}
+              onChange={(e) => setForm({ ...form, description: e.target.value })}
+              disabled={saving}
             />
             <Select
               className="w-full"
               placeholder="Exam Category"
               options={EXAM_CATEGORY_OPTIONS}
-              value={EXAM_CATEGORY_OPTIONS.find((opt) => opt.value === uploadForm.category)}
+              value={EXAM_CATEGORY_OPTIONS.find((opt) => opt.value === form.category)}
               onChange={(selectedOption) =>
-                setUploadForm({ ...uploadForm, category: selectedOption.value })
+                setForm({ ...form, category: selectedOption.value })
               }
-              isDisabled={uploading}
+              isDisabled={saving}
               isSearchable={false}
               styles={{
                 control: (base) => ({
@@ -479,51 +388,59 @@ const RecordedClassesAdminPage = () => {
               <input
                 type="date"
                 className="border border-stone-300 py-[10px] px-4 focus:outline-stone-300 rounded-2xl bg-white"
-                value={uploadForm.recordedDate}
-                onChange={(e) =>
-                  setUploadForm({ ...uploadForm, recordedDate: e.target.value })
-                }
-                disabled={uploading}
+                value={form.recordedDate}
+                onChange={(e) => setForm({ ...form, recordedDate: e.target.value })}
+                disabled={saving}
               />
             </div>
             <div className="flex flex-col gap-1">
               <label className="text-sm text-stone-500 font-medium">
-                Video File
+                YouTube Link
               </label>
               <input
-                type="file"
-                accept="video/*"
-                onChange={(e) => setVideoFile(e.target.files?.[0] || null)}
-                disabled={uploading}
-                className="text-sm"
+                type="text"
+                placeholder="https://youtu.be/VIDEOID or the full watch link"
+                className="border border-stone-300 py-[10px] px-4 focus:outline-stone-300 rounded-2xl bg-white"
+                value={form.youtubeUrl}
+                onChange={(e) => setForm({ ...form, youtubeUrl: e.target.value })}
+                disabled={saving}
+              />
+              <p className="text-xs text-gray-400">
+                Upload as <span className="font-medium">Unlisted</span> on
+                YouTube (not Public) so it doesn't show up in search or on
+                your channel — the in-app enrollment check is what actually
+                controls who can watch it here.
+              </p>
+            </div>
+            <div className="flex flex-col gap-1">
+              <label className="text-sm text-stone-500 font-medium">
+                Duration in minutes (optional — fills in "% watched" analytics)
+              </label>
+              <input
+                type="number"
+                min="1"
+                placeholder="e.g. 180 for a 3-hour class"
+                className="border border-stone-300 py-[10px] px-4 focus:outline-stone-300 rounded-2xl bg-white"
+                value={form.durationMinutes}
+                onChange={(e) => setForm({ ...form, durationMinutes: e.target.value })}
+                disabled={saving}
               />
             </div>
-            {uploading && (
-              <div className="flex flex-col gap-1">
-                <div className="w-full h-2 bg-gray-200 rounded-full overflow-hidden">
-                  <div
-                    className="h-full bg-indigo-500 rounded-full transition-all"
-                    style={{ width: `${uploadProgress}%` }}
-                  />
-                </div>
-                <p className="text-xs text-gray-500">{uploadProgress}% uploaded</p>
-              </div>
-            )}
           </div>
           <div className="grid grid-cols-2 gap-1">
             <button
-              onClick={handleCloseUploadPopup}
-              disabled={uploading}
+              onClick={handleClosePopup}
+              disabled={saving}
               className="border border-indigo-400 text-indigo-400 font-medium py-2 px-4 rounded-xl font-poppins cursor-pointer hover:opacity-85 duration-300 disabled:opacity-50"
             >
               Cancel
             </button>
             <button
-              onClick={handleUpload}
-              disabled={uploading}
+              onClick={handleSave}
+              disabled={saving}
               className="bg-indigo-400 text-stone-50 font-medium py-2 px-4 rounded-xl font-poppins cursor-pointer hover:opacity-85 duration-300 disabled:opacity-50"
             >
-              {uploading ? "Uploading…" : "Upload"}
+              {saving ? "Saving…" : editingId ? "Save Changes" : "Add Recording"}
             </button>
           </div>
         </div>

@@ -2,19 +2,25 @@ import React, { useEffect, useRef, useState } from "react";
 import axios from "axios";
 import { X } from "lucide-react";
 
-const STREAM_SDK_URL = "https://embed.cloudflarestream.com/embed/sdk.latest.js";
+const YOUTUBE_IFRAME_API_URL = "https://www.youtube.com/iframe_api";
 
 let sdkLoadPromise = null;
-const loadStreamSdk = () => {
-  if (window.Stream) return Promise.resolve();
+const loadYoutubeIframeApi = () => {
+  if (window.YT && window.YT.Player) return Promise.resolve();
   if (sdkLoadPromise) return sdkLoadPromise;
 
-  sdkLoadPromise = new Promise((resolve, reject) => {
+  sdkLoadPromise = new Promise((resolve) => {
+    // YouTube's IFrame API calls this global callback itself once ready —
+    // it doesn't fire a normal script "load" event we can rely on.
+    const previousCallback = window.onYouTubeIframeAPIReady;
+    window.onYouTubeIframeAPIReady = () => {
+      if (typeof previousCallback === "function") previousCallback();
+      resolve();
+    };
+
     const script = document.createElement("script");
-    script.src = STREAM_SDK_URL;
+    script.src = YOUTUBE_IFRAME_API_URL;
     script.async = true;
-    script.onload = () => resolve();
-    script.onerror = () => reject(new Error("Failed to load Cloudflare Stream player script."));
     document.body.appendChild(script);
   });
 
@@ -26,20 +32,25 @@ const loadStreamSdk = () => {
 // student actually left off, without pinging on every single frame.
 const PROGRESS_PING_INTERVAL_MS = 15000;
 
-// Wraps Cloudflare's Stream Player (fed a short-lived signed token — never
-// a raw file URL) and reports watch-time back to our backend. The iframe
-// itself has no download affordance and serves HLS-only — that, plus the
-// enrollment/category check already done to obtain the token, is what
-// satisfies "students can only stream, never download" as far as this
-// player's own UI goes (screen recording can never be fully prevented by
-// any web player, which is expected and out of scope here).
+// Wraps a YouTube IFrame Player (fed a video ID the backend only hands over
+// after checking category + active course enrollment — see
+// videoPlaybackController.js) and reports watch-time back to our backend.
+//
+// Real, honest limitation: unlike the Cloudflare Stream approach this
+// replaced, this is an ordinary YouTube embed once playback starts — there
+// is no signed/expiring token and no true anti-download protection. The
+// video is uploaded as Unlisted on YouTube (not publicly searchable), and
+// the in-app enrollment/category check above is what controls who gets a
+// video ID to watch in the first place — but a determined viewer with
+// devtools or a screen recorder can't be fully stopped, same as any other
+// web video embed.
 const RecordedClassPlayer = ({ video, onClose }) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [playbackInfo, setPlaybackInfo] = useState(null);
+  const [youtubeVideoId, setYoutubeVideoId] = useState(null);
   const [resumeOffered, setResumeOffered] = useState(false);
 
-  const iframeRef = useRef(null);
+  const iframeContainerRef = useRef(null);
   const playerRef = useRef(null);
   const lastReportedTimeRef = useRef(0);
   const sessionStartedRef = useRef(false);
@@ -48,17 +59,17 @@ const RecordedClassPlayer = ({ video, onClose }) => {
   useEffect(() => {
     let cancelled = false;
 
-    const fetchToken = async () => {
+    const fetchAccess = async () => {
       try {
         setLoading(true);
-        const [sdkResult, tokenResult] = await Promise.all([
-          loadStreamSdk(),
+        const [, accessResult] = await Promise.all([
+          loadYoutubeIframeApi(),
           axios.get(
             `${import.meta.env.VITE_APP_API_URL}/videos/${video._id}/playback-token`
           ),
         ]);
         if (cancelled) return;
-        setPlaybackInfo(tokenResult.data);
+        setYoutubeVideoId(accessResult.data?.youtubeVideoId);
         setResumeOffered((video.lastPositionSeconds || 0) > 10);
       } catch (err) {
         if (!cancelled) {
@@ -72,7 +83,7 @@ const RecordedClassPlayer = ({ video, onClose }) => {
       }
     };
 
-    fetchToken();
+    fetchAccess();
     return () => {
       cancelled = true;
     };
@@ -93,42 +104,48 @@ const RecordedClassPlayer = ({ video, onClose }) => {
   };
 
   useEffect(() => {
-    if (!playbackInfo || !iframeRef.current) return;
+    if (!youtubeVideoId || !iframeContainerRef.current) return;
 
-    let player;
-    let onPlay;
-    let onPause;
-    let onEnded;
+    let cancelled = false;
 
     const attach = async () => {
-      await loadStreamSdk();
-      player = window.Stream(iframeRef.current);
-      playerRef.current = player;
+      await loadYoutubeIframeApi();
+      if (cancelled || !iframeContainerRef.current) return;
 
-      onPlay = () => {
-        if (!sessionStartedRef.current) {
-          sessionStartedRef.current = true;
-          sendProgress(null, 0, true);
-        }
-      };
-      onPause = () => {
-        const current = Math.floor(player.currentTime || 0);
-        const delta = Math.max(0, current - lastReportedTimeRef.current);
-        lastReportedTimeRef.current = current;
-        sendProgress(current, delta, false);
-      };
-      onEnded = onPause;
+      playerRef.current = new window.YT.Player(iframeContainerRef.current, {
+        videoId: youtubeVideoId,
+        playerVars: {
+          rel: 0, // don't show related videos from other channels at the end
+          modestbranding: 1,
+          playsinline: 1,
+        },
+        events: {
+          onStateChange: (event) => {
+            const player = playerRef.current;
+            if (!player) return;
+            const YT_STATE = window.YT.PlayerState;
 
-      player.addEventListener("play", onPlay);
-      player.addEventListener("pause", onPause);
-      player.addEventListener("ended", onEnded);
+            if (event.data === YT_STATE.PLAYING && !sessionStartedRef.current) {
+              sessionStartedRef.current = true;
+              sendProgress(null, 0, true);
+            }
+            if (event.data === YT_STATE.PAUSED || event.data === YT_STATE.ENDED) {
+              const current = Math.floor(player.getCurrentTime() || 0);
+              const delta = Math.max(0, current - lastReportedTimeRef.current);
+              lastReportedTimeRef.current = current;
+              sendProgress(current, delta, false);
+            }
+          },
+        },
+      });
     };
 
     attach();
 
     pingIntervalRef.current = setInterval(() => {
-      if (!playerRef.current) return;
-      const current = Math.floor(playerRef.current.currentTime || 0);
+      const player = playerRef.current;
+      if (!player || typeof player.getCurrentTime !== "function") return;
+      const current = Math.floor(player.getCurrentTime() || 0);
       const delta = Math.max(0, current - lastReportedTimeRef.current);
       if (delta > 0) {
         lastReportedTimeRef.current = current;
@@ -137,29 +154,30 @@ const RecordedClassPlayer = ({ video, onClose }) => {
     }, PROGRESS_PING_INTERVAL_MS);
 
     return () => {
+      cancelled = true;
       clearInterval(pingIntervalRef.current);
-      if (player) {
-        if (onPlay) player.removeEventListener("play", onPlay);
-        if (onPause) player.removeEventListener("pause", onPause);
-        if (onEnded) player.removeEventListener("ended", onEnded);
+      const player = playerRef.current;
+      if (player && typeof player.getCurrentTime === "function") {
         // Final progress flush on unmount so a student who navigates away
         // mid-video doesn't lose the last few seconds of watch credit.
-        const current = Math.floor(player.currentTime || 0);
+        const current = Math.floor(player.getCurrentTime() || 0);
         const delta = Math.max(0, current - lastReportedTimeRef.current);
         if (delta > 0) sendProgress(current, delta, false);
       }
+      if (player && typeof player.destroy === "function") player.destroy();
+      playerRef.current = null;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [playbackInfo]);
+  }, [youtubeVideoId]);
 
   const handleResume = () => {
-    if (playerRef.current) {
-      playerRef.current.currentTime = video.lastPositionSeconds;
+    if (playerRef.current && typeof playerRef.current.seekTo === "function") {
+      playerRef.current.seekTo(video.lastPositionSeconds, true);
     }
     setResumeOffered(false);
   };
 
-  if (!playbackInfo && !error) {
+  if (!youtubeVideoId && !error) {
     return (
       <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50">
         <div className="bg-white rounded-2xl p-8 text-center">
@@ -186,15 +204,7 @@ const RecordedClassPlayer = ({ video, onClose }) => {
         ) : (
           <>
             <div className="aspect-video">
-              <iframe
-                ref={iframeRef}
-                id={`stream-player-${video._id}`}
-                title={video.title}
-                src={`https://customer-${playbackInfo.customerCode}.cloudflarestream.com/${playbackInfo.signedToken}/iframe?controls=true`}
-                style={{ border: "none", width: "100%", height: "100%" }}
-                allow="accelerometer; gyroscope; autoplay; encrypted-media; picture-in-picture;"
-                allowFullScreen
-              />
+              <div ref={iframeContainerRef} className="w-full h-full" />
             </div>
             {resumeOffered && (
               <div className="absolute bottom-4 left-4 bg-black/70 text-white text-sm px-4 py-2 rounded-lg flex items-center gap-3">
