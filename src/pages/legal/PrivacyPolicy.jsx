@@ -46,6 +46,34 @@ const PrivacyPolicy = () => {
             </p>
           </div>
 
+          <div id="delete-account">
+            <h2 className="font-newsreader text-xl text-navy-dark mb-2">
+              Delete your account and data
+            </h2>
+            <p>
+              If you're a student of Dr. A.D. Academy of Excellence and would
+              like your account and data deleted, email{" "}
+              
+                href="mailto:dradacademy@gmail.com"
+                className="text-navy hover:text-gold underline"
+              >
+                dradacademy@gmail.com
+              </a>{" "}
+              or WhatsApp/call us at{" "}
+              <strong className="font-semibold">+91 95668 18665</strong> with
+              your registered name and phone number, along with a request to
+              delete your account.
+            </p>
+            <p className="mt-3">
+              We will delete your name, phone number, email address, login
+              credentials, and profile information within 7 business days of
+              a verified request. Your test/exam records are deleted along
+              with your account, unless you ask us to retain a de-identified
+              version (with no name or contact details attached) for internal
+              academic quality reporting.
+            </p>
+          </div>
+
           <div>
             <h2 className="font-newsreader text-xl text-navy-dark mb-2">
               Website analytics
@@ -88,7 +116,7 @@ const PrivacyPolicy = () => {
               want it corrected or removed, call or WhatsApp us at{" "}
               <strong className="font-semibold">+91 95668 18665</strong> or
               email{" "}
-              <a
+              
                 href="mailto:dradacademy@gmail.com"
                 className="text-navy hover:text-gold underline"
               >
