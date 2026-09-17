@@ -6,6 +6,7 @@ import { Toaster } from "react-hot-toast";
 import Home from "./pages/home/Home";
 import { AuthContext } from "./context/AuthContext";
 import StudentActivities from "./pages/activities/student/StudentActivities";
+import RecordedClassesStudent from "./pages/activities/student/RecordedClassesStudent";
 import AttemptedExamSubmissionDetail from "./pages/activities/examDetailedView/AttemptedExamSubmissionDetail";
 import EvaluatorActivities from "./pages/activities/evaluator/EvaluatorActivities";
 import EvaluatorDashboard from "./pages/dashboard/evaluator/EvaluatorDashboard";
@@ -78,6 +79,12 @@ function App() {
         <Route
           path="/activities/completed/:examSubmissionId"
           element={<CompletedExamSubmissionDetail />}
+        />
+        <Route
+          path="/recorded-classes"
+          element={
+            userData ? <RecordedClassesStudent /> : <Navigate to={"/login"} />
+          }
         />
         <Route
           path="/attend-exam/:examCode"

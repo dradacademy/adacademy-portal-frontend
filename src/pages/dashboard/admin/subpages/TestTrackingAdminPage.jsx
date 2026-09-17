@@ -2,6 +2,8 @@ import axios from "axios";
 import React, { useEffect, useMemo, useState } from "react";
 import {
   CheckCircle2,
+  ChevronDown,
+  ChevronRight,
   Clock3,
   Search,
   Target,
@@ -10,6 +12,21 @@ import {
   Users,
 } from "lucide-react";
 import { EXAM_CATEGORY_OPTIONS } from "../../../../constants/examCategories";
+
+const MetricBadge = ({ value, tone }) => {
+  if (value === null || value === undefined) {
+    return <span className="text-xs text-gray-400">—</span>;
+  }
+  const toneClasses =
+    tone === "speed"
+      ? "bg-sky-100 text-sky-700"
+      : "bg-violet-100 text-violet-700";
+  return (
+    <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${toneClasses}`}>
+      {Number(value).toFixed(1)}%
+    </span>
+  );
+};
 
 const formatDateTime = (value) => {
   if (!value) return "—";
@@ -115,29 +132,40 @@ const TestTrackingAdminPage = () => {
     if (statusFilter !== "all")
       rows = rows.filter((r) => r.status === statusFilter);
 
-    if (onTimeFilter === "On Time") rows = rows.filter((r) => r.onTime === true);
-    else if (onTimeFilter === "Late") rows = rows.filter((r) => r.onTime === false);
+    // On-time/late and performance filters match if ANY attempt qualifies —
+    // a test attempted 3 times might be late once and on time another, or
+    // weak on attempt 1 and good by attempt 3.
+    if (onTimeFilter === "On Time")
+      rows = rows.filter((r) => (r.attempts || []).some((a) => a.onTime === true));
+    else if (onTimeFilter === "Late")
+      rows = rows.filter((r) => (r.attempts || []).some((a) => a.onTime === false));
     else if (onTimeFilter === "Unscheduled")
-      rows = rows.filter((r) => r.status === "Completed" && r.onTime === null);
+      rows = rows.filter(
+        (r) => r.status === "Completed" && (r.attempts || []).some((a) => a.onTime === null)
+      );
 
     if (performanceFilter === "Good")
-      rows = rows.filter((r) => r.status === "Completed" && r.percentage >= 75);
+      rows = rows.filter((r) => (r.attempts || []).some((a) => a.percentage >= 75));
     else if (performanceFilter === "Average")
-      rows = rows.filter(
-        (r) => r.status === "Completed" && r.percentage >= 40 && r.percentage < 75
+      rows = rows.filter((r) =>
+        (r.attempts || []).some((a) => a.percentage >= 40 && a.percentage < 75)
       );
     else if (performanceFilter === "Weak")
-      rows = rows.filter((r) => r.status === "Completed" && r.percentage < 40);
+      rows = rows.filter((r) => (r.attempts || []).some((a) => a.percentage < 40));
 
     if (dateFrom)
-      rows = rows.filter(
-        (r) => r.completedAt && new Date(r.completedAt) >= new Date(dateFrom)
+      rows = rows.filter((r) =>
+        (r.attempts || []).some(
+          (a) => a.completedAt && new Date(a.completedAt) >= new Date(dateFrom)
+        )
       );
     if (dateTo)
-      rows = rows.filter(
-        (r) =>
-          r.completedAt &&
-          new Date(r.completedAt) <= new Date(`${dateTo}T23:59:59.999`)
+      rows = rows.filter((r) =>
+        (r.attempts || []).some(
+          (a) =>
+            a.completedAt &&
+            new Date(a.completedAt) <= new Date(`${dateTo}T23:59:59.999`)
+        )
       );
 
     return rows;
@@ -153,22 +181,34 @@ const TestTrackingAdminPage = () => {
     dateTo,
   ]);
 
+  // Stats are computed over every individual ATTEMPT (not one per exam+
+  // student row), since a single row can now carry up to 3+ attempts.
   const stats = useMemo(() => {
     const total = filtered.length;
     const completed = filtered.filter((r) => r.status === "Completed").length;
     const pending = total - completed;
-    const onTime = filtered.filter((r) => r.onTime === true).length;
-    const late = filtered.filter((r) => r.onTime === false).length;
-    const completedRows = filtered.filter((r) => r.status === "Completed");
-    const avgPercentage = completedRows.length
+    const allAttempts = filtered.flatMap((r) => r.attempts || []);
+    const onTime = allAttempts.filter((a) => a.onTime === true).length;
+    const late = allAttempts.filter((a) => a.onTime === false).length;
+    const avgPercentage = allAttempts.length
       ? Math.round(
-          (completedRows.reduce((sum, r) => sum + (r.percentage || 0), 0) /
-            completedRows.length) *
+          (allAttempts.reduce((sum, a) => sum + (a.percentage || 0), 0) /
+            allAttempts.length) *
             10
         ) / 10
       : 0;
     return { total, completed, pending, onTime, late, avgPercentage };
   }, [filtered]);
+
+  const [expandedRowKeys, setExpandedRowKeys] = useState(() => new Set());
+  const toggleExpanded = (key) => {
+    setExpandedRowKeys((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
+  };
 
   const clearFilters = () => {
     setSearchTerm("");
@@ -341,98 +381,195 @@ const TestTrackingAdminPage = () => {
 
       {/* Table */}
       <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-x-auto">
-        <table className="w-full text-sm min-w-[1100px]">
+        <table className="w-full text-sm min-w-[1250px]">
           <thead>
             <tr className="bg-gray-50 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">
+              <th className="px-4 py-3 w-8"></th>
               <th className="px-4 py-3">Test</th>
               <th className="px-4 py-3">Student</th>
               <th className="px-4 py-3">Posted</th>
               <th className="px-4 py-3">Scheduled</th>
               <th className="px-4 py-3">Made Available</th>
               <th className="px-4 py-3">Status</th>
+              <th className="px-4 py-3">Attempt #</th>
               <th className="px-4 py-3">Completed On</th>
               <th className="px-4 py-3">Score</th>
+              <th className="px-4 py-3">Speed %</th>
+              <th className="px-4 py-3">Accuracy %</th>
               <th className="px-4 py-3">On Time?</th>
             </tr>
           </thead>
           <tbody>
-            {filtered.map((row) => (
-              <tr
-                key={`${row.examId}-${row.studentId}`}
-                className="border-t border-gray-50 hover:bg-gray-50/60"
-              >
-                <td className="px-4 py-3">
-                  <div className="font-medium text-gray-800 capitalize">
-                    {row.subjectName}
-                  </div>
-                  <div className="text-xs text-gray-500 capitalize">
-                    {row.subTopicName} · Order {row.order} ·{" "}
-                    <span className="font-mono">{row.examCode}</span>
-                  </div>
-                </td>
-                <td className="px-4 py-3">
-                  <div className="text-gray-800">{row.studentName}</div>
-                  <div className="text-xs text-gray-400">{row.studentEmail}</div>
-                </td>
-                <td className="px-4 py-3 text-gray-600">
-                  {formatDateTime(row.postedDate)}
-                </td>
-                <td className="px-4 py-3 text-gray-600">
-                  {row.scheduledDate ? (
-                    formatDateTime(row.scheduledDate)
-                  ) : (
-                    <span className="text-gray-400">Not set</span>
-                  )}
-                </td>
-                <td className="px-4 py-3 text-gray-600">
-                  {formatDateTime(row.madeAvailableDate)}
-                </td>
-                <td className="px-4 py-3">
-                  {row.status === "Completed" ? (
-                    <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-emerald-100 text-emerald-700">
-                      <CheckCircle2 className="h-3.5 w-3.5" /> Completed
-                    </span>
-                  ) : (
-                    <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-amber-100 text-amber-700">
-                      <Clock3 className="h-3.5 w-3.5" /> Pending
-                    </span>
-                  )}
-                </td>
-                <td className="px-4 py-3 text-gray-600">
-                  {row.status === "Completed" ? formatDateTime(row.completedAt) : "—"}
-                </td>
-                <td className="px-4 py-3 text-gray-600">
-                  {row.status === "Completed" ? (
-                    <span
-                      className={`font-medium ${
-                        row.percentage >= 75
-                          ? "text-emerald-600"
-                          : row.percentage < 40
-                          ? "text-rose-600"
-                          : "text-gray-800"
-                      }`}
-                    >
-                      {row.obtainedMark}/{row.totalPossibleMarks} ({row.percentage}%)
-                    </span>
-                  ) : (
-                    "—"
-                  )}
-                </td>
-                <td className="px-4 py-3">
-                  {row.onTime === null || row.onTime === undefined ? (
-                    <span className="text-xs text-gray-400">—</span>
-                  ) : row.onTime ? (
-                    <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-700">
-                      On Time
-                    </span>
-                  ) : (
-                    <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-rose-100 text-rose-700">
-                      Late
-                    </span>
-                  )}
-                </td>
-              </tr>
-            ))}
+            {filtered.map((row) => {
+              const rowKey = `${row.examId}-${row.studentId}`;
+              const attempts = row.attempts || [];
+              const hasMultiple = attempts.length > 1;
+              const isExpanded = expandedRowKeys.has(rowKey);
+              const latest = attempts.length
+                ? attempts[attempts.length - 1]
+                : null;
+
+              return (
+                <React.Fragment key={rowKey}>
+                  <tr
+                    className={`border-t border-gray-50 hover:bg-gray-50/60 ${
+                      hasMultiple ? "cursor-pointer" : ""
+                    }`}
+                    onClick={() => hasMultiple && toggleExpanded(rowKey)}
+                  >
+                    <td className="px-4 py-3 text-gray-400">
+                      {hasMultiple ? (
+                        isExpanded ? (
+                          <ChevronDown className="h-4 w-4" />
+                        ) : (
+                          <ChevronRight className="h-4 w-4" />
+                        )
+                      ) : null}
+                    </td>
+                    <td className="px-4 py-3">
+                      <div className="font-medium text-gray-800 capitalize">
+                        {row.subjectName}
+                      </div>
+                      <div className="text-xs text-gray-500 capitalize">
+                        {row.subTopicName} · Order {row.order} ·{" "}
+                        <span className="font-mono">{row.examCode}</span>
+                      </div>
+                    </td>
+                    <td className="px-4 py-3">
+                      <div className="text-gray-800">{row.studentName}</div>
+                      <div className="text-xs text-gray-400">{row.studentEmail}</div>
+                    </td>
+                    <td className="px-4 py-3 text-gray-600">
+                      {formatDateTime(row.postedDate)}
+                    </td>
+                    <td className="px-4 py-3 text-gray-600">
+                      {row.scheduledDate ? (
+                        formatDateTime(row.scheduledDate)
+                      ) : (
+                        <span className="text-gray-400">Not set</span>
+                      )}
+                    </td>
+                    <td className="px-4 py-3 text-gray-600">
+                      {formatDateTime(row.madeAvailableDate)}
+                    </td>
+                    <td className="px-4 py-3">
+                      {row.status === "Completed" ? (
+                        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-emerald-100 text-emerald-700">
+                          <CheckCircle2 className="h-3.5 w-3.5" /> Completed
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-amber-100 text-amber-700">
+                          <Clock3 className="h-3.5 w-3.5" /> Pending
+                        </span>
+                      )}
+                    </td>
+                    <td className="px-4 py-3 text-gray-600">
+                      {attempts.length > 0
+                        ? hasMultiple
+                          ? `${attempts.length} attempts`
+                          : `#${latest.attemptNumber}`
+                        : "—"}
+                    </td>
+                    <td className="px-4 py-3 text-gray-600">
+                      {latest ? formatDateTime(latest.completedAt) : "—"}
+                    </td>
+                    <td className="px-4 py-3 text-gray-600">
+                      {latest ? (
+                        <span
+                          className={`font-medium ${
+                            latest.percentage >= 75
+                              ? "text-emerald-600"
+                              : latest.percentage < 40
+                              ? "text-rose-600"
+                              : "text-gray-800"
+                          }`}
+                        >
+                          {latest.obtainedMark}/{row.totalPossibleMarks} ({latest.percentage}%)
+                        </span>
+                      ) : (
+                        "—"
+                      )}
+                    </td>
+                    <td className="px-4 py-3">
+                      <MetricBadge value={latest?.speedPercent} tone="speed" />
+                    </td>
+                    <td className="px-4 py-3">
+                      <MetricBadge value={latest?.accuracyPercent} tone="accuracy" />
+                    </td>
+                    <td className="px-4 py-3">
+                      {latest?.onTime === null || latest?.onTime === undefined ? (
+                        <span className="text-xs text-gray-400">—</span>
+                      ) : latest.onTime ? (
+                        <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-700">
+                          On Time
+                        </span>
+                      ) : (
+                        <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-rose-100 text-rose-700">
+                          Late
+                        </span>
+                      )}
+                    </td>
+                  </tr>
+
+                  {hasMultiple &&
+                    isExpanded &&
+                    attempts.map((attempt) => (
+                      <tr
+                        key={`${rowKey}-${attempt.attemptNumber}`}
+                        className="border-t border-gray-50 bg-gray-50/40 text-gray-600"
+                      >
+                        <td className="px-4 py-2"></td>
+                        <td className="px-4 py-2 text-xs text-gray-400" colSpan={4}>
+                          ↳ Attempt {attempt.attemptNumber}
+                        </td>
+                        <td className="px-4 py-2">
+                          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-emerald-100 text-emerald-700">
+                            <CheckCircle2 className="h-3.5 w-3.5" /> Completed
+                          </span>
+                        </td>
+                        <td className="px-4 py-2 text-gray-600">
+                          #{attempt.attemptNumber}
+                        </td>
+                        <td className="px-4 py-2 text-gray-600">
+                          {formatDateTime(attempt.completedAt)}
+                        </td>
+                        <td className="px-4 py-2 text-gray-600">
+                          <span
+                            className={`font-medium ${
+                              attempt.percentage >= 75
+                                ? "text-emerald-600"
+                                : attempt.percentage < 40
+                                ? "text-rose-600"
+                                : "text-gray-800"
+                            }`}
+                          >
+                            {attempt.obtainedMark}/{row.totalPossibleMarks} ({attempt.percentage}%)
+                          </span>
+                        </td>
+                        <td className="px-4 py-2">
+                          <MetricBadge value={attempt.speedPercent} tone="speed" />
+                        </td>
+                        <td className="px-4 py-2">
+                          <MetricBadge value={attempt.accuracyPercent} tone="accuracy" />
+                        </td>
+                        <td className="px-4 py-2">
+                          {attempt.onTime === null || attempt.onTime === undefined ? (
+                            <span className="text-xs text-gray-400">—</span>
+                          ) : attempt.onTime ? (
+                            <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-700">
+                              On Time
+                            </span>
+                          ) : (
+                            <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-rose-100 text-rose-700">
+                              Late
+                            </span>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                </React.Fragment>
+              );
+            })}
           </tbody>
         </table>
         {filtered.length === 0 && (

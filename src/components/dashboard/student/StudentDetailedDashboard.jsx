@@ -26,8 +26,22 @@ import {
   FaExclamationTriangle,
   FaAward,
   FaPercentage,
+  FaClock,
+  FaHourglassHalf,
+  FaVideo,
 } from "react-icons/fa";
 import { AlertTriangle } from "lucide-react";
+
+const formatDateTime = (value) => {
+  if (!value) return "Never";
+  return new Date(value).toLocaleString("en-US", {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+  });
+};
 
 const colorMap = {
   green: {
@@ -126,6 +140,8 @@ const StudentDetailedDashboard = ({ student, onBack }) => {
     topicChartData,
     attemptSummary,
     keyInsights,
+    pendingTestsCount,
+    videoEngagement,
   } = data;
 
   const attemptData = [
@@ -188,7 +204,7 @@ const StudentDetailedDashboard = ({ student, onBack }) => {
               A. Basic Details
             </h2>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-6">
             <div className="flex items-center bg-gradient-to-br from-blue-50 to-blue-100 rounded-xl p-5">
               <FaUser className="text-blue-600 text-2xl mr-4" />
               <div>
@@ -213,6 +229,24 @@ const StudentDetailedDashboard = ({ student, onBack }) => {
                 <p className="text-gray-600 text-sm mb-1">Email</p>
                 <p className="text-base font-semibold text-gray-900">
                   {basicDetails.email}
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center bg-gradient-to-br from-teal-50 to-teal-100 rounded-xl p-5">
+              <FaClock className="text-teal-600 text-2xl mr-4" />
+              <div>
+                <p className="text-gray-600 text-sm mb-1">Last Active</p>
+                <p className="text-base font-semibold text-gray-900">
+                  {formatDateTime(basicDetails.lastLoginAt)}
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center bg-gradient-to-br from-amber-50 to-amber-100 rounded-xl p-5">
+              <FaHourglassHalf className="text-amber-600 text-2xl mr-4" />
+              <div>
+                <p className="text-gray-600 text-sm mb-1">Pending Tests</p>
+                <p className="text-lg font-bold text-gray-900">
+                  {pendingTestsCount ?? 0}
                 </p>
               </div>
             </div>
@@ -433,6 +467,20 @@ const StudentDetailedDashboard = ({ student, onBack }) => {
                                           }s`
                                         : "—"}
                                     </p>
+                                    <div className="flex gap-2 pt-1">
+                                      <span className="px-2 py-0.5 rounded-full text-[11px] font-medium bg-sky-100 text-sky-700">
+                                        Speed{" "}
+                                        {exam.speedPercent != null
+                                          ? `${exam.speedPercent.toFixed(1)}%`
+                                          : "—"}
+                                      </span>
+                                      <span className="px-2 py-0.5 rounded-full text-[11px] font-medium bg-violet-100 text-violet-700">
+                                        Accuracy{" "}
+                                        {exam.accuracyPercent != null
+                                          ? `${exam.accuracyPercent.toFixed(1)}%`
+                                          : "—"}
+                                      </span>
+                                    </div>
                                   </div>
                                 </div>
                               ))}
@@ -549,6 +597,57 @@ const StudentDetailedDashboard = ({ student, onBack }) => {
               </ResponsiveContainer>
             </div>
           </div>
+        </div>
+
+        {/* F. Video Engagement */}
+        <div className="bg-white rounded-2xl shadow-lg p-6 mb-6 border border-teal-100">
+          <div className="flex items-center mb-6">
+            <div className="w-1 h-8 bg-gradient-to-b from-blue-600 to-indigo-600 mr-4 rounded-full"></div>
+            <h2 className="text-xl font-bold text-gray-900 font-poppins">
+              F. Video Engagement
+            </h2>
+          </div>
+
+          {!videoEngagement || videoEngagement.length === 0 ? (
+            <div className="text-center text-gray-500 py-10 border-2 border-dashed border-gray-200 rounded-xl">
+              No recorded-class activity yet. This section fills in once the
+              student starts watching recorded classes.
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {videoEngagement.map((video, idx) => (
+                <div
+                  key={idx}
+                  className="flex items-center gap-4 bg-teal-50/50 border border-teal-100 rounded-xl p-4"
+                >
+                  <FaVideo className="text-teal-600 text-xl shrink-0" />
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center justify-between gap-2 mb-1">
+                      <p className="font-semibold text-gray-800 truncate">
+                        {video.title}
+                      </p>
+                      <span className="text-sm font-bold text-teal-700 shrink-0">
+                        {video.percentWatched?.toFixed(0) ?? 0}%
+                      </span>
+                    </div>
+                    <div className="w-full h-2 bg-gray-200 rounded-full overflow-hidden">
+                      <div
+                        className="h-full bg-teal-500 rounded-full"
+                        style={{
+                          width: `${Math.min(100, video.percentWatched || 0)}%`,
+                        }}
+                      />
+                    </div>
+                    <p className="text-xs text-gray-500 mt-1">
+                      Last watched: {formatDateTime(video.lastWatchedAt)} ·{" "}
+                      {video.sessionCount ?? 0} session
+                      {video.sessionCount === 1 ? "" : "s"}
+                    </p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
 
         {/* E. Key Insights */}

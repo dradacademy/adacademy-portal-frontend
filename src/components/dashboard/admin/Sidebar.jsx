@@ -326,7 +326,7 @@ import { Link, useLocation, useNavigate } from "react-router-dom";
 import { AuthContext } from "../../../context/AuthContext";
 import { MdOutlineRateReview, MdRateReview } from "react-icons/md";
 import { MdOutlineFactCheck, MdFactCheck } from "react-icons/md";
-import { Images } from "lucide-react";
+import { Images, Video, BarChart3 } from "lucide-react";
 import axios from "axios";
 import toast from "react-hot-toast";
 
@@ -711,6 +711,68 @@ const Sidebar = () => {
                       />
                       {!showCollapsed && (
                         <h2 className="font-medium text-lg">Content</h2>
+                      )}
+                    </Link>
+                  </div>
+
+                  {/* Recorded Classes */}
+                  <div className="flex items-center">
+                    <div
+                      className={`h-10 w-2 ${
+                        location.pathname === "/dashboard/recorded-classes" ||
+                        location.pathname === "/dashboard/recorded-classes/"
+                          ? "bg-stone-50"
+                          : "bg-indigo-500"
+                      } rounded-tr-full rounded-br-full`}
+                    ></div>
+                    <Link
+                      to={"/dashboard/recorded-classes"}
+                      className={`flex items-center gap-2 px-[17px] transition-all duration-300 ${
+                        location.pathname === "/dashboard/recorded-classes" ||
+                        location.pathname === "/dashboard/recorded-classes/"
+                          ? "text-stone-50"
+                          : "text-indigo-100 hover:opacity-80 duration-300"
+                      } ${showCollapsed ? "justify-center px-2" : ""}`}
+                      title={showCollapsed ? "Recorded Classes" : ""}
+                    >
+                      <Video
+                        className={`${
+                          showCollapsed ? "w-5 h-5 sm:w-6 sm:h-6" : "w-6 h-6"
+                        }`}
+                      />
+                      {!showCollapsed && (
+                        <h2 className="font-medium text-lg">Recorded Classes</h2>
+                      )}
+                    </Link>
+                  </div>
+
+                  {/* Video Analytics */}
+                  <div className="flex items-center">
+                    <div
+                      className={`h-10 w-2 ${
+                        location.pathname === "/dashboard/video-analytics" ||
+                        location.pathname === "/dashboard/video-analytics/"
+                          ? "bg-stone-50"
+                          : "bg-indigo-500"
+                      } rounded-tr-full rounded-br-full`}
+                    ></div>
+                    <Link
+                      to={"/dashboard/video-analytics"}
+                      className={`flex items-center gap-2 px-[17px] transition-all duration-300 ${
+                        location.pathname === "/dashboard/video-analytics" ||
+                        location.pathname === "/dashboard/video-analytics/"
+                          ? "text-stone-50"
+                          : "text-indigo-100 hover:opacity-80 duration-300"
+                      } ${showCollapsed ? "justify-center px-2" : ""}`}
+                      title={showCollapsed ? "Video Analytics" : ""}
+                    >
+                      <BarChart3
+                        className={`${
+                          showCollapsed ? "w-5 h-5 sm:w-6 sm:h-6" : "w-6 h-6"
+                        }`}
+                      />
+                      {!showCollapsed && (
+                        <h2 className="font-medium text-lg">Video Analytics</h2>
                       )}
                     </Link>
                   </div>

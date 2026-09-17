@@ -45,6 +45,19 @@ const UsersAdminPage = () => {
   const [openPasswordPopup, setOpenPasswordPopup] = useState(false);
   const [showUserDeletePopup, setShowUserDeletePopup] = useState(false);
 
+  // "Manage Enrollment" — sets/renews a student's course-enrollment validity
+  // window for the recorded-class video system (separate from User.category,
+  // which only says WHICH course; this says UNTIL WHEN they have video
+  // access). See models/enrollmentModel.js on the backend.
+  const [openEnrollmentPopup, setOpenEnrollmentPopup] = useState(false);
+  const [enrollmentUser, setEnrollmentUser] = useState(null);
+  const [enrollmentForm, setEnrollmentForm] = useState({
+    category: "",
+    validTill: "",
+    revoked: false,
+  });
+  const [enrollmentLoading, setEnrollmentLoading] = useState(false);
+
   const handleOpenDeletePopup = (data) => {
     setShowUserDeletePopup(true);
     setUserDeletePopupData(data);
@@ -108,6 +121,68 @@ const UsersAdminPage = () => {
       );
     } finally {
       setTogglingUserId(null);
+    }
+  };
+
+  const handleOpenEnrollmentPopup = async (rowData) => {
+    setEnrollmentUser(rowData);
+    setOpenEnrollmentPopup(true);
+    setEnrollmentForm({
+      category: rowData.category || "",
+      validTill: "",
+      revoked: false,
+    });
+    try {
+      const response = await axios.get(
+        `${import.meta.env.VITE_APP_API_URL}/enrollments/${rowData._id}`
+      );
+      const existing = (response.data?.data || []).find(
+        (e) => e.category === rowData.category
+      );
+      if (existing) {
+        setEnrollmentForm({
+          category: existing.category,
+          validTill: existing.validTill
+            ? new Date(existing.validTill).toISOString().slice(0, 10)
+            : "",
+          revoked: existing.revoked,
+        });
+      }
+    } catch (error) {
+      // Non-fatal — the admin can still set a fresh enrollment even if the
+      // existing-lookup fails.
+      console.error(error);
+    }
+  };
+
+  const handleCloseEnrollmentPopup = () => {
+    setOpenEnrollmentPopup(false);
+    setEnrollmentUser(null);
+    setEnrollmentForm({ category: "", validTill: "", revoked: false });
+  };
+
+  const handleSubmitEnrollment = async (e) => {
+    e.preventDefault();
+    if (!enrollmentUser || !enrollmentForm.category || !enrollmentForm.validTill) {
+      toast.error("Please select a category and a valid-till date.");
+      return;
+    }
+    setEnrollmentLoading(true);
+    try {
+      await axios.patch(
+        `${import.meta.env.VITE_APP_API_URL}/enrollments/${enrollmentUser._id}`,
+        {
+          category: enrollmentForm.category,
+          validTill: enrollmentForm.validTill,
+          revoked: enrollmentForm.revoked,
+        }
+      );
+      toast.success("Enrollment updated.");
+      handleCloseEnrollmentPopup();
+    } catch (error) {
+      toast.error(error?.response?.data?.message || "Failed to update enrollment");
+    } finally {
+      setEnrollmentLoading(false);
     }
   };
 
@@ -220,6 +295,14 @@ const UsersAdminPage = () => {
             }`}
           >
             {rowData.isDisabled ? "Enable" : "Disable"}
+          </button>
+        )}
+        {rowData.role === "student" && (
+          <button
+            onClick={() => handleOpenEnrollmentPopup(rowData)}
+            className="bg-teal-500 text-stone-50 px-3 py-1.5 rounded text-nowrap text-sm font-medium hover:bg-teal-600 transition duration-300 cursor-pointer"
+          >
+            Manage Enrollment
           </button>
         )}
         {rowData.role !== "admin" && (
@@ -515,6 +598,95 @@ const UsersAdminPage = () => {
         setPassword={setPassword}
         handleSubmitEditPassword={handleSubmitEditPassword}
       />
+
+      <Dialog open={openEnrollmentPopup} onClose={handleCloseEnrollmentPopup}>
+        <div className="flex flex-col gap-5 sm:min-w-[450px] p-5">
+          <div className="flex items-start justify-between gap-6 w-full">
+            <div className="flex flex-col gap-1">
+              <h1 className="text-2xl font-bold text-stone-700 font-poppins">
+                Manage Enrollment
+              </h1>
+              <p className="text-sm text-stone-500 font-work-sans">
+                {enrollmentUser?.username} — sets how long this student can
+                stream recorded classes for a course category. Access is cut
+                off automatically once the valid-till date passes.
+              </p>
+            </div>
+            <MdClose
+              onClick={handleCloseEnrollmentPopup}
+              className="text-stone-500 font-medium text-4xl cursor-pointer hover:opacity-80 duration-300"
+            />
+          </div>
+          <div className="flex flex-col gap-3 font-inter">
+            <Select
+              className="w-full"
+              placeholder="Exam Category"
+              options={EXAM_CATEGORY_OPTIONS}
+              value={
+                EXAM_CATEGORY_OPTIONS.find(
+                  (opt) => opt.value === enrollmentForm.category
+                ) || null
+              }
+              onChange={(selectedOption) =>
+                setEnrollmentForm({ ...enrollmentForm, category: selectedOption.value })
+              }
+              isSearchable={false}
+              styles={{
+                control: (base) => ({
+                  ...base,
+                  borderRadius: "15px",
+                  padding: "4px",
+                  borderColor: "#ccc",
+                  boxShadow: "none",
+                  "&:hover": { borderColor: "#888" },
+                }),
+                menuPortal: (base) => ({ ...base, zIndex: 9999 }),
+              }}
+              menuPortalTarget={document.body}
+              menuPosition="absolute"
+            />
+            <div className="flex flex-col gap-1">
+              <label className="text-sm text-stone-500 font-medium">
+                Valid Till
+              </label>
+              <input
+                type="date"
+                className="border border-stone-300 py-[10px] px-4 focus:outline-stone-300 rounded-2xl bg-white"
+                value={enrollmentForm.validTill}
+                onChange={(e) =>
+                  setEnrollmentForm({ ...enrollmentForm, validTill: e.target.value })
+                }
+                required
+              />
+            </div>
+            <label className="flex items-center gap-2 text-sm text-stone-600 font-medium">
+              <input
+                type="checkbox"
+                checked={enrollmentForm.revoked}
+                onChange={(e) =>
+                  setEnrollmentForm({ ...enrollmentForm, revoked: e.target.checked })
+                }
+              />
+              Revoke access immediately (overrides the valid-till date)
+            </label>
+          </div>
+          <div className="grid grid-cols-2 gap-1">
+            <button
+              onClick={handleCloseEnrollmentPopup}
+              className="border border-indigo-400 text-indigo-400 font-medium py-2 px-4 rounded-xl font-poppins cursor-pointer hover:opacity-85 duration-300"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={handleSubmitEnrollment}
+              disabled={enrollmentLoading}
+              className="bg-indigo-400 text-stone-50 font-medium py-2 px-4 rounded-xl font-poppins cursor-pointer hover:opacity-85 duration-300 disabled:opacity-50"
+            >
+              {enrollmentLoading ? "Saving..." : "Save"}
+            </button>
+          </div>
+        </div>
+      </Dialog>
     </div>
   );
 };

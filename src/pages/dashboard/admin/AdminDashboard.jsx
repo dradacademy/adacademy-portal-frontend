@@ -15,6 +15,8 @@ import ExamDashboard from "./subpages/ExamDashboard";
 import StudentDashboard from "./subpages/StudentDashboard";
 import TestTrackingAdminPage from "./subpages/TestTrackingAdminPage";
 import ContentManagementAdminPage from "./subpages/ContentManagementAdminPage";
+import RecordedClassesAdminPage from "./subpages/RecordedClassesAdminPage";
+import VideoAnalyticsAdminPage from "./subpages/VideoAnalyticsAdminPage";
 
 const AdminDashboard = () => {
   return (
@@ -36,6 +38,8 @@ const AdminDashboard = () => {
             <Route path="/users" element={<UsersAdminPage />} />
             <Route path="/test-tracking" element={<TestTrackingAdminPage />} />
             <Route path="/content" element={<ContentManagementAdminPage />} />
+            <Route path="/recorded-classes" element={<RecordedClassesAdminPage />} />
+            <Route path="/video-analytics" element={<VideoAnalyticsAdminPage />} />
             {/* <Route path="/trigger-mail" element={<TriggerMailAdminPage />} /> */}
             <Route path="/comment" element={<CommentDashboard />} />
             <Route path="/controllers" element={<MarkAndDurationAdmin />} />
