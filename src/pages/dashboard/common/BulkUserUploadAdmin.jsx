@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import axios from "axios";
 import toast from "react-hot-toast";
 import {
+  AlertTriangle,
   CheckCircle2,
   Download,
   FileSpreadsheet,
@@ -16,6 +17,12 @@ const BulkUserUploadAdmin = () => {
   const [isDragOver, setIsDragOver] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [isUploading, setIsUploading] = useState(false);
+  // Full response from the last upload (inserted/skipped counts, any
+  // per-row user-creation errors, plus — since the template now supports
+  // an optional enrollmentValidTill column — enrollment-specific results,
+  // so a bad date in that column is visible here instead of silently
+  // disappearing into a generic toast.
+  const [uploadResult, setUploadResult] = useState(null);
 
   const handleDragOver = (e) => {
     e.preventDefault();
@@ -95,9 +102,20 @@ const BulkUserUploadAdmin = () => {
         formData,
         { withCredentials: true }
       );
-      toast.success(res.data.message);
+      setUploadResult(res.data);
+      const enrolled = res.data.enrollmentsCreated || 0;
+      toast.success(
+        enrolled > 0
+          ? `${res.data.message} — ${enrolled} enrollment${enrolled === 1 ? "" : "s"} set from the sheet.`
+          : res.data.message
+      );
     } catch (error) {
-      toast.error("Upload failed");
+      setUploadResult(null);
+      toast.error(
+        error?.response?.data?.error ||
+          error?.response?.data?.message ||
+          "Upload failed"
+      );
     }
   };
 
@@ -139,7 +157,8 @@ const BulkUserUploadAdmin = () => {
                     Download Excel Template
                   </p>
                   <p className="text-sm text-gray-600">
-                    Get the formatted template file
+                    Includes an optional "enrollmentValidTill" column to set
+                    up course access at the same time
                   </p>
                 </div>
               </div>
@@ -246,6 +265,67 @@ const BulkUserUploadAdmin = () => {
             </button>
           </div>
         </div>
+
+        {uploadResult && (
+          <div className="mt-5 rounded-xl border border-gray-200 bg-gray-50 p-4 flex flex-col gap-3">
+            <div className="flex flex-wrap gap-4 text-sm">
+              <span className="font-medium text-gray-800">
+                {uploadResult.inserted || 0} user
+                {uploadResult.inserted === 1 ? "" : "s"} created
+              </span>
+              {uploadResult.enrollmentsCreated > 0 && (
+                <span className="font-medium text-indigo-700">
+                  {uploadResult.enrollmentsCreated} enrollment
+                  {uploadResult.enrollmentsCreated === 1 ? "" : "s"} set
+                </span>
+              )}
+              {uploadResult.skipped > 0 && (
+                <span className="font-medium text-amber-700">
+                  {uploadResult.skipped} row{uploadResult.skipped === 1 ? "" : "s"} skipped
+                </span>
+              )}
+            </div>
+
+            {uploadResult.errors && uploadResult.errors.length > 0 && (
+              <div className="flex flex-col gap-1">
+                <p className="text-xs font-semibold text-amber-700 flex items-center gap-1.5">
+                  <AlertTriangle className="h-3.5 w-3.5" />
+                  Rows not created
+                </p>
+                <ul className="text-xs text-gray-600 space-y-0.5 max-h-32 overflow-y-auto">
+                  {uploadResult.errors.map((err, idx) => (
+                    <li key={idx}>
+                      Row {err.row} ({err.email}): {err.reason}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
+            {uploadResult.enrollmentErrors &&
+              uploadResult.enrollmentErrors.length > 0 && (
+                <div className="flex flex-col gap-1">
+                  <p className="text-xs font-semibold text-amber-700 flex items-center gap-1.5">
+                    <AlertTriangle className="h-3.5 w-3.5" />
+                    Enrollment not set for some rows
+                  </p>
+                  <ul className="text-xs text-gray-600 space-y-0.5 max-h-32 overflow-y-auto">
+                    {uploadResult.enrollmentErrors.map((err, idx) => (
+                      <li key={idx}>
+                        {err.row ? `Row ${err.row} (${err.email}): ` : ""}
+                        {err.reason}
+                      </li>
+                    ))}
+                  </ul>
+                  <p className="text-xs text-gray-500">
+                    These accounts were still created — use "Manage
+                    Enrollment" on the Users page to set access for them
+                    manually.
+                  </p>
+                </div>
+              )}
+          </div>
+        )}
       </form>
     </div>
   );
