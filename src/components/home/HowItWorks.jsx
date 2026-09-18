@@ -21,9 +21,9 @@ const STEPS = [
   },
   {
     number: "04",
-    title: "Unlock the Next Level",
+    title: "Attempt Every Set",
     description:
-      "Pass one exam to unlock the next, so your preparation always builds forward.",
+      "Every test set is available to attempt as soon as it's posted — up to 3 attempts each — so you can practice in whatever order suits you.",
   },
 ];
 

@@ -40,7 +40,7 @@ const FEATURES = [
     icon: Layers,
     title: "Structured Study Roadmap",
     description:
-      "Exams unlock in sequence as you pass each one, so your preparation follows a deliberate, building order.",
+      "Every topic-wise set is available the moment it's posted, with up to 3 attempts each — so you can move through your syllabus at your own pace.",
   },
   {
     icon: Anchor,

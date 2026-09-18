@@ -26,6 +26,18 @@ const EMPTY_FORM = {
   recordedDate: new Date().toISOString().slice(0, 10),
   youtubeUrl: "",
   durationMinutes: "",
+  visibilityWindowDays: "7",
+  neverExpires: false,
+};
+
+// How the "Visible for" setting reads on the recordings table — a per-video
+// window (default 7 days from the recorded date, editable per class) after
+// which it quietly stops showing up for students, independent of YouTube.
+const formatVisibilityWindow = (rec) => {
+  if (rec.visibilityWindowDays === null || rec.visibilityWindowDays === undefined) {
+    return "Never expires";
+  }
+  return `${rec.visibilityWindowDays} day${rec.visibilityWindowDays === 1 ? "" : "s"}`;
 };
 
 // Admin management for the in-app recorded-class list. The admin uploads
@@ -91,6 +103,12 @@ const RecordedClassesAdminPage = () => {
       durationMinutes: rec.durationSeconds
         ? String(Math.round(rec.durationSeconds / 60))
         : "",
+      neverExpires:
+        rec.visibilityWindowDays === null || rec.visibilityWindowDays === undefined,
+      visibilityWindowDays:
+        rec.visibilityWindowDays === null || rec.visibilityWindowDays === undefined
+          ? "7"
+          : String(rec.visibilityWindowDays),
     });
     setOpenFormPopup(true);
   };
@@ -112,6 +130,9 @@ const RecordedClassesAdminPage = () => {
         durationSeconds: form.durationMinutes
           ? Number(form.durationMinutes) * 60
           : null,
+        visibilityWindowDays: form.neverExpires
+          ? null
+          : Math.max(0, Number(form.visibilityWindowDays) || 7),
       };
 
       if (editingId) {
@@ -228,6 +249,7 @@ const RecordedClassesAdminPage = () => {
               <th className="px-4 py-3">Category</th>
               <th className="px-4 py-3">Recorded Date</th>
               <th className="px-4 py-3">Duration</th>
+              <th className="px-4 py-3">Visible For</th>
               <th className="px-4 py-3">Status</th>
               <th className="px-4 py-3">Actions</th>
             </tr>
@@ -235,13 +257,13 @@ const RecordedClassesAdminPage = () => {
           <tbody>
             {loading ? (
               <tr>
-                <td colSpan={6} className="text-center text-gray-400 py-10">
+                <td colSpan={7} className="text-center text-gray-400 py-10">
                   Loading…
                 </td>
               </tr>
             ) : recordings.length === 0 ? (
               <tr>
-                <td colSpan={6} className="text-center text-gray-400 py-10">
+                <td colSpan={7} className="text-center text-gray-400 py-10">
                   No recordings added yet.
                 </td>
               </tr>
@@ -273,6 +295,9 @@ const RecordedClassesAdminPage = () => {
                           rec.durationSeconds % 60
                         }s`
                       : "—"}
+                  </td>
+                  <td className="px-4 py-3 text-gray-600">
+                    {formatVisibilityWindow(rec)}
                   </td>
                   <td className="px-4 py-3">
                     <span
@@ -425,6 +450,43 @@ const RecordedClassesAdminPage = () => {
                 onChange={(e) => setForm({ ...form, durationMinutes: e.target.value })}
                 disabled={saving}
               />
+            </div>
+            <div className="flex flex-col gap-2 border border-stone-200 rounded-2xl p-3 bg-stone-50">
+              <label className="text-sm text-stone-500 font-medium">
+                Visible to students for
+              </label>
+              <div className="flex items-center gap-2">
+                <input
+                  type="number"
+                  min="0"
+                  className="border border-stone-300 py-2 px-4 focus:outline-stone-300 rounded-xl bg-white w-28 disabled:opacity-50 disabled:bg-stone-100"
+                  value={form.visibilityWindowDays}
+                  onChange={(e) =>
+                    setForm({ ...form, visibilityWindowDays: e.target.value })
+                  }
+                  disabled={saving || form.neverExpires}
+                />
+                <span className="text-sm text-stone-500">
+                  day{form.visibilityWindowDays === "1" ? "" : "s"} from the
+                  recorded date
+                </span>
+              </div>
+              <label className="flex items-center gap-2 text-sm text-stone-600 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={form.neverExpires}
+                  onChange={(e) =>
+                    setForm({ ...form, neverExpires: e.target.checked })
+                  }
+                  disabled={saving}
+                />
+                Never expire (always visible to students while Active)
+              </label>
+              <p className="text-xs text-gray-400">
+                After this window, the class drops off students' "Recorded
+                Classes" list on its own — nothing changes on YouTube. You
+                can still see, edit, or delete it here at any time.
+              </p>
             </div>
           </div>
           <div className="grid grid-cols-2 gap-1">
