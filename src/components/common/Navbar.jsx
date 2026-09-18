@@ -125,7 +125,7 @@ const Navbar = ({ dashboard }) => {
                     to={"/recorded-classes"}
                     className="font-medium hover:text-navy transition-colors relative group"
                   >
-                    Recorded Classes
+                    Classes
                     <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-gold transition-all group-hover:w-full"></span>
                   </Link>
                 )}
@@ -338,7 +338,7 @@ const Navbar = ({ dashboard }) => {
                       onClick={closeMenu}
                       className="block px-6 py-3 text-gray-600 hover:text-navy hover:bg-gray-50 transition-colors font-medium"
                     >
-                      Recorded Classes
+                      Classes
                     </Link>
                   )}
                   {userData?.role !== "student" && (

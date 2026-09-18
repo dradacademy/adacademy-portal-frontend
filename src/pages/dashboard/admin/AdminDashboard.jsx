@@ -17,6 +17,7 @@ import TestTrackingAdminPage from "./subpages/TestTrackingAdminPage";
 import ContentManagementAdminPage from "./subpages/ContentManagementAdminPage";
 import RecordedClassesAdminPage from "./subpages/RecordedClassesAdminPage";
 import VideoAnalyticsAdminPage from "./subpages/VideoAnalyticsAdminPage";
+import LiveClassAdminPage from "./subpages/LiveClassAdminPage";
 
 const AdminDashboard = () => {
   return (
@@ -38,6 +39,7 @@ const AdminDashboard = () => {
             <Route path="/users" element={<UsersAdminPage />} />
             <Route path="/test-tracking" element={<TestTrackingAdminPage />} />
             <Route path="/content" element={<ContentManagementAdminPage />} />
+            <Route path="/live-class" element={<LiveClassAdminPage />} />
             <Route path="/recorded-classes" element={<RecordedClassesAdminPage />} />
             <Route path="/video-analytics" element={<VideoAnalyticsAdminPage />} />
             {/* <Route path="/trigger-mail" element={<TriggerMailAdminPage />} /> */}

@@ -326,7 +326,7 @@ import { Link, useLocation, useNavigate } from "react-router-dom";
 import { AuthContext } from "../../../context/AuthContext";
 import { MdOutlineRateReview, MdRateReview } from "react-icons/md";
 import { MdOutlineFactCheck, MdFactCheck } from "react-icons/md";
-import { Images, Video, BarChart3 } from "lucide-react";
+import { Images, Video, BarChart3, Megaphone } from "lucide-react";
 import axios from "axios";
 import toast from "react-hot-toast";
 
@@ -711,6 +711,37 @@ const Sidebar = () => {
                       />
                       {!showCollapsed && (
                         <h2 className="font-medium text-lg">Content</h2>
+                      )}
+                    </Link>
+                  </div>
+
+                  {/* Live Class */}
+                  <div className="flex items-center">
+                    <div
+                      className={`h-10 w-2 ${
+                        location.pathname === "/dashboard/live-class" ||
+                        location.pathname === "/dashboard/live-class/"
+                          ? "bg-stone-50"
+                          : "bg-indigo-500"
+                      } rounded-tr-full rounded-br-full`}
+                    ></div>
+                    <Link
+                      to={"/dashboard/live-class"}
+                      className={`flex items-center gap-2 px-[17px] transition-all duration-300 ${
+                        location.pathname === "/dashboard/live-class" ||
+                        location.pathname === "/dashboard/live-class/"
+                          ? "text-stone-50"
+                          : "text-indigo-100 hover:opacity-80 duration-300"
+                      } ${showCollapsed ? "justify-center px-2" : ""}`}
+                      title={showCollapsed ? "Live Class" : ""}
+                    >
+                      <Megaphone
+                        className={`${
+                          showCollapsed ? "w-5 h-5 sm:w-6 sm:h-6" : "w-6 h-6"
+                        }`}
+                      />
+                      {!showCollapsed && (
+                        <h2 className="font-medium text-lg">Live Class</h2>
                       )}
                     </Link>
                   </div>
