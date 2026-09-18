@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from "react";
 import axios from "axios";
-import { X } from "lucide-react";
+import { X, Volume2, VolumeX } from "lucide-react";
 
 const YOUTUBE_IFRAME_API_URL = "https://www.youtube.com/iframe_api";
 
@@ -25,13 +25,18 @@ const loadYoutubeIframeApi = () => {
   return sdkLoadPromise;
 };
 
+// How often to ping our backend with live watch progress while playing —
+// same cadence and same "actual play time, not just an open tab" principle
+// as RecordedClassPlayer, so live attendance can't be gamed by leaving the
+// page open without the stream actually running.
+const PROGRESS_PING_INTERVAL_MS = 15000;
+
 // Wraps a YouTube IFrame Player for a LIVE class (fed a video ID the
 // backend only hands over after checking category + active course
-// enrollment — see liveClassController.js's joinLiveClass). Deliberately
-// simpler than RecordedClassPlayer: a live stream has no fixed duration,
-// no meaningful "resume position," and watch-time/percent-watched analytics
-// don't apply the same way to a live broadcast, so none of that tracking
-// runs here — this just embeds the stream once access is confirmed.
+// enrollment — see liveClassController.js's joinLiveClass). Unlike
+// RecordedClassPlayer there's no fixed duration or "resume position" to
+// track, but watch TIME is still reported — it's what powers automatic
+// live attendance (see liveAttendanceModel.js / getLiveAttendanceReport).
 const LiveClassPlayer = ({ liveClass, onClose }) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -39,6 +44,18 @@ const LiveClassPlayer = ({ liveClass, onClose }) => {
 
   const iframeContainerRef = useRef(null);
   const playerRef = useRef(null);
+  const lastReportedTimeRef = useRef(0);
+  const sessionStartedRef = useRef(false);
+  const pingIntervalRef = useRef(null);
+  // Browsers block autoplay-with-sound (most mobile browsers included), so
+  // the player starts muted below to guarantee it actually starts playing
+  // — an unmuted autoplay request is silently ignored by the browser,
+  // which otherwise leaves the video paused with no watch time ever
+  // recorded and no error shown to the student. We immediately try an
+  // in-script unMute() once playback begins (allowed, since the video is
+  // already playing by then), and still expose this manual toggle as a
+  // fallback for the rare browser that blocks even that.
+  const [isMuted, setIsMuted] = useState(true);
 
   useEffect(() => {
     let cancelled = false;
@@ -72,6 +89,19 @@ const LiveClassPlayer = ({ liveClass, onClose }) => {
     };
   }, [liveClass._id]);
 
+  const sendProgress = (deltaSecondsWatched, newSession) => {
+    if (deltaSecondsWatched <= 0 && !newSession) return;
+    axios
+      .post(
+        `${import.meta.env.VITE_APP_API_URL}/live-classes/${liveClass._id}/progress`,
+        { deltaSecondsWatched, newSession }
+      )
+      .catch(() => {
+        // Best-effort — a dropped progress ping isn't worth surfacing to
+        // the student mid-class.
+      });
+  };
+
   useEffect(() => {
     if (!youtubeVideoId || !iframeContainerRef.current) return;
 
@@ -88,18 +118,58 @@ const LiveClassPlayer = ({ liveClass, onClose }) => {
           modestbranding: 1,
           playsinline: 1,
           autoplay: 1,
+          // Starts muted so the browser actually allows the autoplay —
+          // see the isMuted comment above.
+          mute: 1,
+        },
+        events: {
+          onStateChange: (event) => {
+            const YT_STATE = window.YT.PlayerState;
+            if (event.data === YT_STATE.PLAYING && !sessionStartedRef.current) {
+              sessionStartedRef.current = true;
+              sendProgress(0, true);
+              try {
+                event.target.unMute();
+                setIsMuted(event.target.isMuted());
+              } catch (e) {
+                // Some browsers still refuse this — the visible unmute
+                // button below is the fallback.
+              }
+            }
+          },
         },
       });
     };
 
     attach();
 
+    pingIntervalRef.current = setInterval(() => {
+      const player = playerRef.current;
+      if (!player || typeof player.getCurrentTime !== "function") return;
+      // getCurrentTime() on a live broadcast only advances while it's
+      // actually playing — that's what makes this a real watch-time signal
+      // rather than "the page was open."
+      const current = Math.floor(player.getCurrentTime() || 0);
+      const delta = Math.max(0, current - lastReportedTimeRef.current);
+      if (delta > 0) {
+        lastReportedTimeRef.current = current;
+        sendProgress(delta, false);
+      }
+    }, PROGRESS_PING_INTERVAL_MS);
+
     return () => {
       cancelled = true;
+      clearInterval(pingIntervalRef.current);
       const player = playerRef.current;
+      if (player && typeof player.getCurrentTime === "function") {
+        const current = Math.floor(player.getCurrentTime() || 0);
+        const delta = Math.max(0, current - lastReportedTimeRef.current);
+        if (delta > 0) sendProgress(delta, false);
+      }
       if (player && typeof player.destroy === "function") player.destroy();
       playerRef.current = null;
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [youtubeVideoId]);
 
   if (!youtubeVideoId && !error) {
@@ -127,6 +197,30 @@ const LiveClassPlayer = ({ liveClass, onClose }) => {
             <span className="h-1.5 w-1.5 rounded-full bg-white animate-pulse" />
             LIVE
           </div>
+        )}
+
+        {!error && youtubeVideoId && (
+          <button
+            onClick={() => {
+              const player = playerRef.current;
+              if (!player) return;
+              if (isMuted) {
+                player.unMute();
+              } else {
+                player.mute();
+              }
+              setIsMuted(!isMuted);
+            }}
+            className="absolute bottom-3 left-3 z-10 flex items-center gap-1.5 text-white bg-black/60 hover:bg-black/80 rounded-full py-1.5 px-3 text-xs font-medium"
+          >
+            {isMuted ? (
+              <>
+                <VolumeX className="h-4 w-4" /> Tap to unmute
+              </>
+            ) : (
+              <Volume2 className="h-4 w-4" />
+            )}
+          </button>
         )}
 
         {error ? (
