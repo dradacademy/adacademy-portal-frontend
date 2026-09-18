@@ -11,7 +11,9 @@ import {
   Sparkles,
   Image as ImageIcon,
   LoaderCircle,
+  Megaphone,
 } from "lucide-react";
+import { EXAM_CATEGORY_OPTIONS } from "../../../../constants/examCategories";
 
 // Phase 3: lets the admin update the homepage's Achievers, Testimonials,
 // Gallery, and Announcements sections without a code change / redeploy.
@@ -107,6 +109,46 @@ const ContentManagementAdminPage = () => {
 
   const [openDelete, setOpenDelete] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState(null);
+
+  // "Notify Students" — separate from the ContentItem-based Announcements
+  // tab above. That tab posts to the PUBLIC homepage's Announcements
+  // section (anyone can see it, even logged out). This posts a
+  // Notification (type: announcement) — the thing that actually drives
+  // the red scrolling ticker + notification bell "new" badge for
+  // logged-in students. Two different systems, both called
+  // "announcement" — kept visually separate here so it's not confused
+  // with the tab above.
+  const [notifyCategory, setNotifyCategory] = useState("");
+  const [notifyTitle, setNotifyTitle] = useState("");
+  const [notifyMessage, setNotifyMessage] = useState("");
+  const [notifySending, setNotifySending] = useState(false);
+
+  const handlePostNotification = async () => {
+    if (!notifyTitle.trim()) {
+      toast.error("Please enter a title for the announcement.");
+      return;
+    }
+    setNotifySending(true);
+    try {
+      await axios.post(`${import.meta.env.VITE_APP_API_URL}/notifications/announcement`, {
+        category: notifyCategory || null,
+        title: notifyTitle.trim(),
+        message: notifyMessage.trim(),
+      });
+      toast.success(
+        notifyCategory
+          ? "Posted — students in that category will see it on their bell and ticker."
+          : "Posted — all students will see it on their bell and ticker."
+      );
+      setNotifyTitle("");
+      setNotifyMessage("");
+      setNotifyCategory("");
+    } catch (err) {
+      toast.error(err?.response?.data?.message || "Failed to post the announcement.");
+    } finally {
+      setNotifySending(false);
+    }
+  };
 
   const fields = TYPE_FIELDS[activeType];
 
@@ -340,6 +382,60 @@ const ContentManagementAdminPage = () => {
             + Add New
           </button>
         </div>
+      </div>
+
+      {/* Notify Students — posts to the notification bell + the red
+          scrolling ticker on the student Activities page. Distinct from
+          the "Announcements" tab below, which only updates the public
+          homepage's Announcements section. */}
+      <div className="flex flex-col gap-3 p-5 rounded-2xl border border-indigo-100 bg-indigo-50/40 font-inter">
+        <div className="flex items-center gap-2">
+          <Megaphone className="w-5 h-5 text-indigo-500" />
+          <h2 className="text-lg font-bold text-stone-700 font-poppins">
+            Notify Students (Bell + Ticker)
+          </h2>
+        </div>
+        <p className="text-sm text-stone-500 -mt-1">
+          This is what makes the red scrolling banner appear on a logged-in
+          student's Activities page and lights up their notification bell —
+          it's separate from the "Announcements" tab below, which only
+          updates the public homepage.
+        </p>
+        <div className="grid sm:grid-cols-[200px_1fr] gap-3">
+          <select
+            value={notifyCategory}
+            onChange={(e) => setNotifyCategory(e.target.value)}
+            className="border border-stone-300 py-[10px] px-3 focus:outline-none rounded-xl bg-white text-sm"
+          >
+            <option value="">All categories</option>
+            {EXAM_CATEGORY_OPTIONS.map((opt) => (
+              <option key={opt.value} value={opt.value}>
+                {opt.label}
+              </option>
+            ))}
+          </select>
+          <input
+            type="text"
+            placeholder="Title (required) — e.g. Holiday on Monday, no class"
+            value={notifyTitle}
+            onChange={(e) => setNotifyTitle(e.target.value)}
+            className="border border-stone-300 py-[10px] px-4 focus:outline-none rounded-xl bg-white text-sm"
+          />
+        </div>
+        <textarea
+          placeholder="Message (optional) — a bit more detail if needed"
+          value={notifyMessage}
+          onChange={(e) => setNotifyMessage(e.target.value)}
+          className="border border-stone-300 py-[10px] px-4 focus:outline-none rounded-xl bg-white text-sm min-h-[70px]"
+        />
+        <button
+          onClick={handlePostNotification}
+          disabled={notifySending}
+          className="self-start flex items-center gap-2 bg-indigo-500 text-stone-50 font-medium py-2 px-5 rounded-xl font-poppins cursor-pointer hover:opacity-85 duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          {notifySending && <LoaderCircle className="w-4 h-4 animate-spin" />}
+          Post to Students
+        </button>
       </div>
 
       <div className="flex flex-wrap items-center gap-2 font-inter">
