@@ -7,6 +7,9 @@ import Home from "./pages/home/Home";
 import { AuthContext } from "./context/AuthContext";
 import StudentActivities from "./pages/activities/student/StudentActivities";
 import RecordedClassesStudent from "./pages/activities/student/RecordedClassesStudent";
+import AttachmentsStudent from "./pages/activities/student/AttachmentsStudent";
+import MyProgressStudent from "./pages/activities/student/MyProgressStudent";
+import StudentProfilePage from "./pages/activities/student/StudentProfilePage";
 import AttemptedExamSubmissionDetail from "./pages/activities/examDetailedView/AttemptedExamSubmissionDetail";
 import EvaluatorActivities from "./pages/activities/evaluator/EvaluatorActivities";
 import EvaluatorDashboard from "./pages/dashboard/evaluator/EvaluatorDashboard";
@@ -84,6 +87,24 @@ function App() {
           path="/recorded-classes"
           element={
             userData ? <RecordedClassesStudent /> : <Navigate to={"/login"} />
+          }
+        />
+        <Route
+          path="/attachments"
+          element={
+            userData ? <AttachmentsStudent /> : <Navigate to={"/login"} />
+          }
+        />
+        <Route
+          path="/progress"
+          element={
+            userData ? <MyProgressStudent /> : <Navigate to={"/login"} />
+          }
+        />
+        <Route
+          path="/profile"
+          element={
+            userData ? <StudentProfilePage /> : <Navigate to={"/login"} />
           }
         />
         <Route

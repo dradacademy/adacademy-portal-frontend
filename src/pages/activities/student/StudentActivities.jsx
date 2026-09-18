@@ -6,6 +6,8 @@ import React, {
   useMemo,
 } from "react";
 import Navbar from "../../../components/common/Navbar";
+import NewUpdatesBanner from "../../../components/common/NewUpdatesBanner";
+import AnnouncementTicker from "../../../components/common/AnnouncementTicker";
 import { AuthContext } from "../../../context/AuthContext";
 import toast from "react-hot-toast";
 import axios from "axios";
@@ -299,6 +301,8 @@ const StudentActivities = () => {
     <div className="p-5">
       <Navbar />
       <main className=" mx-auto px-4 py-8 w-full">
+        <AnnouncementTicker />
+        <NewUpdatesBanner />
         <StatsActivity
           currentUsertype={"student"}
           examData={examData}

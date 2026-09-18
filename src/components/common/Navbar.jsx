@@ -13,6 +13,7 @@ import IconButton from "@mui/material/IconButton";
 import Tooltip from "@mui/material/Tooltip";
 import { FiLogOut } from "react-icons/fi";
 import PortalSelectorPopup from "./popup/PortalSelectorPopup";
+import NotificationBell from "./NotificationBell";
 
 const EXAM_LINKS = [
   { name: "GATE Civil", to: "/exams/gate" },
@@ -129,6 +130,33 @@ const Navbar = ({ dashboard }) => {
                     <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-gold transition-all group-hover:w-full"></span>
                   </Link>
                 )}
+                {userData?.role === "student" && (
+                  <Link
+                    to={"/attachments"}
+                    className="font-medium hover:text-navy transition-colors relative group"
+                  >
+                    Materials
+                    <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-gold transition-all group-hover:w-full"></span>
+                  </Link>
+                )}
+                {userData?.role === "student" && (
+                  <Link
+                    to={"/progress"}
+                    className="font-medium hover:text-navy transition-colors relative group"
+                  >
+                    My Progress
+                    <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-gold transition-all group-hover:w-full"></span>
+                  </Link>
+                )}
+                {userData?.role === "student" && (
+                  <Link
+                    to={"/profile"}
+                    className="font-medium hover:text-navy transition-colors relative group"
+                  >
+                    My Profile
+                    <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-gold transition-all group-hover:w-full"></span>
+                  </Link>
+                )}
                 {userData?.role !== "student" && (
                   <Link
                     to={"/dashboard"}
@@ -203,6 +231,7 @@ const Navbar = ({ dashboard }) => {
           <div className="hidden lg:flex items-center gap-4 font-poppins shrink-0">
             {userData != null ? (
               <React.Fragment>
+                {userData?.role === "student" && <NotificationBell />}
                 <Box
                   sx={{
                     display: "flex",
@@ -340,6 +369,38 @@ const Navbar = ({ dashboard }) => {
                     >
                       Classes
                     </Link>
+                  )}
+                  {userData?.role === "student" && (
+                    <Link
+                      to={"/attachments"}
+                      onClick={closeMenu}
+                      className="block px-6 py-3 text-gray-600 hover:text-navy hover:bg-gray-50 transition-colors font-medium"
+                    >
+                      Materials
+                    </Link>
+                  )}
+                  {userData?.role === "student" && (
+                    <Link
+                      to={"/progress"}
+                      onClick={closeMenu}
+                      className="block px-6 py-3 text-gray-600 hover:text-navy hover:bg-gray-50 transition-colors font-medium"
+                    >
+                      My Progress
+                    </Link>
+                  )}
+                  {userData?.role === "student" && (
+                    <Link
+                      to={"/profile"}
+                      onClick={closeMenu}
+                      className="block px-6 py-3 text-gray-600 hover:text-navy hover:bg-gray-50 transition-colors font-medium"
+                    >
+                      My Profile
+                    </Link>
+                  )}
+                  {userData?.role === "student" && (
+                    <div className="px-6 py-3">
+                      <NotificationBell />
+                    </div>
                   )}
                   {userData?.role !== "student" && (
                     <Link

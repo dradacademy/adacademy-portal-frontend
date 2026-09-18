@@ -6,7 +6,9 @@ import {
   ChevronRight,
   Clock3,
   HelpCircle,
+  FileText,
 } from "lucide-react";
+import AnswerSheetPanel from "./AnswerSheetPanel";
 
 const formatDateTime = (value) => {
   if (!value) return "—";
@@ -73,6 +75,7 @@ const StudentTestIndexTable = ({ data, searchTerm, loading }) => {
   const [statusFilter, setStatusFilter] = useState("All");
   const [onTimeFilter, setOnTimeFilter] = useState("All");
   const [expandedExamIds, setExpandedExamIds] = useState(() => new Set());
+  const [answerSheetExam, setAnswerSheetExam] = useState(null);
 
   const toggleExpanded = (examId) => {
     setExpandedExamIds((prev) => {
@@ -181,6 +184,7 @@ const StudentTestIndexTable = ({ data, searchTerm, loading }) => {
               <th className="px-4 py-3">Speed %</th>
               <th className="px-4 py-3">Accuracy %</th>
               <th className="px-4 py-3">On Time?</th>
+              <th className="px-4 py-3">Answer Sheet</th>
             </tr>
           </thead>
           <tbody>
@@ -276,6 +280,22 @@ const StudentTestIndexTable = ({ data, searchTerm, loading }) => {
                     <td className="px-4 py-3">
                       <OnTimeBadge onTime={latest?.onTime} />
                     </td>
+                    <td className="px-4 py-3">
+                      {row.status === "Completed" && (
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setAnswerSheetExam({
+                              examId: row.examId,
+                              attemptNumber: latest?.attemptNumber,
+                            });
+                          }}
+                          className="flex items-center gap-1 text-xs font-medium bg-indigo-50 text-indigo-600 px-2.5 py-1.5 rounded-full hover:bg-indigo-100"
+                        >
+                          <FileText className="h-3.5 w-3.5" /> Upload / View
+                        </button>
+                      )}
+                    </td>
                   </tr>
 
                   {hasMultiple &&
@@ -318,6 +338,20 @@ const StudentTestIndexTable = ({ data, searchTerm, loading }) => {
                         <td className="px-4 py-2">
                           <OnTimeBadge onTime={attempt.onTime} />
                         </td>
+                        <td className="px-4 py-2">
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setAnswerSheetExam({
+                                examId: row.examId,
+                                attemptNumber: attempt.attemptNumber,
+                              });
+                            }}
+                            className="flex items-center gap-1 text-xs font-medium bg-indigo-50 text-indigo-600 px-2.5 py-1.5 rounded-full hover:bg-indigo-100"
+                          >
+                            <FileText className="h-3.5 w-3.5" /> Upload / View
+                          </button>
+                        </td>
                       </tr>
                     ))}
                 </React.Fragment>
@@ -331,6 +365,14 @@ const StudentTestIndexTable = ({ data, searchTerm, loading }) => {
           </div>
         )}
       </div>
+
+      {answerSheetExam && (
+        <AnswerSheetPanel
+          examId={answerSheetExam.examId}
+          attemptNumber={answerSheetExam.attemptNumber}
+          onClose={() => setAnswerSheetExam(null)}
+        />
+      )}
     </div>
   );
 };

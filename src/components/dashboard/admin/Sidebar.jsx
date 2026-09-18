@@ -326,7 +326,17 @@ import { Link, useLocation, useNavigate } from "react-router-dom";
 import { AuthContext } from "../../../context/AuthContext";
 import { MdOutlineRateReview, MdRateReview } from "react-icons/md";
 import { MdOutlineFactCheck, MdFactCheck } from "react-icons/md";
-import { Images, Video, BarChart3, Megaphone } from "lucide-react";
+import {
+  Images,
+  Video,
+  BarChart3,
+  Megaphone,
+  ClipboardCheck,
+  Users as UsersIcon,
+  Paperclip,
+  FileText,
+  User as UserIcon,
+} from "lucide-react";
 import axios from "axios";
 import toast from "react-hot-toast";
 
@@ -804,6 +814,161 @@ const Sidebar = () => {
                       />
                       {!showCollapsed && (
                         <h2 className="font-medium text-lg">Video Analytics</h2>
+                      )}
+                    </Link>
+                  </div>
+
+                  {/* Attendance Report */}
+                  <div className="flex items-center">
+                    <div
+                      className={`h-10 w-2 ${
+                        location.pathname === "/dashboard/attendance-report" ||
+                        location.pathname === "/dashboard/attendance-report/"
+                          ? "bg-stone-50"
+                          : "bg-indigo-500"
+                      } rounded-tr-full rounded-br-full`}
+                    ></div>
+                    <Link
+                      to={"/dashboard/attendance-report"}
+                      className={`flex items-center gap-2 px-[17px] transition-all duration-300 ${
+                        location.pathname === "/dashboard/attendance-report" ||
+                        location.pathname === "/dashboard/attendance-report/"
+                          ? "text-stone-50"
+                          : "text-indigo-100 hover:opacity-80 duration-300"
+                      } ${showCollapsed ? "justify-center px-2" : ""}`}
+                      title={showCollapsed ? "Attendance Report" : ""}
+                    >
+                      <ClipboardCheck
+                        className={`${
+                          showCollapsed ? "w-5 h-5 sm:w-6 sm:h-6" : "w-6 h-6"
+                        }`}
+                      />
+                      {!showCollapsed && (
+                        <h2 className="font-medium text-lg">Attendance Report</h2>
+                      )}
+                    </Link>
+                  </div>
+
+                  {/* Student Progress */}
+                  <div className="flex items-center">
+                    <div
+                      className={`h-10 w-2 ${
+                        location.pathname === "/dashboard/student-progress" ||
+                        location.pathname === "/dashboard/student-progress/"
+                          ? "bg-stone-50"
+                          : "bg-indigo-500"
+                      } rounded-tr-full rounded-br-full`}
+                    ></div>
+                    <Link
+                      to={"/dashboard/student-progress"}
+                      className={`flex items-center gap-2 px-[17px] transition-all duration-300 ${
+                        location.pathname === "/dashboard/student-progress" ||
+                        location.pathname === "/dashboard/student-progress/"
+                          ? "text-stone-50"
+                          : "text-indigo-100 hover:opacity-80 duration-300"
+                      } ${showCollapsed ? "justify-center px-2" : ""}`}
+                      title={showCollapsed ? "Student Progress" : ""}
+                    >
+                      <UsersIcon
+                        className={`${
+                          showCollapsed ? "w-5 h-5 sm:w-6 sm:h-6" : "w-6 h-6"
+                        }`}
+                      />
+                      {!showCollapsed && (
+                        <h2 className="font-medium text-lg">Student Progress</h2>
+                      )}
+                    </Link>
+                  </div>
+
+                  {/* Attachments */}
+                  <div className="flex items-center">
+                    <div
+                      className={`h-10 w-2 ${
+                        location.pathname === "/dashboard/attachments" ||
+                        location.pathname === "/dashboard/attachments/"
+                          ? "bg-stone-50"
+                          : "bg-indigo-500"
+                      } rounded-tr-full rounded-br-full`}
+                    ></div>
+                    <Link
+                      to={"/dashboard/attachments"}
+                      className={`flex items-center gap-2 px-[17px] transition-all duration-300 ${
+                        location.pathname === "/dashboard/attachments" ||
+                        location.pathname === "/dashboard/attachments/"
+                          ? "text-stone-50"
+                          : "text-indigo-100 hover:opacity-80 duration-300"
+                      } ${showCollapsed ? "justify-center px-2" : ""}`}
+                      title={showCollapsed ? "Attachments" : ""}
+                    >
+                      <Paperclip
+                        className={`${
+                          showCollapsed ? "w-5 h-5 sm:w-6 sm:h-6" : "w-6 h-6"
+                        }`}
+                      />
+                      {!showCollapsed && (
+                        <h2 className="font-medium text-lg">Attachments</h2>
+                      )}
+                    </Link>
+                  </div>
+
+                  {/* Answer Sheets */}
+                  <div className="flex items-center">
+                    <div
+                      className={`h-10 w-2 ${
+                        location.pathname === "/dashboard/answer-sheets" ||
+                        location.pathname === "/dashboard/answer-sheets/"
+                          ? "bg-stone-50"
+                          : "bg-indigo-500"
+                      } rounded-tr-full rounded-br-full`}
+                    ></div>
+                    <Link
+                      to={"/dashboard/answer-sheets"}
+                      className={`flex items-center gap-2 px-[17px] transition-all duration-300 ${
+                        location.pathname === "/dashboard/answer-sheets" ||
+                        location.pathname === "/dashboard/answer-sheets/"
+                          ? "text-stone-50"
+                          : "text-indigo-100 hover:opacity-80 duration-300"
+                      } ${showCollapsed ? "justify-center px-2" : ""}`}
+                      title={showCollapsed ? "Answer Sheets" : ""}
+                    >
+                      <FileText
+                        className={`${
+                          showCollapsed ? "w-5 h-5 sm:w-6 sm:h-6" : "w-6 h-6"
+                        }`}
+                      />
+                      {!showCollapsed && (
+                        <h2 className="font-medium text-lg">Answer Sheets</h2>
+                      )}
+                    </Link>
+                  </div>
+
+                  {/* Student Profiles */}
+                  <div className="flex items-center">
+                    <div
+                      className={`h-10 w-2 ${
+                        location.pathname === "/dashboard/student-profiles" ||
+                        location.pathname === "/dashboard/student-profiles/"
+                          ? "bg-stone-50"
+                          : "bg-indigo-500"
+                      } rounded-tr-full rounded-br-full`}
+                    ></div>
+                    <Link
+                      to={"/dashboard/student-profiles"}
+                      className={`flex items-center gap-2 px-[17px] transition-all duration-300 ${
+                        location.pathname === "/dashboard/student-profiles" ||
+                        location.pathname === "/dashboard/student-profiles/"
+                          ? "text-stone-50"
+                          : "text-indigo-100 hover:opacity-80 duration-300"
+                      } ${showCollapsed ? "justify-center px-2" : ""}`}
+                      title={showCollapsed ? "Student Profiles" : ""}
+                    >
+                      <UserIcon
+                        className={`${
+                          showCollapsed ? "w-5 h-5 sm:w-6 sm:h-6" : "w-6 h-6"
+                        }`}
+                      />
+                      {!showCollapsed && (
+                        <h2 className="font-medium text-lg">Student Profiles</h2>
                       )}
                     </Link>
                   </div>

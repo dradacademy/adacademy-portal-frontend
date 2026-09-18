@@ -31,7 +31,13 @@ const UsersAdminPage = () => {
     password: "",
     role: "student",
     category: EXAM_CATEGORY_OPTIONS[0].value,
+    batch: "",
   });
+  // Inline "Batch" edits in the users table — keyed by userId, only present
+  // while a row's batch value differs from what's saved (drives the Save
+  // button's visibility below).
+  const [batchEdits, setBatchEdits] = useState({});
+  const [savingBatchId, setSavingBatchId] = useState(null);
   // Category tab — view students one exam category at a time so it's
   // immediately obvious who belongs to GATE vs. TNPSC vs. SSC/RRB.
   const [activeCategory, setActiveCategory] = useState("all");
@@ -92,7 +98,35 @@ const UsersAdminPage = () => {
       password: "",
       role: "student",
       category: EXAM_CATEGORY_OPTIONS[0].value,
+      batch: "",
     });
+  };
+
+  const handleSaveBatch = async (rowData) => {
+    const newBatch = batchEdits[rowData._id] ?? rowData.batch ?? "";
+    setSavingBatchId(rowData._id);
+    try {
+      const response = await axios.patch(
+        `${import.meta.env.VITE_APP_API_URL}/users/${rowData._id}/batch`,
+        { batch: newBatch }
+      );
+      const updatedUser = response.data?.user || response.data?.data;
+      SetAllUsersData(
+        allUsersData.map((u) =>
+          u._id === rowData._id ? { ...u, batch: updatedUser?.batch ?? newBatch } : u
+        )
+      );
+      setBatchEdits((prev) => {
+        const next = { ...prev };
+        delete next[rowData._id];
+        return next;
+      });
+      toast.success("Batch updated.");
+    } catch (error) {
+      toast.error(error?.response?.data?.message || "Failed to update batch.");
+    } finally {
+      setSavingBatchId(null);
+    }
   };
 
   const handleToggleActive = async (rowData) => {
@@ -249,6 +283,7 @@ const UsersAdminPage = () => {
         ...(userData.role === "student" && {
           registerNumber: userData.registerNumber,
           category: userData.category,
+          batch: userData.batch,
         }),
       };
       const response = await axios.post(
@@ -265,6 +300,7 @@ const UsersAdminPage = () => {
           password: "",
           role: "student",
           category: EXAM_CATEGORY_OPTIONS[0].value,
+          batch: "",
         });
         toast.success("User added successfully");
         handleCloseUserPopup();
@@ -399,6 +435,39 @@ const UsersAdminPage = () => {
           }
         />
         <Column
+          header="Batch"
+          body={(rowData) =>
+            rowData.role === "student" ? (
+              <div className="flex items-center gap-1.5">
+                <input
+                  type="text"
+                  className="border border-stone-200 rounded-lg px-2 py-1 text-sm w-24"
+                  placeholder="Batch"
+                  value={batchEdits[rowData._id] ?? rowData.batch ?? ""}
+                  onChange={(e) =>
+                    setBatchEdits((prev) => ({
+                      ...prev,
+                      [rowData._id]: e.target.value,
+                    }))
+                  }
+                />
+                {batchEdits[rowData._id] !== undefined &&
+                  batchEdits[rowData._id] !== (rowData.batch || "") && (
+                    <button
+                      onClick={() => handleSaveBatch(rowData)}
+                      disabled={savingBatchId === rowData._id}
+                      className="text-xs font-medium bg-indigo-500 text-white px-2 py-1 rounded-lg hover:bg-indigo-600 disabled:opacity-50 text-nowrap"
+                    >
+                      {savingBatchId === rowData._id ? "…" : "Save"}
+                    </button>
+                  )}
+              </div>
+            ) : (
+              "—"
+            )
+          }
+        />
+        <Column
           field="isDisabled"
           header="Status"
           sortable
@@ -521,6 +590,17 @@ const UsersAdminPage = () => {
                 }}
                 menuPortalTarget={document.body}
                 menuPosition="absolute"
+              />
+            )}
+            {userData.role === "student" && (
+              <input
+                type="text"
+                name="batch"
+                id="batch"
+                className=" border border-stone-300 py-[10px] px-4 focus:outline-stone-300 rounded-2xl bg-white"
+                placeholder="Batch (optional)"
+                onChange={handleChange}
+                value={userData.batch}
               />
             )}
             <input

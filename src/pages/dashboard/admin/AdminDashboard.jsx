@@ -18,6 +18,11 @@ import ContentManagementAdminPage from "./subpages/ContentManagementAdminPage";
 import RecordedClassesAdminPage from "./subpages/RecordedClassesAdminPage";
 import VideoAnalyticsAdminPage from "./subpages/VideoAnalyticsAdminPage";
 import LiveClassAdminPage from "./subpages/LiveClassAdminPage";
+import AttendanceReportAdminPage from "./subpages/AttendanceReportAdminPage";
+import StudentProgressDashboardAdminPage from "./subpages/StudentProgressDashboardAdminPage";
+import AttachmentsAdminPage from "./subpages/AttachmentsAdminPage";
+import AnswerSheetsAdminPage from "./subpages/AnswerSheetsAdminPage";
+import StudentProfilesAdminPage from "./subpages/StudentProfilesAdminPage";
 
 const AdminDashboard = () => {
   return (
@@ -42,6 +47,11 @@ const AdminDashboard = () => {
             <Route path="/live-class" element={<LiveClassAdminPage />} />
             <Route path="/recorded-classes" element={<RecordedClassesAdminPage />} />
             <Route path="/video-analytics" element={<VideoAnalyticsAdminPage />} />
+            <Route path="/attendance-report" element={<AttendanceReportAdminPage />} />
+            <Route path="/student-progress" element={<StudentProgressDashboardAdminPage />} />
+            <Route path="/attachments" element={<AttachmentsAdminPage />} />
+            <Route path="/answer-sheets" element={<AnswerSheetsAdminPage />} />
+            <Route path="/student-profiles" element={<StudentProfilesAdminPage />} />
             {/* <Route path="/trigger-mail" element={<TriggerMailAdminPage />} /> */}
             <Route path="/comment" element={<CommentDashboard />} />
             <Route path="/controllers" element={<MarkAndDurationAdmin />} />
