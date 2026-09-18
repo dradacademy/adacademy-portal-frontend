@@ -2,7 +2,7 @@ import axios from "axios";
 import React, { useEffect, useState } from "react";
 import toast from "react-hot-toast";
 import Select from "react-select";
-import { Megaphone, PlayCircle } from "lucide-react";
+import { Megaphone, PlayCircle, Trash2 } from "lucide-react";
 import {
   EXAM_CATEGORY_OPTIONS,
   getCategoryLabel,
@@ -37,6 +37,7 @@ const LiveClassAdminPage = () => {
   const [form, setForm] = useState(EMPTY_FORM);
   const [saving, setSaving] = useState(false);
   const [ending, setEnding] = useState(null);
+  const [deleting, setDeleting] = useState(null);
 
   const fetchHistory = async () => {
     try {
@@ -94,6 +95,37 @@ const LiveClassAdminPage = () => {
     }
   };
 
+  // Permanently removes a live-class entry — from the admin's history table
+  // AND from student view (if it happened to still be the live one). Unlike
+  // "End Live" (which just marks it no longer ongoing but keeps the history
+  // row), this deletes the record entirely — for cleaning up a duplicate or
+  // mistaken entry, not the normal end-of-class flow.
+  const handleDelete = async (liveClass) => {
+    const confirmed = window.confirm(
+      `Delete "${liveClass.title}" from the live class history? This can't be undone.${
+        liveClass.active
+          ? " It's currently LIVE — deleting it will immediately remove it from students' view too."
+          : ""
+      }`
+    );
+    if (!confirmed) return;
+
+    setDeleting(liveClass._id);
+    try {
+      await axios.delete(
+        `${import.meta.env.VITE_APP_API_URL}/live-classes/${liveClass._id}`
+      );
+      toast.success("Deleted.");
+      fetchHistory();
+    } catch (error) {
+      toast.error(
+        error?.response?.data?.message || "Failed to delete the live class."
+      );
+    } finally {
+      setDeleting(null);
+    }
+  };
+
   return (
     <div className="flex flex-col gap-8 w-full font-inter">
       <div className="flex flex-col gap-2">
@@ -128,13 +160,23 @@ const LiveClassAdminPage = () => {
                   </p>
                 </div>
               </div>
-              <button
-                onClick={() => handleEndLive(lc)}
-                disabled={ending === lc._id}
-                className="bg-stone-700 hover:bg-stone-800 text-white text-sm font-medium py-2 px-4 rounded-xl transition-colors disabled:opacity-50"
-              >
-                {ending === lc._id ? "Ending…" : "End Live"}
-              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => handleEndLive(lc)}
+                  disabled={ending === lc._id || deleting === lc._id}
+                  className="bg-stone-700 hover:bg-stone-800 text-white text-sm font-medium py-2 px-4 rounded-xl transition-colors disabled:opacity-50"
+                >
+                  {ending === lc._id ? "Ending…" : "End Live"}
+                </button>
+                <button
+                  onClick={() => handleDelete(lc)}
+                  disabled={deleting === lc._id || ending === lc._id}
+                  title="Delete this entry entirely"
+                  className="p-2 rounded-xl text-rose-500 hover:bg-rose-100 disabled:opacity-50"
+                >
+                  <Trash2 className="h-4 w-4" />
+                </button>
+              </div>
             </div>
           ))}
         </div>
@@ -214,18 +256,19 @@ const LiveClassAdminPage = () => {
               <th className="px-4 py-3">Started</th>
               <th className="px-4 py-3">Ended</th>
               <th className="px-4 py-3">Status</th>
+              <th className="px-4 py-3"></th>
             </tr>
           </thead>
           <tbody>
             {loading ? (
               <tr>
-                <td colSpan={5} className="text-center text-gray-400 py-10">
+                <td colSpan={6} className="text-center text-gray-400 py-10">
                   Loading…
                 </td>
               </tr>
             ) : history.length === 0 ? (
               <tr>
-                <td colSpan={5} className="text-center text-gray-400 py-10">
+                <td colSpan={6} className="text-center text-gray-400 py-10">
                   No live classes started yet.
                 </td>
               </tr>
@@ -248,6 +291,16 @@ const LiveClassAdminPage = () => {
                     >
                       {lc.active ? "Live" : "Ended"}
                     </span>
+                  </td>
+                  <td className="px-4 py-3 text-right">
+                    <button
+                      onClick={() => handleDelete(lc)}
+                      disabled={deleting === lc._id}
+                      title="Delete this entry entirely"
+                      className="p-2 rounded-xl text-rose-500 hover:bg-rose-100 disabled:opacity-50"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </button>
                   </td>
                 </tr>
               ))
