@@ -678,7 +678,7 @@ const AttendExamStudent = () => {
                 )}
                 {currentQuestion.questionType === "Fill in the Blanks" && (
                   <p className="text-sm text-gray-500 italic">
-                    {currentQuestion.isNumericAnswer
+                    {examData.allNumericAnswerKeypad || currentQuestion.isNumericAnswer
                       ? "Enter a numeric answer using the keypad below."
                       : "Fill in the blank with the appropriate word or phrase."}
                   </p>
@@ -773,7 +773,7 @@ const AttendExamStudent = () => {
                   </div>
                 )}
                 {currentQuestion.questionType === "Fill in the Blanks" &&
-                  (currentQuestion.isNumericAnswer ? (
+                  (examData.allNumericAnswerKeypad || currentQuestion.isNumericAnswer ? (
                     <NumericKeypad
                       value={answers[currentQuestionIndex]?.studentAnswer || ""}
                       onChange={handleAnswerChange}

@@ -63,6 +63,7 @@ const CreateExamAdminPage = () => {
     status: "active",
     passPercentage: null,
     scheduledDate: "",
+    allNumericAnswerKeypad: false,
     questions: [],
   });
 
@@ -177,6 +178,7 @@ const CreateExamAdminPage = () => {
         scheduledDate: existingExam.scheduledDate
           ? new Date(existingExam.scheduledDate).toISOString().slice(0, 10)
           : "",
+        allNumericAnswerKeypad: !!existingExam.allNumericAnswerKeypad,
       }));
 
       const sourceQuestions = (

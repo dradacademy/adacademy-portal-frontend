@@ -180,6 +180,31 @@ const CreateExamAdminForm = ({
         />
       </div>
 
+      <div className="flex flex-col gap-1 w-full border border-stone-200 rounded-lg p-3 bg-stone-50">
+        <label className="flex items-center gap-2 text-sm text-stone-700 select-none font-medium">
+          <Checkbox
+            checked={!!formData.allNumericAnswerKeypad}
+            onChange={(e) =>
+              handleChange({
+                target: {
+                  name: "allNumericAnswerKeypad",
+                  value: e.target.checked,
+                },
+              })
+            }
+          />
+          Numeric answer keypad for ALL "Fill in the Blanks" questions in
+          this exam
+        </label>
+        <p className="text-xs text-stone-400 pl-6">
+          Turns on the on-screen number pad (and value-based grading) for
+          every Fill-in-the-Blanks question here at once — you don't need to
+          tick each question's own "Numeric answer" box individually. That
+          per-question box below still works on its own for exams where only
+          some questions are numeric.
+        </p>
+      </div>
+
       {newQuestions.length > 1 && bulkRangeConfig && (
         <div className="border border-indigo-200 bg-indigo-50/60 rounded-2xl p-4 flex flex-col gap-3">
           <h4 className="font-semibold text-indigo-700 text-sm">
