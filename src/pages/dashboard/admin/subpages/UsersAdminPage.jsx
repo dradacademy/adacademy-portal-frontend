@@ -61,6 +61,7 @@ const UsersAdminPage = () => {
     category: "",
     validTill: "",
     revoked: false,
+    accessLevel: "full",
   });
   const [enrollmentLoading, setEnrollmentLoading] = useState(false);
 
@@ -165,6 +166,7 @@ const UsersAdminPage = () => {
       category: rowData.category || "",
       validTill: "",
       revoked: false,
+      accessLevel: "full",
     });
     try {
       const response = await axios.get(
@@ -180,6 +182,7 @@ const UsersAdminPage = () => {
             ? new Date(existing.validTill).toISOString().slice(0, 10)
             : "",
           revoked: existing.revoked,
+          accessLevel: existing.accessLevel || "full",
         });
       }
     } catch (error) {
@@ -192,7 +195,7 @@ const UsersAdminPage = () => {
   const handleCloseEnrollmentPopup = () => {
     setOpenEnrollmentPopup(false);
     setEnrollmentUser(null);
-    setEnrollmentForm({ category: "", validTill: "", revoked: false });
+    setEnrollmentForm({ category: "", validTill: "", revoked: false, accessLevel: "full" });
   };
 
   const handleSubmitEnrollment = async (e) => {
@@ -209,6 +212,7 @@ const UsersAdminPage = () => {
           category: enrollmentForm.category,
           validTill: enrollmentForm.validTill,
           revoked: enrollmentForm.revoked,
+          accessLevel: enrollmentForm.accessLevel,
         }
       );
       toast.success("Enrollment updated.");
@@ -687,8 +691,8 @@ const UsersAdminPage = () => {
                 Manage Enrollment
               </h1>
               <p className="text-sm text-stone-500 font-work-sans">
-                {enrollmentUser?.username} — sets how long this student can
-                stream recorded classes for a course category. Access is cut
+                {enrollmentUser?.username} — sets how long, and how much,
+                this student can access for a course category. Access is cut
                 off automatically once the valid-till date passes.
               </p>
             </div>
@@ -738,6 +742,48 @@ const UsersAdminPage = () => {
                 }
                 required
               />
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <label className="text-sm text-stone-500 font-medium">
+                Access Level
+              </label>
+              <div className="flex flex-col gap-1.5 border border-stone-200 rounded-2xl p-3">
+                <label className="flex items-start gap-2 text-sm text-stone-700">
+                  <input
+                    type="radio"
+                    name="accessLevel"
+                    className="mt-1"
+                    checked={enrollmentForm.accessLevel !== "test_series_only"}
+                    onChange={() =>
+                      setEnrollmentForm({ ...enrollmentForm, accessLevel: "full" })
+                    }
+                  />
+                  <span>
+                    <span className="font-medium">Full Course Access</span>
+                    <span className="block text-xs text-stone-400">
+                      Live classes, recorded lectures, materials, and tests.
+                    </span>
+                  </span>
+                </label>
+                <label className="flex items-start gap-2 text-sm text-stone-700">
+                  <input
+                    type="radio"
+                    name="accessLevel"
+                    className="mt-1"
+                    checked={enrollmentForm.accessLevel === "test_series_only"}
+                    onChange={() =>
+                      setEnrollmentForm({ ...enrollmentForm, accessLevel: "test_series_only" })
+                    }
+                  />
+                  <span>
+                    <span className="font-medium">Test Series Only</span>
+                    <span className="block text-xs text-stone-400">
+                      Tests only for this category — no live classes,
+                      recordings, or materials.
+                    </span>
+                  </span>
+                </label>
+              </div>
             </div>
             <label className="flex items-center gap-2 text-sm text-stone-600 font-medium">
               <input

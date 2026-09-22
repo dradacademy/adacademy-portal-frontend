@@ -134,7 +134,15 @@ export const AuthContextProvider = ({ children }) => {
         localStorage.setItem("token", data.token);
         setAuthHeader(data.token);
         setUserData(data.user);
-        Navigate("/");
+        // A student who hasn't completed their profile goes straight there
+        // on login — App.jsx's route guard would bounce them there anyway
+        // on the next navigation, but this avoids a visible flash of "/"
+        // before that redirect kicks in.
+        if (data.user?.role === "student" && !data.user?.profileCompleted) {
+          Navigate("/profile");
+        } else {
+          Navigate("/");
+        }
         setLoginFormData({
           email: "",
           password: "",

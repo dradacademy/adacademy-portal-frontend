@@ -36,6 +36,24 @@ function App() {
     return <div className="flex items-center justify-center h-screen"></div>;
   }
 
+  // A student who hasn't completed (submitted) their profile is locked out
+  // of every other student-facing screen — see requireCompletedProfile.js
+  // on the backend for the matching, actually-enforcing check on the APIs
+  // themselves; this is what makes the lock visible/navigable rather than
+  // just a wall of 403s. Never true for admin/evaluator.
+  const profileLocked = userData?.role === "student" && !userData?.profileCompleted;
+
+  // Wraps a student-only route: unauthenticated -> /login, incomplete
+  // profile -> /profile, otherwise the real page.
+  const studentGate = (element) =>
+    !userData ? (
+      <Navigate to={"/login"} />
+    ) : profileLocked ? (
+      <Navigate to={"/profile"} replace />
+    ) : (
+      element
+    );
+
   return (
     <div className=" text-stone-800 bg-[#fafafa] min-h-screen">
       <Routes>
@@ -66,6 +84,8 @@ function App() {
                 {userData?.role === "evaluator" ||
                 userData?.role === "admin" ? (
                   <EvaluatorActivities />
+                ) : profileLocked ? (
+                  <Navigate to={"/profile"} replace />
                 ) : (
                   <StudentActivities />
                 )}
@@ -85,22 +105,13 @@ function App() {
         />
         <Route
           path="/recorded-classes"
-          element={
-            userData ? <RecordedClassesStudent /> : <Navigate to={"/login"} />
-          }
+          element={studentGate(<RecordedClassesStudent />)}
         />
         <Route
           path="/attachments"
-          element={
-            userData ? <AttachmentsStudent /> : <Navigate to={"/login"} />
-          }
+          element={studentGate(<AttachmentsStudent />)}
         />
-        <Route
-          path="/progress"
-          element={
-            userData ? <MyProgressStudent /> : <Navigate to={"/login"} />
-          }
-        />
+        <Route path="/progress" element={studentGate(<MyProgressStudent />)} />
         <Route
           path="/profile"
           element={
@@ -109,9 +120,7 @@ function App() {
         />
         <Route
           path="/attend-exam/:examCode"
-          element={
-            userData ? <AttendExamStudent /> : <Navigate to={"/login"} />
-          }
+          element={studentGate(<AttendExamStudent />)}
         />
         <Route path="/login" element={<Login />} />
         <Route path="/signup" element={<Signup />} />

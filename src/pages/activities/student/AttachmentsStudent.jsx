@@ -106,6 +106,11 @@ const AttachmentsStudent = () => {
                         <Lock className="h-3.5 w-3.5" />
                         Enrollment expired — contact the academy to renew
                       </div>
+                    ) : att.accessLevel === "test_series_only" ? (
+                      <div className="flex items-center gap-1.5 text-xs text-amber-600 font-medium">
+                        <Lock className="h-3.5 w-3.5" />
+                        Test Series Only plan — contact the academy to upgrade
+                      </div>
                     ) : (
                       <button
                         onClick={() => setViewing(att)}

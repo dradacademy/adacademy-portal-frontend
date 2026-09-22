@@ -64,6 +64,12 @@ const Navbar = ({ dashboard }) => {
 
   const { userData, setUserData, handleLogout } = useContext(AuthContext);
 
+  // A student who hasn't submitted their profile yet is locked out of
+  // everything else in the app (see App.jsx's route guard and the backend's
+  // requireCompletedProfile.js middleware, which is the actual
+  // enforcement) — this banner is just orientation, not the lock itself.
+  const profileLocked = userData?.role === "student" && !userData?.profileCompleted;
+
   const toggleMenu = () => {
     setIsMenuOpen(!isMenuOpen);
   };
@@ -334,6 +340,15 @@ const Navbar = ({ dashboard }) => {
             )}
           </button>
         </div>
+
+        {profileLocked && (
+          <Link
+            to={"/profile"}
+            className="flex items-center justify-center gap-2 bg-amber-50 border-t border-amber-200 text-amber-800 text-sm font-medium py-2 px-4 hover:bg-amber-100 transition-colors"
+          >
+            Complete your student profile to unlock the rest of the portal — tap here to finish it
+          </Link>
+        )}
 
         {/* Mobile Menu — the scrollable link list and the primary action
             (Log In / Logout) are split into two flex children on purpose:

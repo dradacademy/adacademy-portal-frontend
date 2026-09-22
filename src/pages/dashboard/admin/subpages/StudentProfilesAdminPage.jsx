@@ -1,4 +1,5 @@
 import axios from "axios";
+import download from "downloadjs";
 import React, { useEffect, useRef, useState } from "react";
 import toast from "react-hot-toast";
 import { Dialog } from "@mui/material";
@@ -9,6 +10,7 @@ import {
   CheckCircle2,
   XCircle,
   User as UserIcon,
+  FileDown,
 } from "lucide-react";
 import {
   EXAM_CATEGORY_OPTIONS,
@@ -286,6 +288,30 @@ const StudentProfilesAdminPage = () => {
   const [category, setCategory] = useState("");
   const [status, setStatus] = useState("");
   const [detailStudentId, setDetailStudentId] = useState(null);
+  const [detailStudentName, setDetailStudentName] = useState("");
+  const [downloadingPdf, setDownloadingPdf] = useState(false);
+
+  // Admin-only PDF export — never wired up anywhere on the student-facing
+  // StudentProfilePage. Fetched as a blob (the endpoint requires the same
+  // Bearer token every other admin call already sends via axios' global
+  // Authorization header) and handed to downloadjs, same pattern used
+  // elsewhere in this app for file downloads.
+  const handleDownloadPdf = async (studentId, studentName) => {
+    if (!studentId) return;
+    try {
+      setDownloadingPdf(true);
+      const response = await axios.get(
+        `${import.meta.env.VITE_APP_API_URL}/student-profiles/${studentId}/pdf`,
+        { responseType: "blob" }
+      );
+      const filenameSafeName = (studentName || "student").replace(/[^a-z0-9]+/gi, "-").toLowerCase();
+      download(response.data, `${filenameSafeName}-profile.pdf`, "application/pdf");
+    } catch (error) {
+      toast.error("Failed to generate the profile PDF.");
+    } finally {
+      setDownloadingPdf(false);
+    }
+  };
 
   const fetchRows = async () => {
     try {
@@ -423,7 +449,10 @@ const StudentProfilesAdminPage = () => {
                   </td>
                   <td className="px-4 py-3">
                     <button
-                      onClick={() => setDetailStudentId(row.studentId)}
+                      onClick={() => {
+                        setDetailStudentId(row.studentId);
+                        setDetailStudentName(row.name);
+                      }}
                       className="text-xs font-medium bg-indigo-500 text-white px-3 py-1.5 rounded-full hover:bg-indigo-600"
                     >
                       View Detail
@@ -445,10 +474,22 @@ const StudentProfilesAdminPage = () => {
         <div className="p-6 flex flex-col gap-5">
           <div className="flex items-start justify-between gap-6">
             <h2 className="text-xl font-bold text-stone-700 font-poppins">Student Profile</h2>
-            <MdClose
-              onClick={() => setDetailStudentId(null)}
-              className="text-stone-500 font-medium text-3xl cursor-pointer hover:opacity-80 duration-300"
-            />
+            <div className="flex items-center gap-4">
+              {/* Admin-only — this button never appears on the student's own
+                  profile page. */}
+              <button
+                onClick={() => handleDownloadPdf(detailStudentId, detailStudentName)}
+                disabled={downloadingPdf}
+                className="flex items-center gap-1.5 text-xs font-medium bg-stone-700 text-white px-3 py-1.5 rounded-full hover:bg-stone-800 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <FileDown className="h-3.5 w-3.5" />
+                {downloadingPdf ? "Preparing…" : "Download PDF"}
+              </button>
+              <MdClose
+                onClick={() => setDetailStudentId(null)}
+                className="text-stone-500 font-medium text-3xl cursor-pointer hover:opacity-80 duration-300"
+              />
+            </div>
           </div>
           {detailStudentId && <ProfileDetailContent studentId={detailStudentId} />}
         </div>

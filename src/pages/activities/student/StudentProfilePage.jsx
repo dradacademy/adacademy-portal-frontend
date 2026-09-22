@@ -56,7 +56,7 @@ const EMPTY_ACADEMIC_ROWS = ACADEMIC_ROW_LABELS.map((level) => ({
 // whatever a student fills in here is exactly what the admin sees on the
 // Student Profiles admin page — nothing summarized or reshaped in between.
 const StudentProfilePage = () => {
-  const { userData } = useContext(AuthContext);
+  const { userData, fetchUser } = useContext(AuthContext);
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -151,8 +151,18 @@ const StudentProfilePage = () => {
         `${import.meta.env.VITE_APP_API_URL}/student-profiles/me`,
         profile
       );
-      setProfile(response.data?.data);
+      const savedProfile = response.data?.data;
+      setProfile(savedProfile);
       toast.success("Profile saved.");
+
+      // The moment both declarations are signed, status flips to
+      // "submitted" and the rest of the portal should unlock immediately —
+      // re-fetch /users/me so userData.profileCompleted updates without
+      // requiring a logout/login (see App.jsx's profileLocked guard and
+      // Navbar.jsx's lock banner, both driven off that flag).
+      if (savedProfile?.status === "submitted" && !userData?.profileCompleted) {
+        fetchUser();
+      }
     } catch (error) {
       toast.error(error?.response?.data?.message || "Failed to save your profile.");
     } finally {
