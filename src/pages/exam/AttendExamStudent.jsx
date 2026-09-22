@@ -36,6 +36,7 @@ import toast from "react-hot-toast";
 import EligibilityPopup from "../../components/common/popup/EligibilityPopup";
 import CalculatorComponent from "../../components/calculator/CalculatorComponent";
 import TimerDisplay from "../../components/exam/TimerDisplay";
+import NumericKeypad from "../../components/exam/NumericKeypad";
 import { MarkContext } from "../../context/MarkContext";
 import { DurationContext } from "../../context/DurationContext";
 import "katex/dist/katex.min.css";
@@ -512,7 +513,7 @@ const AttendExamStudent = () => {
                       {marks} {marks === 1 ? "mark" : "marks"}
                     </div>
                   </div>
-                  {negative > 0 && currentQuestion.questionType === "MCQ" && (
+                  {negative > 0 && (
                     <div className="text-xs text-red-500 mt-1">
                       Negative: -{negative} marks
                     </div>
@@ -642,14 +643,21 @@ const AttendExamStudent = () => {
                   Question {currentQuestionIndex + 1} of{" "}
                   {examData.questions.length}
                 </div>
-                {currentQuestion.questionType === "MCQ" && (
-                  <div className="ml-auto text-xs font-medium text-gray-700">
-                    {marks} {marks === 1 ? "mark" : "marks"}
-                    {negative > 0 && (
-                      <span className="text-red-500 ml-1">(-{negative})</span>
-                    )}
-                  </div>
-                )}
+                {/* Sourced from this question's own marks/negativeMark
+                    override when the admin set one during upload, else the
+                    level-based default — see getMarksForQuestion above.
+                    Shown for every question type, not just MCQ, so a
+                    numeric (NAT-style) question's 0 negative marking is
+                    just as visible as an MCQ's penalty. */}
+                <div className="ml-auto text-xs font-medium text-gray-700">
+                  Marks for correct answer: {marks}
+                  <span className="mx-1.5 text-gray-300">|</span>
+                  Negative Marks: {negative > 0 ? (
+                    <span className="text-red-500">{negative}</span>
+                  ) : (
+                    0
+                  )}
+                </div>
               </div>
               <div className="mb-8">
                 <h2 className="text-xl font-bold text-gray-900 mb-2 font-inter leading-relaxed">
@@ -670,7 +678,9 @@ const AttendExamStudent = () => {
                 )}
                 {currentQuestion.questionType === "Fill in the Blanks" && (
                   <p className="text-sm text-gray-500 italic">
-                    Fill in the blank with the appropriate word or phrase.
+                    {currentQuestion.isNumericAnswer
+                      ? "Enter a numeric answer using the keypad below."
+                      : "Fill in the blank with the appropriate word or phrase."}
                   </p>
                 )}
                 {currentQuestion.questionType === "Short Answer" && (
@@ -762,17 +772,23 @@ const AttendExamStudent = () => {
                     })}
                   </div>
                 )}
-                {currentQuestion.questionType === "Fill in the Blanks" && (
-                  <div className="max-w-2xl">
-                    <input
-                      type="text"
+                {currentQuestion.questionType === "Fill in the Blanks" &&
+                  (currentQuestion.isNumericAnswer ? (
+                    <NumericKeypad
                       value={answers[currentQuestionIndex]?.studentAnswer || ""}
-                      onChange={(e) => handleAnswerChange(e.target.value)}
-                      placeholder="Type your answer here..."
-                      className="w-full p-4 border border-gray-200 rounded-xl focus:outline-none"
+                      onChange={handleAnswerChange}
                     />
-                  </div>
-                )}
+                  ) : (
+                    <div className="max-w-2xl">
+                      <input
+                        type="text"
+                        value={answers[currentQuestionIndex]?.studentAnswer || ""}
+                        onChange={(e) => handleAnswerChange(e.target.value)}
+                        placeholder="Type your answer here..."
+                        className="w-full p-4 border border-gray-200 rounded-xl focus:outline-none"
+                      />
+                    </div>
+                  ))}
                 {currentQuestion.questionType === "Short Answer" && (
                   <div className="max-w-3xl">
                     <textarea

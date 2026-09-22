@@ -96,6 +96,7 @@ const CreateExamAdminPage = () => {
       duration: null,
       options: [{ text: "", image: null }, { text: "", image: null }],
       correctAnswers: [],
+      isNumericAnswer: false,
       image: null,
       answerKeyText: "",
       answerKeyImage: null,
@@ -302,6 +303,7 @@ const CreateExamAdminPage = () => {
           duration: null,
           options: [{ text: "", image: null }, { text: "", image: null }],
           correctAnswers: [],
+          isNumericAnswer: false,
           image: null,
           answerKeyText: "",
           answerKeyImage: null,
@@ -761,6 +763,9 @@ const CreateExamAdminPage = () => {
         if (value === "MCQ" || value === "MSQ") {
           updated[index].options = [{ text: "", image: null }, { text: "", image: null }];
         }
+        if (value !== "Fill in the Blanks") {
+          updated[index].isNumericAnswer = false;
+        }
       }
 
       return updated;
@@ -969,6 +974,7 @@ const CreateExamAdminPage = () => {
           duration: null,
           options: [{ text: "", image: null }, { text: "", image: null }],
           correctAnswers: [],
+          isNumericAnswer: false,
           image: null,
           answerKeyText: "",
           answerKeyImage: null,

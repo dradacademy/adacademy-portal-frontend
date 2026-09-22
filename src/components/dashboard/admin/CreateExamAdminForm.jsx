@@ -559,24 +559,42 @@ const CreateExamAdminForm = ({
             </>
           )}
           {question.questionType === "Fill in the Blanks" && (
-            <input
-              type="text"
-              placeholder={`Correct Answers (Enter multiple correct answers, separated by commas)`}
-              name="correctAnswers"
-              className=" border border-stone-300 py-[10px] px-4 focus:outline-none rounded-lg bg-white w-full"
-              value={question.correctAnswers.join(", ")}
-              onChange={(e) => {
-                const answers = e.target.value
-                  .split(",")
-                  .map((ans) => ans.trim());
-                setNewQuestions((prev) => {
-                  const updated = [...prev];
-                  updated[qIndex].correctAnswers = answers;
-                  return updated;
-                });
-              }}
-              required
-            />
+            <>
+              <input
+                type="text"
+                placeholder={`Correct Answers (Enter multiple correct answers, separated by commas)`}
+                name="correctAnswers"
+                className=" border border-stone-300 py-[10px] px-4 focus:outline-none rounded-lg bg-white w-full"
+                value={question.correctAnswers.join(", ")}
+                onChange={(e) => {
+                  const answers = e.target.value
+                    .split(",")
+                    .map((ans) => ans.trim());
+                  setNewQuestions((prev) => {
+                    const updated = [...prev];
+                    updated[qIndex].correctAnswers = answers;
+                    return updated;
+                  });
+                }}
+                required
+              />
+              <label className="flex items-center gap-2 text-sm text-stone-600 select-none">
+                <Checkbox
+                  checked={!!question.isNumericAnswer}
+                  onChange={(e) =>
+                    handleQuestionChange(qIndex, {
+                      target: {
+                        name: "isNumericAnswer",
+                        value: e.target.checked,
+                      },
+                    })
+                  }
+                />
+                Numeric answer (NAT-style) — show students the on-screen
+                number pad instead of a text box, and grade by value (so
+                "2.3" and "2.30" both count as correct)
+              </label>
+            </>
           )}
           {question.questionType === "Short Answer" && (
             <div>
