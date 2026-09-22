@@ -3,6 +3,6 @@
       "target": {
         "namespace": "android_app",
         "package_name": "com.dradacademy.twa",
-        "sha256_cert_fingerprints": ["14:9E:19:75:4F:C7:17:63:C9:C5:1B:AC:F4:53:74:34:56:14:76:0E:76:9B:56:C4:7F:EF:DD:32:39:EF:4A:F0"]
+        "sha256_cert_fingerprints": ["14:9E:19:75:4F:C7:17:63:C9:C5:EB:AC:F4:53:74:34:56:14:76:0E:76:9B:58:C4:7F:EF:DD:32:39:EF:4A:F0"]
       }
     }]
