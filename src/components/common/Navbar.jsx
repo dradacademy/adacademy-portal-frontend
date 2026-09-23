@@ -156,6 +156,15 @@ const Navbar = ({ dashboard }) => {
                 )}
                 {userData?.role === "student" && (
                   <Link
+                    to={"/performance-analytics"}
+                    className="font-medium hover:text-navy transition-colors relative group"
+                  >
+                    Performance
+                    <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-gold transition-all group-hover:w-full"></span>
+                  </Link>
+                )}
+                {userData?.role === "student" && (
+                  <Link
                     to={"/profile"}
                     className="font-medium hover:text-navy transition-colors relative group"
                   >
@@ -401,6 +410,15 @@ const Navbar = ({ dashboard }) => {
                       className="block px-6 py-3 text-gray-600 hover:text-navy hover:bg-gray-50 transition-colors font-medium"
                     >
                       My Progress
+                    </Link>
+                  )}
+                  {userData?.role === "student" && (
+                    <Link
+                      to={"/performance-analytics"}
+                      onClick={closeMenu}
+                      className="block px-6 py-3 text-gray-600 hover:text-navy hover:bg-gray-50 transition-colors font-medium"
+                    >
+                      Performance
                     </Link>
                   )}
                   {userData?.role === "student" && (

@@ -9,6 +9,7 @@ import StudentActivities from "./pages/activities/student/StudentActivities";
 import RecordedClassesStudent from "./pages/activities/student/RecordedClassesStudent";
 import AttachmentsStudent from "./pages/activities/student/AttachmentsStudent";
 import MyProgressStudent from "./pages/activities/student/MyProgressStudent";
+import PerformanceAnalyticsStudent from "./pages/activities/student/PerformanceAnalyticsStudent";
 import StudentProfilePage from "./pages/activities/student/StudentProfilePage";
 import AttemptedExamSubmissionDetail from "./pages/activities/examDetailedView/AttemptedExamSubmissionDetail";
 import EvaluatorActivities from "./pages/activities/evaluator/EvaluatorActivities";
@@ -112,6 +113,10 @@ function App() {
           element={studentGate(<AttachmentsStudent />)}
         />
         <Route path="/progress" element={studentGate(<MyProgressStudent />)} />
+        <Route
+          path="/performance-analytics"
+          element={studentGate(<PerformanceAnalyticsStudent />)}
+        />
         <Route
           path="/profile"
           element={

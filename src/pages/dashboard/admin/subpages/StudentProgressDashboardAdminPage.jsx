@@ -1,4 +1,5 @@
 import axios from "axios";
+import download from "downloadjs";
 import React, { useEffect, useMemo, useState } from "react";
 import toast from "react-hot-toast";
 import { Dialog } from "@mui/material";
@@ -13,6 +14,7 @@ import {
   Paperclip,
   CheckCircle2,
   XCircle,
+  BarChart3,
 } from "lucide-react";
 import {
   EXAM_CATEGORY_OPTIONS,
@@ -83,10 +85,24 @@ const StudentProgressDashboardAdminPage = () => {
   const [detailStudentId, setDetailStudentId] = useState(null);
   const [detail, setDetail] = useState(null);
   const [detailLoading, setDetailLoading] = useState(false);
+  const [downloadingReport, setDownloadingReport] = useState(false);
 
   const [weightsOpen, setWeightsOpen] = useState(false);
   const [weights, setWeights] = useState({ examWeight: 40, videoWeight: 40, attachmentWeight: 20 });
   const [savingWeights, setSavingWeights] = useState(false);
+
+  // Category Performance Rollup — a period-based, category-wide view
+  // (pass rate, avg marks/speed/accuracy, most-missed topics) across every
+  // exam in a category at once, complementing the per-exam Exam Dashboard.
+  // Deliberately kept on this same page as a dialog rather than a new
+  // sidebar entry, per the "one tab, not sidebar sprawl" approach this was
+  // scoped under.
+  const [rollupOpen, setRollupOpen] = useState(false);
+  const [rollupCategory, setRollupCategory] = useState(EXAM_CATEGORY_OPTIONS[0]?.value || "");
+  const [rollupFromDate, setRollupFromDate] = useState("");
+  const [rollupToDate, setRollupToDate] = useState("");
+  const [rollupData, setRollupData] = useState(null);
+  const [rollupLoading, setRollupLoading] = useState(false);
 
   const fetchRows = async () => {
     try {
@@ -155,6 +171,29 @@ const StudentProgressDashboardAdminPage = () => {
     setDetail(null);
   };
 
+  // Admin-only Performance Report PDF — same fetch-as-blob + downloadjs
+  // pattern already used for the Student Profile PDF export
+  // (StudentProfilesAdminPage.jsx's handleDownloadPdf), never wired up
+  // anywhere on the student-facing Performance page.
+  const handleDownloadReport = async () => {
+    if (!detailStudentId) return;
+    try {
+      setDownloadingReport(true);
+      const response = await axios.get(
+        `${import.meta.env.VITE_APP_API_URL}/performance-analytics/${detailStudentId}/pdf`,
+        { responseType: "blob" }
+      );
+      const filenameSafeName = (detail?.student?.name || "student")
+        .replace(/[^a-z0-9]+/gi, "-")
+        .toLowerCase();
+      download(response.data, `${filenameSafeName}-performance-report.pdf`, "application/pdf");
+    } catch (error) {
+      toast.error("Failed to generate the performance report PDF.");
+    } finally {
+      setDownloadingReport(false);
+    }
+  };
+
   const openWeights = async () => {
     try {
       const response = await axios.get(
@@ -191,6 +230,31 @@ const StudentProgressDashboardAdminPage = () => {
     }
   };
 
+  const fetchRollup = async (categoryOverride) => {
+    const cat = categoryOverride || rollupCategory;
+    if (!cat) return;
+    setRollupLoading(true);
+    try {
+      const params = {};
+      if (rollupFromDate) params.fromDate = rollupFromDate;
+      if (rollupToDate) params.toDate = rollupToDate;
+      const response = await axios.get(
+        `${import.meta.env.VITE_APP_API_URL}/performance-analytics/rollup/${cat}`,
+        { params }
+      );
+      setRollupData(response.data?.data || null);
+    } catch (error) {
+      toast.error("Failed to load category rollup.");
+    } finally {
+      setRollupLoading(false);
+    }
+  };
+
+  const openRollup = () => {
+    setRollupOpen(true);
+    fetchRollup(rollupCategory);
+  };
+
   const batchOptions = useMemo(() => {
     const set = new Set(rows.map((r) => r.batch).filter(Boolean));
     return [...set];
@@ -208,12 +272,20 @@ const StudentProgressDashboardAdminPage = () => {
             live from real activity, never static.
           </p>
         </div>
-        <button
-          onClick={openWeights}
-          className="flex items-center gap-2 text-nowrap bg-stone-100 text-stone-600 font-medium py-2 px-5 rounded-2xl font-poppins cursor-pointer hover:bg-stone-200 duration-300"
-        >
-          <Settings2 className="h-4 w-4" /> Weighting
-        </button>
+        <div className="flex items-center gap-3">
+          <button
+            onClick={openRollup}
+            className="flex items-center gap-2 text-nowrap bg-stone-100 text-stone-600 font-medium py-2 px-5 rounded-2xl font-poppins cursor-pointer hover:bg-stone-200 duration-300"
+          >
+            <BarChart3 className="h-4 w-4" /> Category Rollup
+          </button>
+          <button
+            onClick={openWeights}
+            className="flex items-center gap-2 text-nowrap bg-stone-100 text-stone-600 font-medium py-2 px-5 rounded-2xl font-poppins cursor-pointer hover:bg-stone-200 duration-300"
+          >
+            <Settings2 className="h-4 w-4" /> Weighting
+          </button>
+        </div>
       </div>
 
       <div className="flex flex-wrap items-center gap-3 bg-white rounded-2xl border border-gray-100 shadow-sm p-4">
@@ -454,10 +526,21 @@ const StudentProgressDashboardAdminPage = () => {
         <div className="p-6 flex flex-col gap-5">
           <div className="flex items-start justify-between gap-6">
             <h2 className="text-xl font-bold text-stone-700 font-poppins">Student Detail</h2>
-            <MdClose
-              onClick={closeDetail}
-              className="text-stone-500 font-medium text-3xl cursor-pointer hover:opacity-80 duration-300"
-            />
+            <div className="flex items-center gap-4">
+              {!detailLoading && detail && (
+                <button
+                  onClick={handleDownloadReport}
+                  disabled={downloadingReport}
+                  className="text-xs font-medium bg-indigo-500 text-white px-3 py-1.5 rounded-full hover:bg-indigo-600 disabled:opacity-50"
+                >
+                  {downloadingReport ? "Preparing…" : "Download Performance Report"}
+                </button>
+              )}
+              <MdClose
+                onClick={closeDetail}
+                className="text-stone-500 font-medium text-3xl cursor-pointer hover:opacity-80 duration-300"
+              />
+            </div>
           </div>
 
           {detailLoading ? (
@@ -615,6 +698,169 @@ const StudentProgressDashboardAdminPage = () => {
           >
             {savingWeights ? "Saving…" : "Save"}
           </button>
+        </div>
+      </Dialog>
+
+      {/* Category Performance Rollup — pass rate, average marks/speed/
+          accuracy, and the most-missed topics across every exam in one
+          category, optionally scoped to a date range on completedAt. Reads
+          the exact same data ExamSubmission already carries; no new model. */}
+      <Dialog open={rollupOpen} onClose={() => setRollupOpen(false)} maxWidth="sm" fullWidth>
+        <div className="p-6 flex flex-col gap-4">
+          <div className="flex items-start justify-between gap-6">
+            <h2 className="text-xl font-bold text-stone-700 font-poppins">
+              Category Performance Rollup
+            </h2>
+            <MdClose
+              onClick={() => setRollupOpen(false)}
+              className="text-stone-500 font-medium text-3xl cursor-pointer hover:opacity-80 duration-300"
+            />
+          </div>
+
+          <div className="flex flex-wrap items-end gap-3">
+            <div className="flex flex-col gap-1">
+              <label className="text-xs text-stone-500">Category</label>
+              <select
+                className="border border-stone-200 rounded-xl px-3 py-2 text-sm"
+                value={rollupCategory}
+                onChange={(e) => setRollupCategory(e.target.value)}
+              >
+                {EXAM_CATEGORY_OPTIONS.map((opt) => (
+                  <option key={opt.value} value={opt.value}>
+                    {opt.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="flex flex-col gap-1">
+              <label className="text-xs text-stone-500">From (optional)</label>
+              <input
+                type="date"
+                className="border border-stone-200 rounded-xl px-3 py-2 text-sm"
+                value={rollupFromDate}
+                onChange={(e) => setRollupFromDate(e.target.value)}
+              />
+            </div>
+            <div className="flex flex-col gap-1">
+              <label className="text-xs text-stone-500">To (optional)</label>
+              <input
+                type="date"
+                className="border border-stone-200 rounded-xl px-3 py-2 text-sm"
+                value={rollupToDate}
+                onChange={(e) => setRollupToDate(e.target.value)}
+              />
+            </div>
+            <button
+              onClick={() => fetchRollup()}
+              disabled={rollupLoading}
+              className="bg-indigo-500 text-white font-medium py-2 px-4 rounded-xl hover:opacity-85 duration-300 disabled:opacity-50"
+            >
+              {rollupLoading ? "Loading…" : "Load"}
+            </button>
+          </div>
+
+          {rollupLoading ? (
+            <p className="text-sm text-stone-400 text-center py-6">Loading…</p>
+          ) : !rollupData?.hasData ? (
+            <p className="text-sm text-stone-400 text-center py-6">
+              No completed attempts yet in this category
+              {rollupFromDate || rollupToDate ? " for the selected date range" : ""}.
+            </p>
+          ) : (
+            <div className="flex flex-col gap-4">
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                {[
+                  ["Total Attempts", rollupData.totalAttempts],
+                  ["Students", rollupData.distinctStudents],
+                  ["Pass Rate", rollupData.passRate !== null ? `${rollupData.passRate}%` : "—"],
+                  ["Avg Score", `${rollupData.avgPercentage}%`],
+                  ["Avg Speed", rollupData.avgSpeed !== null ? `${rollupData.avgSpeed}%` : "—"],
+                  ["Avg Accuracy", rollupData.avgAccuracy !== null ? `${rollupData.avgAccuracy}%` : "—"],
+                ].map(([label, value]) => (
+                  <div key={label} className="bg-stone-50 rounded-xl p-3 text-center">
+                    <p className="text-lg font-bold text-stone-700">{value}</p>
+                    <p className="text-xs text-stone-400">{label}</p>
+                  </div>
+                ))}
+              </div>
+
+              <div>
+                <p className="text-sm font-semibold text-stone-600 mb-2">
+                  Most-missed topics (lowest average score, category-wide)
+                </p>
+                {rollupData.mostMissedTopics.length === 0 ? (
+                  <p className="text-xs text-stone-400">
+                    No topic-linked completed attempts yet.
+                  </p>
+                ) : (
+                  <div className="flex flex-col divide-y divide-stone-50">
+                    {rollupData.mostMissedTopics.map((t, i) => (
+                      <div
+                        key={`${t.subjectName}-${t.subTopicName}`}
+                        className="py-2 flex items-center justify-between gap-2"
+                      >
+                        <div>
+                          <p className="text-sm text-stone-700 capitalize">
+                            {i + 1}. {t.subjectName}
+                          </p>
+                          <p className="text-xs text-stone-400 capitalize">{t.subTopicName}</p>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-sm font-semibold text-rose-500">{t.avgPercentage}%</p>
+                          <p className="text-xs text-stone-400">{t.attempts} attempts</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {rollupData.engagement && (
+                <div>
+                  <p className="text-sm font-semibold text-stone-600 mb-1">
+                    Engagement vs. Performance
+                  </p>
+                  <p className="text-xs text-stone-400 mb-2">
+                    Students who watched a recorded class or opened a study
+                    material in the last {rollupData.engagement.windowDays}{" "}
+                    days, vs. those who didn't — correlation only, not a
+                    claim that engagement causes the difference.
+                  </p>
+                  {rollupData.engagement.engagedAttempts === 0 &&
+                  rollupData.engagement.notEngagedAttempts === 0 ? (
+                    <p className="text-xs text-stone-400">
+                      Not enough data yet to compare.
+                    </p>
+                  ) : (
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="bg-emerald-50 rounded-xl p-3 text-center">
+                        <p className="text-lg font-bold text-emerald-700">
+                          {rollupData.engagement.engagedAvgScore !== null
+                            ? `${rollupData.engagement.engagedAvgScore}%`
+                            : "—"}
+                        </p>
+                        <p className="text-xs text-emerald-600">
+                          Engaged ({rollupData.engagement.engagedStudents} students,{" "}
+                          {rollupData.engagement.engagedAttempts} attempts)
+                        </p>
+                      </div>
+                      <div className="bg-stone-100 rounded-xl p-3 text-center">
+                        <p className="text-lg font-bold text-stone-600">
+                          {rollupData.engagement.notEngagedAvgScore !== null
+                            ? `${rollupData.engagement.notEngagedAvgScore}%`
+                            : "—"}
+                        </p>
+                        <p className="text-xs text-stone-500">
+                          Not engaged ({rollupData.engagement.notEngagedStudents} students,{" "}
+                          {rollupData.engagement.notEngagedAttempts} attempts)
+                        </p>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
         </div>
       </Dialog>
     </div>
