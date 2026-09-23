@@ -160,6 +160,11 @@ const PerformanceAnalyticsStudent = () => {
   const [leaderboardData, setLeaderboardData] = useState(null);
   const [leaderboardLoading, setLeaderboardLoading] = useState(true);
   const [leaderboardError, setLeaderboardError] = useState(null);
+  // Which test's leaderboard the dropdown below currently shows — defaults
+  // to the first test once the leaderboard data arrives (see the effect
+  // near the fetch below), so something is visible immediately rather than
+  // starting on an empty "pick a test" state.
+  const [selectedLeaderboardExamId, setSelectedLeaderboardExamId] = useState("");
 
   // Trend + quadrant both read from the same "my attempt history" fetch —
   // they're two different charts over the exact same underlying data, no
@@ -193,7 +198,13 @@ const PerformanceAnalyticsStudent = () => {
         const response = await axios.get(
           `${import.meta.env.VITE_APP_API_URL}/performance-analytics/leaderboards/me`
         );
-        setLeaderboardData(response.data?.data || null);
+        const leaderboardResult = response.data?.data || null;
+        setLeaderboardData(leaderboardResult);
+        // Default the dropdown to the first test in the list, once, so a
+        // leaderboard is shown right away rather than an empty picker.
+        if (leaderboardResult?.leaderboards?.length > 0) {
+          setSelectedLeaderboardExamId(leaderboardResult.leaderboards[0].examId);
+        }
         setLeaderboardError(null);
       } catch (err) {
         setLeaderboardError("Failed to load the leaderboard.");
@@ -203,6 +214,10 @@ const PerformanceAnalyticsStudent = () => {
     };
     if (userData?._id) fetchLeaderboards();
   }, [userData]);
+
+  const selectedLeaderboard = (leaderboardData?.leaderboards || []).find(
+    (board) => board.examId === selectedLeaderboardExamId
+  );
 
   useEffect(() => {
     const fetchTrend = async () => {
@@ -440,7 +455,7 @@ const PerformanceAnalyticsStudent = () => {
             </h2>
           </div>
           <p className="text-gray-600 text-sm mb-4">
-            Top 10 scorers on every test
+            Pick a test to see its top 5 scorers
             {leaderboardData?.hasCategory && leaderboardData?.categoryLabel
               ? ` in ${leaderboardData.categoryLabel}`
               : " in your category"}
@@ -461,30 +476,39 @@ const PerformanceAnalyticsStudent = () => {
               here once results start coming in.
             </div>
           ) : (
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-              {leaderboardData.leaderboards.map((board) => (
-                <div
-                  key={board.examId}
-                  className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5"
-                >
+            <div className="max-w-lg">
+              <select
+                value={selectedLeaderboardExamId}
+                onChange={(e) => setSelectedLeaderboardExamId(e.target.value)}
+                className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm mb-4 bg-white"
+              >
+                {leaderboardData.leaderboards.map((board) => (
+                  <option key={board.examId} value={board.examId}>
+                    {board.subjectName} — {board.subTopicName} ({board.examCode})
+                  </option>
+                ))}
+              </select>
+
+              {selectedLeaderboard && (
+                <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
                   <div className="flex items-start justify-between gap-3 mb-3">
                     <div>
                       <p className="text-sm font-semibold text-gray-800 capitalize">
-                        {board.subjectName}
+                        {selectedLeaderboard.subjectName}
                       </p>
                       <p className="text-xs text-gray-400 capitalize">
-                        {board.subTopicName} ·{" "}
-                        <span className="font-mono">{board.examCode}</span>
+                        {selectedLeaderboard.subTopicName} ·{" "}
+                        <span className="font-mono">{selectedLeaderboard.examCode}</span>
                       </p>
                     </div>
                     <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-500 shrink-0">
                       <Users className="h-3 w-3" />
-                      {board.totalParticipants}
+                      {selectedLeaderboard.totalParticipants}
                     </span>
                   </div>
 
                   <div className="flex flex-col divide-y divide-gray-50">
-                    {board.topPerformers.map((p) => (
+                    {selectedLeaderboard.topPerformers.slice(0, 5).map((p) => (
                       <div
                         key={p.rank}
                         className={`py-2 flex items-center justify-between gap-2 rounded-lg ${
@@ -527,17 +551,18 @@ const PerformanceAnalyticsStudent = () => {
                     ))}
                   </div>
 
-                  {!board.attemptedByMe ? (
+                  {!selectedLeaderboard.attemptedByMe ? (
                     <p className="text-xs text-gray-400 mt-3">
                       You haven't attempted this test yet.
                     </p>
-                  ) : board.myRank > 10 ? (
+                  ) : selectedLeaderboard.myRank > 5 ? (
                     <p className="text-xs text-gray-500 mt-3">
-                      You're ranked #{board.myRank} of {board.totalParticipants} ({board.myPercentage}%).
+                      You're ranked #{selectedLeaderboard.myRank} of{" "}
+                      {selectedLeaderboard.totalParticipants} ({selectedLeaderboard.myPercentage}%).
                     </p>
                   ) : null}
                 </div>
-              ))}
+              )}
             </div>
           )}
         </div>
