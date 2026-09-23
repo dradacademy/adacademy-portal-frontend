@@ -7,6 +7,7 @@ import {
   FaStar,
   FaTrophy,
 } from "react-icons/fa";
+import { ArrowDown, ArrowUp, ArrowUpDown } from "lucide-react";
 import {
   Bar,
   BarChart,
@@ -20,10 +21,50 @@ import {
   YAxis,
 } from "recharts";
 
+// Same click-to-sort column header used across the admin tables.
+const SortableTh = ({ label, sortKey, sort, onSort, className = "" }) => {
+  const active = sort.key === sortKey;
+  const Icon = active ? (sort.dir === "asc" ? ArrowUp : ArrowDown) : ArrowUpDown;
+  return (
+    <th
+      className={`px-4 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider ${className}`}
+    >
+      <button
+        type="button"
+        onClick={() => onSort(sortKey)}
+        className={`flex items-center gap-1 hover:text-indigo-600 duration-150 ${
+          active ? "text-indigo-600" : ""
+        }`}
+      >
+        {label}
+        <Icon className="h-3 w-3" />
+      </button>
+    </th>
+  );
+};
+
+const STUDENT_PERFORMANCE_SORTERS = {
+  rankByMarks: (s) => s.rankByMarks ?? null,
+  rankByCompletionTime: (s) => s.rankByCompletionTime ?? null,
+  name: (s) => (s.name || s.email || "").toLowerCase(),
+  status: (s) => (s.status !== "completed" ? "In Progress" : s.pass ? "Qualified" : "Not Qualified"),
+  marks: (s) => s.marks ?? null,
+  timetaken: (s) => (s.timetaken ?? null),
+  attemptNumber: (s) => s.attemptNumber ?? null,
+  submittedAt: (s) => (s.submittedAt ? new Date(s.submittedAt).getTime() : null),
+};
+
 const DetailedExamDashboard = ({ exam, onBack }) => {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [studentSort, setStudentSort] = useState({ key: null, dir: "asc" });
+
+  const handleStudentSort = (key) => {
+    setStudentSort((prev) =>
+      prev.key === key ? { key, dir: prev.dir === "asc" ? "desc" : "asc" } : { key, dir: "asc" }
+    );
+  };
 
   useEffect(() => {
     if (exam) {
@@ -97,6 +138,24 @@ const DetailedExamDashboard = ({ exam, onBack }) => {
     const secs = seconds % 60;
     return `${mins}m ${secs}s`;
   };
+
+  const sortedStudentPerformance = (() => {
+    const rows = studentPerformance || [];
+    if (!studentSort.key || !STUDENT_PERFORMANCE_SORTERS[studentSort.key]) return rows;
+    const getValue = STUDENT_PERFORMANCE_SORTERS[studentSort.key];
+    const dirMultiplier = studentSort.dir === "asc" ? 1 : -1;
+    return [...rows].sort((a, b) => {
+      const va = getValue(a);
+      const vb = getValue(b);
+      // Nulls/undefined always sink to the bottom, in either direction.
+      if (va === null || va === undefined) return vb === null || vb === undefined ? 0 : 1;
+      if (vb === null || vb === undefined) return -1;
+      if (typeof va === "string" || typeof vb === "string") {
+        return String(va).localeCompare(String(vb)) * dirMultiplier;
+      }
+      return (va - vb) * dirMultiplier;
+    });
+  })();
 
   const performanceData = [
     {
@@ -325,35 +384,19 @@ const DetailedExamDashboard = ({ exam, onBack }) => {
             <table className="w-full">
               <thead>
                 <tr className="border-b-2 border-indigo-100">
-                  <th className="px-4 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">
-                    Rank (Marks)
-                  </th>
-                  <th className="px-4 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">
-                    Rank (Time)
-                  </th>
-                  <th className="px-4 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">
-                    Name / Email
-                  </th>
-                  <th className="px-4 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">
-                    Status
-                  </th>
-                  <th className="px-4 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">
-                    Marks
-                  </th>
-                  <th className="px-4 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">
-                    Time Taken
-                  </th>
-                  <th className="px-4 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">
-                    Attempt
-                  </th>
-                  <th className="px-4 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">
-                    Submitted At
-                  </th>
+                  <SortableTh label="Rank (Marks)" sortKey="rankByMarks" sort={studentSort} onSort={handleStudentSort} />
+                  <SortableTh label="Rank (Time)" sortKey="rankByCompletionTime" sort={studentSort} onSort={handleStudentSort} />
+                  <SortableTh label="Name / Email" sortKey="name" sort={studentSort} onSort={handleStudentSort} />
+                  <SortableTh label="Status" sortKey="status" sort={studentSort} onSort={handleStudentSort} />
+                  <SortableTh label="Marks" sortKey="marks" sort={studentSort} onSort={handleStudentSort} />
+                  <SortableTh label="Time Taken" sortKey="timetaken" sort={studentSort} onSort={handleStudentSort} />
+                  <SortableTh label="Attempt" sortKey="attemptNumber" sort={studentSort} onSort={handleStudentSort} />
+                  <SortableTh label="Submitted At" sortKey="submittedAt" sort={studentSort} onSort={handleStudentSort} />
                 </tr>
               </thead>
               <tbody>
-                {studentPerformance && studentPerformance.length > 0 ? (
-                  studentPerformance.map((s) => (
+                {sortedStudentPerformance && sortedStudentPerformance.length > 0 ? (
+                  sortedStudentPerformance.map((s) => (
                     <tr
                       key={s.submissionId}
                       className="border-b border-gray-100 hover:bg-indigo-50 transition-colors"

@@ -1,14 +1,54 @@
 import axios from "axios";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import toast from "react-hot-toast";
 import { Dialog } from "@mui/material";
 import Select from "react-select";
 import { MdClose } from "react-icons/md";
-import { Youtube, Video, Trash2, Pencil } from "lucide-react";
+import {
+  Youtube,
+  Video,
+  Trash2,
+  Pencil,
+  ArrowDown,
+  ArrowUp,
+  ArrowUpDown,
+} from "lucide-react";
 import {
   EXAM_CATEGORY_OPTIONS,
   getCategoryLabel,
 } from "../../../../constants/examCategories";
+
+// Same click-to-sort column header used across the other admin tables.
+const SortableTh = ({ label, sortKey, sort, onSort, className = "" }) => {
+  const active = sort.key === sortKey;
+  const Icon = active ? (sort.dir === "asc" ? ArrowUp : ArrowDown) : ArrowUpDown;
+  return (
+    <th className={`px-4 py-3 ${className}`}>
+      <button
+        type="button"
+        onClick={() => onSort(sortKey)}
+        className={`flex items-center gap-1 uppercase tracking-wide font-semibold hover:text-indigo-600 duration-150 ${
+          active ? "text-indigo-600" : ""
+        }`}
+      >
+        {label}
+        <Icon className="h-3 w-3" />
+      </button>
+    </th>
+  );
+};
+
+const SORTERS = {
+  title: (r) => (r.title || "").toLowerCase(),
+  category: (r) => (getCategoryLabel(r.category) || "").toLowerCase(),
+  recordedDate: (r) => (r.recordedDate ? new Date(r.recordedDate).getTime() : null),
+  duration: (r) => r.durationSeconds ?? null,
+  visibleFor: (r) =>
+    r.visibilityWindowDays === null || r.visibilityWindowDays === undefined
+      ? Infinity
+      : r.visibilityWindowDays,
+  status: (r) => (r.active ? 1 : 0),
+};
 
 const formatDateTime = (value) => {
   if (!value) return "—";
@@ -57,6 +97,30 @@ const RecordedClassesAdminPage = () => {
   const [editingId, setEditingId] = useState(null);
   const [form, setForm] = useState(EMPTY_FORM);
   const [saving, setSaving] = useState(false);
+  const [sort, setSort] = useState({ key: null, dir: "asc" });
+
+  const handleSort = (key) => {
+    setSort((prev) =>
+      prev.key === key ? { key, dir: prev.dir === "asc" ? "desc" : "asc" } : { key, dir: "asc" }
+    );
+  };
+
+  const sortedRecordings = useMemo(() => {
+    if (!sort.key || !SORTERS[sort.key]) return recordings;
+    const getValue = SORTERS[sort.key];
+    const dirMultiplier = sort.dir === "asc" ? 1 : -1;
+    return [...recordings].sort((a, b) => {
+      const va = getValue(a);
+      const vb = getValue(b);
+      // Nulls/undefined always sink to the bottom, in either direction.
+      if (va === null || va === undefined) return vb === null || vb === undefined ? 0 : 1;
+      if (vb === null || vb === undefined) return -1;
+      if (typeof va === "string" || typeof vb === "string") {
+        return String(va).localeCompare(String(vb)) * dirMultiplier;
+      }
+      return (va - vb) * dirMultiplier;
+    });
+  }, [recordings, sort]);
 
   const fetchRecordings = async () => {
     try {
@@ -245,12 +309,12 @@ const RecordedClassesAdminPage = () => {
         <table className="w-full text-sm min-w-[900px]">
           <thead>
             <tr className="bg-gray-50 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">
-              <th className="px-4 py-3">Title</th>
-              <th className="px-4 py-3">Category</th>
-              <th className="px-4 py-3">Recorded Date</th>
-              <th className="px-4 py-3">Duration</th>
-              <th className="px-4 py-3">Visible For</th>
-              <th className="px-4 py-3">Status</th>
+              <SortableTh label="Title" sortKey="title" sort={sort} onSort={handleSort} />
+              <SortableTh label="Category" sortKey="category" sort={sort} onSort={handleSort} />
+              <SortableTh label="Recorded Date" sortKey="recordedDate" sort={sort} onSort={handleSort} />
+              <SortableTh label="Duration" sortKey="duration" sort={sort} onSort={handleSort} />
+              <SortableTh label="Visible For" sortKey="visibleFor" sort={sort} onSort={handleSort} />
+              <SortableTh label="Status" sortKey="status" sort={sort} onSort={handleSort} />
               <th className="px-4 py-3">Actions</th>
             </tr>
           </thead>
@@ -261,14 +325,14 @@ const RecordedClassesAdminPage = () => {
                   Loading…
                 </td>
               </tr>
-            ) : recordings.length === 0 ? (
+            ) : sortedRecordings.length === 0 ? (
               <tr>
                 <td colSpan={7} className="text-center text-gray-400 py-10">
                   No recordings added yet.
                 </td>
               </tr>
             ) : (
-              recordings.map((rec) => (
+              sortedRecordings.map((rec) => (
                 <tr key={rec._id} className="border-t border-gray-50 hover:bg-gray-50/60">
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-2">

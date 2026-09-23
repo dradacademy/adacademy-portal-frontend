@@ -1,14 +1,53 @@
 import axios from "axios";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import toast from "react-hot-toast";
 import { Dialog } from "@mui/material";
 import Select from "react-select";
 import { MdClose } from "react-icons/md";
-import { Paperclip, Trash2, Pencil, Upload, FileText, Presentation } from "lucide-react";
+import {
+  Paperclip,
+  Trash2,
+  Pencil,
+  Upload,
+  FileText,
+  Presentation,
+  ArrowDown,
+  ArrowUp,
+  ArrowUpDown,
+} from "lucide-react";
 import {
   EXAM_CATEGORY_OPTIONS,
   getCategoryLabel,
 } from "../../../../constants/examCategories";
+
+// Same click-to-sort column header used across the other admin tables.
+const SortableTh = ({ label, sortKey, sort, onSort, className = "" }) => {
+  const active = sort.key === sortKey;
+  const Icon = active ? (sort.dir === "asc" ? ArrowUp : ArrowDown) : ArrowUpDown;
+  return (
+    <th className={`px-4 py-3 ${className}`}>
+      <button
+        type="button"
+        onClick={() => onSort(sortKey)}
+        className={`flex items-center gap-1 uppercase tracking-wide font-semibold hover:text-indigo-600 duration-150 ${
+          active ? "text-indigo-600" : ""
+        }`}
+      >
+        {label}
+        <Icon className="h-3 w-3" />
+      </button>
+    </th>
+  );
+};
+
+const SORTERS = {
+  title: (a) => (a.title || "").toLowerCase(),
+  category: (a) => (getCategoryLabel(a.category) || "").toLowerCase(),
+  type: (a) => (a.contentType === "application/pdf" ? "pdf" : a.fileName?.split(".").pop()?.toLowerCase() || ""),
+  fileSize: (a) => a.fileSize ?? 0,
+  createdAt: (a) => (a.createdAt ? new Date(a.createdAt).getTime() : null),
+  status: (a) => (a.active ? 1 : 0),
+};
 
 const formatDateTime = (value) => {
   if (!value) return "—";
@@ -51,6 +90,30 @@ const AttachmentsAdminPage = () => {
   const [form, setForm] = useState(EMPTY_FORM);
   const [file, setFile] = useState(null);
   const [saving, setSaving] = useState(false);
+  const [sort, setSort] = useState({ key: null, dir: "asc" });
+
+  const handleSort = (key) => {
+    setSort((prev) =>
+      prev.key === key ? { key, dir: prev.dir === "asc" ? "desc" : "asc" } : { key, dir: "asc" }
+    );
+  };
+
+  const sortedAttachments = useMemo(() => {
+    if (!sort.key || !SORTERS[sort.key]) return attachments;
+    const getValue = SORTERS[sort.key];
+    const dirMultiplier = sort.dir === "asc" ? 1 : -1;
+    return [...attachments].sort((a, b) => {
+      const va = getValue(a);
+      const vb = getValue(b);
+      // Nulls/undefined always sink to the bottom, in either direction.
+      if (va === null || va === undefined) return vb === null || vb === undefined ? 0 : 1;
+      if (vb === null || vb === undefined) return -1;
+      if (typeof va === "string" || typeof vb === "string") {
+        return String(va).localeCompare(String(vb)) * dirMultiplier;
+      }
+      return (va - vb) * dirMultiplier;
+    });
+  }, [attachments, sort]);
 
   const fetchAttachments = async () => {
     try {
@@ -212,12 +275,12 @@ const AttachmentsAdminPage = () => {
         <table className="w-full text-sm min-w-[900px]">
           <thead>
             <tr className="bg-gray-50 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">
-              <th className="px-4 py-3">Title</th>
-              <th className="px-4 py-3">Category</th>
-              <th className="px-4 py-3">Type</th>
-              <th className="px-4 py-3">Size</th>
-              <th className="px-4 py-3">Uploaded</th>
-              <th className="px-4 py-3">Status</th>
+              <SortableTh label="Title" sortKey="title" sort={sort} onSort={handleSort} />
+              <SortableTh label="Category" sortKey="category" sort={sort} onSort={handleSort} />
+              <SortableTh label="Type" sortKey="type" sort={sort} onSort={handleSort} />
+              <SortableTh label="Size" sortKey="fileSize" sort={sort} onSort={handleSort} />
+              <SortableTh label="Uploaded" sortKey="createdAt" sort={sort} onSort={handleSort} />
+              <SortableTh label="Status" sortKey="status" sort={sort} onSort={handleSort} />
               <th className="px-4 py-3">Actions</th>
             </tr>
           </thead>
@@ -228,14 +291,14 @@ const AttachmentsAdminPage = () => {
                   Loading…
                 </td>
               </tr>
-            ) : attachments.length === 0 ? (
+            ) : sortedAttachments.length === 0 ? (
               <tr>
                 <td colSpan={7} className="text-center text-gray-400 py-10">
                   No materials uploaded yet.
                 </td>
               </tr>
             ) : (
-              attachments.map((att) => (
+              sortedAttachments.map((att) => (
                 <tr key={att._id} className="border-t border-gray-50 hover:bg-gray-50/60">
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-2">

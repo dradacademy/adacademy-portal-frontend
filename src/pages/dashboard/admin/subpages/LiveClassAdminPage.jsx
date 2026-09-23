@@ -1,14 +1,58 @@
 import axios from "axios";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import toast from "react-hot-toast";
+import { Dialog } from "@mui/material";
 import Select from "react-select";
-import { Megaphone, PlayCircle, Trash2 } from "lucide-react";
+import { MdClose } from "react-icons/md";
+import {
+  Megaphone,
+  PlayCircle,
+  Trash2,
+  Pencil,
+  ArrowDown,
+  ArrowUp,
+  ArrowUpDown,
+} from "lucide-react";
 import {
   EXAM_CATEGORY_OPTIONS,
   getCategoryLabel,
 } from "../../../../constants/examCategories";
 
+// Same click-to-sort column header used across the other admin tables.
+const SortableTh = ({ label, sortKey, sort, onSort, className = "" }) => {
+  const active = sort.key === sortKey;
+  const Icon = active ? (sort.dir === "asc" ? ArrowUp : ArrowDown) : ArrowUpDown;
+  return (
+    <th className={`px-4 py-3 ${className}`}>
+      <button
+        type="button"
+        onClick={() => onSort(sortKey)}
+        className={`flex items-center gap-1 uppercase tracking-wide font-semibold hover:text-indigo-600 duration-150 ${
+          active ? "text-indigo-600" : ""
+        }`}
+      >
+        {label}
+        <Icon className="h-3 w-3" />
+      </button>
+    </th>
+  );
+};
+
+const SORTERS = {
+  title: (r) => (r.title || "").toLowerCase(),
+  category: (r) => (getCategoryLabel(r.category) || "").toLowerCase(),
+  startedAt: (r) => (r.startedAt ? new Date(r.startedAt).getTime() : null),
+  endedAt: (r) => (r.endedAt ? new Date(r.endedAt).getTime() : null),
+  status: (r) => (r.active ? 1 : 0),
+};
+
 const EMPTY_FORM = {
+  title: "",
+  category: EXAM_CATEGORY_OPTIONS[0].value,
+  youtubeUrl: "",
+};
+
+const EMPTY_EDIT_FORM = {
   title: "",
   category: EXAM_CATEGORY_OPTIONS[0].value,
   youtubeUrl: "",
@@ -38,6 +82,35 @@ const LiveClassAdminPage = () => {
   const [saving, setSaving] = useState(false);
   const [ending, setEnding] = useState(null);
   const [deleting, setDeleting] = useState(null);
+
+  const [editOpen, setEditOpen] = useState(false);
+  const [editingId, setEditingId] = useState(null);
+  const [editForm, setEditForm] = useState(EMPTY_EDIT_FORM);
+  const [editSaving, setEditSaving] = useState(false);
+  const [sort, setSort] = useState({ key: null, dir: "asc" });
+
+  const handleSort = (key) => {
+    setSort((prev) =>
+      prev.key === key ? { key, dir: prev.dir === "asc" ? "desc" : "asc" } : { key, dir: "asc" }
+    );
+  };
+
+  const sortedHistory = useMemo(() => {
+    if (!sort.key || !SORTERS[sort.key]) return history;
+    const getValue = SORTERS[sort.key];
+    const dirMultiplier = sort.dir === "asc" ? 1 : -1;
+    return [...history].sort((a, b) => {
+      const va = getValue(a);
+      const vb = getValue(b);
+      // Nulls/undefined always sink to the bottom, in either direction.
+      if (va === null || va === undefined) return vb === null || vb === undefined ? 0 : 1;
+      if (vb === null || vb === undefined) return -1;
+      if (typeof va === "string" || typeof vb === "string") {
+        return String(va).localeCompare(String(vb)) * dirMultiplier;
+      }
+      return (va - vb) * dirMultiplier;
+    });
+  }, [history, sort]);
 
   const fetchHistory = async () => {
     try {
@@ -92,6 +165,50 @@ const LiveClassAdminPage = () => {
       toast.error("Failed to end the live class.");
     } finally {
       setEnding(null);
+    }
+  };
+
+  // Edit metadata on an existing entry — title, category, or swap the
+  // YouTube link itself — without touching whether it's live/ended (that
+  // stays owned by Go Live/End Live/Delete). Works on both a currently-live
+  // entry and a past one, same as Recorded Classes' Edit.
+  const handleOpenEdit = (liveClass) => {
+    setEditingId(liveClass._id);
+    setEditForm({
+      title: liveClass.title,
+      category: liveClass.category,
+      youtubeUrl: `https://youtu.be/${liveClass.youtubeVideoId}`,
+    });
+    setEditOpen(true);
+  };
+
+  const handleCloseEdit = () => {
+    setEditOpen(false);
+    setEditingId(null);
+    setEditForm(EMPTY_EDIT_FORM);
+  };
+
+  const handleSaveEdit = async () => {
+    if (!editForm.title || !editForm.category || !editForm.youtubeUrl) {
+      toast.error("Please fill in the title, category, and YouTube link.");
+      return;
+    }
+
+    setEditSaving(true);
+    try {
+      await axios.patch(
+        `${import.meta.env.VITE_APP_API_URL}/live-classes/${editingId}`,
+        editForm
+      );
+      toast.success("Live class updated.");
+      handleCloseEdit();
+      fetchHistory();
+    } catch (error) {
+      toast.error(
+        error?.response?.data?.message || "Failed to update the live class."
+      );
+    } finally {
+      setEditSaving(false);
     }
   };
 
@@ -161,6 +278,14 @@ const LiveClassAdminPage = () => {
                 </div>
               </div>
               <div className="flex items-center gap-2">
+                <button
+                  onClick={() => handleOpenEdit(lc)}
+                  disabled={ending === lc._id || deleting === lc._id}
+                  title="Edit"
+                  className="p-2 rounded-xl bg-indigo-50 text-indigo-600 hover:bg-indigo-100 disabled:opacity-50"
+                >
+                  <Pencil className="h-4 w-4" />
+                </button>
                 <button
                   onClick={() => handleEndLive(lc)}
                   disabled={ending === lc._id || deleting === lc._id}
@@ -251,11 +376,11 @@ const LiveClassAdminPage = () => {
         <table className="w-full text-sm min-w-[700px]">
           <thead>
             <tr className="bg-gray-50 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">
-              <th className="px-4 py-3">Title</th>
-              <th className="px-4 py-3">Category</th>
-              <th className="px-4 py-3">Started</th>
-              <th className="px-4 py-3">Ended</th>
-              <th className="px-4 py-3">Status</th>
+              <SortableTh label="Title" sortKey="title" sort={sort} onSort={handleSort} />
+              <SortableTh label="Category" sortKey="category" sort={sort} onSort={handleSort} />
+              <SortableTh label="Started" sortKey="startedAt" sort={sort} onSort={handleSort} />
+              <SortableTh label="Ended" sortKey="endedAt" sort={sort} onSort={handleSort} />
+              <SortableTh label="Status" sortKey="status" sort={sort} onSort={handleSort} />
               <th className="px-4 py-3"></th>
             </tr>
           </thead>
@@ -266,14 +391,14 @@ const LiveClassAdminPage = () => {
                   Loading…
                 </td>
               </tr>
-            ) : history.length === 0 ? (
+            ) : sortedHistory.length === 0 ? (
               <tr>
                 <td colSpan={6} className="text-center text-gray-400 py-10">
                   No live classes started yet.
                 </td>
               </tr>
             ) : (
-              history.map((lc) => (
+              sortedHistory.map((lc) => (
                 <tr key={lc._id} className="border-t border-gray-50">
                   <td className="px-4 py-3 font-medium text-gray-800">{lc.title}</td>
                   <td className="px-4 py-3 text-gray-600">
@@ -293,14 +418,24 @@ const LiveClassAdminPage = () => {
                     </span>
                   </td>
                   <td className="px-4 py-3 text-right">
-                    <button
-                      onClick={() => handleDelete(lc)}
-                      disabled={deleting === lc._id}
-                      title="Delete this entry entirely"
-                      className="p-2 rounded-xl text-rose-500 hover:bg-rose-100 disabled:opacity-50"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </button>
+                    <div className="flex items-center justify-end gap-2">
+                      <button
+                        onClick={() => handleOpenEdit(lc)}
+                        disabled={deleting === lc._id}
+                        title="Edit"
+                        className="p-2 rounded-xl bg-indigo-50 text-indigo-600 hover:bg-indigo-100 disabled:opacity-50"
+                      >
+                        <Pencil className="h-4 w-4" />
+                      </button>
+                      <button
+                        onClick={() => handleDelete(lc)}
+                        disabled={deleting === lc._id}
+                        title="Delete this entry entirely"
+                        className="p-2 rounded-xl text-rose-500 hover:bg-rose-100 disabled:opacity-50"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))
@@ -308,6 +443,95 @@ const LiveClassAdminPage = () => {
           </tbody>
         </table>
       </div>
+
+      {/* Edit dialog */}
+      <Dialog open={editOpen} onClose={editSaving ? undefined : handleCloseEdit}>
+        <div className="flex flex-col gap-5 sm:min-w-[500px] p-5">
+          <div className="flex items-start justify-between gap-6 w-full">
+            <div className="flex flex-col gap-1">
+              <h1 className="text-2xl font-bold text-stone-700 font-poppins">
+                Edit Live Class
+              </h1>
+              <p className="text-sm text-stone-500 font-work-sans">
+                Update the title, category, or YouTube link. Whether it's
+                live or ended isn't changed here.
+              </p>
+            </div>
+            {!editSaving && (
+              <MdClose
+                onClick={handleCloseEdit}
+                className="text-stone-500 font-medium text-4xl cursor-pointer hover:opacity-80 duration-300"
+              />
+            )}
+          </div>
+          <div className="flex flex-col gap-2 font-inter">
+            <input
+              type="text"
+              placeholder="Class Title"
+              className="border border-stone-300 py-[10px] px-4 focus:outline-stone-300 rounded-2xl bg-white"
+              value={editForm.title}
+              onChange={(e) => setEditForm({ ...editForm, title: e.target.value })}
+              disabled={editSaving}
+            />
+            <Select
+              className="w-full"
+              placeholder="Exam Category"
+              options={EXAM_CATEGORY_OPTIONS}
+              value={EXAM_CATEGORY_OPTIONS.find((opt) => opt.value === editForm.category)}
+              onChange={(selectedOption) =>
+                setEditForm({ ...editForm, category: selectedOption.value })
+              }
+              isDisabled={editSaving}
+              isSearchable={false}
+              styles={{
+                control: (base) => ({
+                  ...base,
+                  borderRadius: "15px",
+                  padding: "4px",
+                  borderColor: "#ccc",
+                  boxShadow: "none",
+                  "&:hover": { borderColor: "#888" },
+                }),
+                menuPortal: (base) => ({ ...base, zIndex: 9999 }),
+              }}
+              menuPortalTarget={document.body}
+              menuPosition="absolute"
+            />
+            <div className="flex flex-col gap-1">
+              <input
+                type="text"
+                placeholder="YouTube Live watch link (e.g. https://youtube.com/watch?v=VIDEOID)"
+                className="border border-stone-300 py-[10px] px-4 focus:outline-stone-300 rounded-2xl bg-white"
+                value={editForm.youtubeUrl}
+                onChange={(e) =>
+                  setEditForm({ ...editForm, youtubeUrl: e.target.value })
+                }
+                disabled={editSaving}
+              />
+              <p className="text-xs text-gray-400">
+                Only change this if you need to point students at a
+                different YouTube video/stream for this entry.
+              </p>
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-1">
+            <button
+              onClick={handleCloseEdit}
+              disabled={editSaving}
+              className="border border-indigo-400 text-indigo-400 font-medium py-2 px-4 rounded-xl font-poppins cursor-pointer hover:opacity-85 duration-300 disabled:opacity-50"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={handleSaveEdit}
+              disabled={editSaving}
+              className="bg-indigo-400 text-stone-50 font-medium py-2 px-4 rounded-xl font-poppins cursor-pointer hover:opacity-85 duration-300 disabled:opacity-50"
+            >
+              {editSaving ? "Saving…" : "Save Changes"}
+            </button>
+          </div>
+        </div>
+      </Dialog>
     </div>
   );
 };

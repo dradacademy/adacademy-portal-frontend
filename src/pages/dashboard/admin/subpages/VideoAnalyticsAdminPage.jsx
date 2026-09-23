@@ -1,6 +1,35 @@
 import axios from "axios";
 import React, { useEffect, useMemo, useState } from "react";
-import { Search, Eye, Users, Clock } from "lucide-react";
+import { Search, Eye, Users, Clock, ArrowDown, ArrowUp, ArrowUpDown } from "lucide-react";
+
+// Same click-to-sort column header used across the other admin tables.
+const SortableTh = ({ label, sortKey, sort, onSort, className = "" }) => {
+  const active = sort.key === sortKey;
+  const Icon = active ? (sort.dir === "asc" ? ArrowUp : ArrowDown) : ArrowUpDown;
+  return (
+    <th className={`px-4 py-3 ${className}`}>
+      <button
+        type="button"
+        onClick={() => onSort(sortKey)}
+        className={`flex items-center gap-1 uppercase tracking-wide font-semibold hover:text-indigo-600 duration-150 ${
+          active ? "text-indigo-600" : ""
+        }`}
+      >
+        {label}
+        <Icon className="h-3 w-3" />
+      </button>
+    </th>
+  );
+};
+
+const SORTERS = {
+  student: (r) => (r.studentName || "").toLowerCase(),
+  video: (r) => (r.videoTitle || "").toLowerCase(),
+  percentWatched: (r) => r.percentWatched ?? 0,
+  totalWatchSeconds: (r) => r.totalWatchSeconds ?? 0,
+  sessionCount: (r) => r.sessionCount ?? 0,
+  lastWatchedAt: (r) => (r.lastWatchedAt ? new Date(r.lastWatchedAt).getTime() : null),
+};
 
 const formatDateTime = (value) => {
   if (!value) return "Never";
@@ -41,6 +70,13 @@ const VideoAnalyticsAdminPage = () => {
   const [rows, setRows] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
+  const [sort, setSort] = useState({ key: null, dir: "asc" });
+
+  const handleSort = (key) => {
+    setSort((prev) =>
+      prev.key === key ? { key, dir: prev.dir === "asc" ? "desc" : "asc" } : { key, dir: "asc" }
+    );
+  };
 
   useEffect(() => {
     const fetchAnalytics = async () => {
@@ -69,6 +105,23 @@ const VideoAnalyticsAdminPage = () => {
         r.videoTitle?.toLowerCase().includes(term)
     );
   }, [rows, searchTerm]);
+
+  const sortedRows = useMemo(() => {
+    if (!sort.key || !SORTERS[sort.key]) return filtered;
+    const getValue = SORTERS[sort.key];
+    const dirMultiplier = sort.dir === "asc" ? 1 : -1;
+    return [...filtered].sort((a, b) => {
+      const va = getValue(a);
+      const vb = getValue(b);
+      // Nulls/undefined always sink to the bottom, in either direction.
+      if (va === null || va === undefined) return vb === null || vb === undefined ? 0 : 1;
+      if (vb === null || vb === undefined) return -1;
+      if (typeof va === "string" || typeof vb === "string") {
+        return String(va).localeCompare(String(vb)) * dirMultiplier;
+      }
+      return (va - vb) * dirMultiplier;
+    });
+  }, [filtered, sort]);
 
   const stats = useMemo(() => {
     const uniqueStudents = new Set(rows.map((r) => r.studentId)).size;
@@ -116,12 +169,12 @@ const VideoAnalyticsAdminPage = () => {
         <table className="w-full text-sm min-w-[900px]">
           <thead>
             <tr className="bg-gray-50 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">
-              <th className="px-4 py-3">Student</th>
-              <th className="px-4 py-3">Class</th>
-              <th className="px-4 py-3">% Watched</th>
-              <th className="px-4 py-3">Total Watch Time</th>
-              <th className="px-4 py-3">Sessions</th>
-              <th className="px-4 py-3">Last Watched</th>
+              <SortableTh label="Student" sortKey="student" sort={sort} onSort={handleSort} />
+              <SortableTh label="Class" sortKey="video" sort={sort} onSort={handleSort} />
+              <SortableTh label="% Watched" sortKey="percentWatched" sort={sort} onSort={handleSort} />
+              <SortableTh label="Total Watch Time" sortKey="totalWatchSeconds" sort={sort} onSort={handleSort} />
+              <SortableTh label="Sessions" sortKey="sessionCount" sort={sort} onSort={handleSort} />
+              <SortableTh label="Last Watched" sortKey="lastWatchedAt" sort={sort} onSort={handleSort} />
             </tr>
           </thead>
           <tbody>
@@ -131,14 +184,14 @@ const VideoAnalyticsAdminPage = () => {
                   Loading…
                 </td>
               </tr>
-            ) : filtered.length === 0 ? (
+            ) : sortedRows.length === 0 ? (
               <tr>
                 <td colSpan={6} className="text-center text-gray-400 py-10">
                   No watch activity recorded yet.
                 </td>
               </tr>
             ) : (
-              filtered.map((row, idx) => (
+              sortedRows.map((row, idx) => (
                 <tr
                   key={`${row.studentId}-${row.videoId}-${idx}`}
                   className="border-t border-gray-50 hover:bg-gray-50/60"

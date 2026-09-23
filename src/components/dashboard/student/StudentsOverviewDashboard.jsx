@@ -1,11 +1,50 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import axios from "axios";
 import { FaGraduationCap } from "react-icons/fa";
+import { ArrowDown, ArrowUp, ArrowUpDown } from "lucide-react";
+
+// Generic click-to-sort column header — same pattern used across the other
+// admin tables (Test Tracking, Attendance Report, etc.): first click sorts
+// ascending, a second click on the same column flips to descending, a
+// different column starts a fresh ascending sort.
+const SortableTh = ({ label, sortKey, sort, onSort, className = "" }) => {
+  const active = sort.key === sortKey;
+  const Icon = active ? (sort.dir === "asc" ? ArrowUp : ArrowDown) : ArrowUpDown;
+  return (
+    <th className={`px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider ${className}`}>
+      <button
+        type="button"
+        onClick={() => onSort(sortKey)}
+        className={`flex items-center gap-1 hover:text-indigo-600 duration-150 ${
+          active ? "text-indigo-600" : ""
+        }`}
+      >
+        {label}
+        <Icon className="h-3 w-3" />
+      </button>
+    </th>
+  );
+};
+
+const SORTERS = {
+  registerNumber: (s) => (s.registerNumber || "").toLowerCase(),
+  name: (s) => (s.name || "").toLowerCase(),
+  email: (s) => (s.email || "").toLowerCase(),
+  totalExams: (s) => s.totalExams ?? 0,
+  avgPercentage: (s) => s.avgPercentage ?? 0,
+};
 
 const StudentsOverviewDashboard = ({ onStudentClick }) => {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [sort, setSort] = useState({ key: null, dir: "asc" });
+
+  const handleSort = (key) => {
+    setSort((prev) =>
+      prev.key === key ? { key, dir: prev.dir === "asc" ? "desc" : "asc" } : { key, dir: "asc" }
+    );
+  };
 
   useEffect(() => {
     fetchOverviewData();
@@ -56,6 +95,18 @@ const StudentsOverviewDashboard = ({ onStudentClick }) => {
 
   const { students, totalStudents } = data;
 
+  const sortedStudents = [...students].sort((a, b) => {
+    if (!sort.key || !SORTERS[sort.key]) return 0;
+    const getValue = SORTERS[sort.key];
+    const dirMultiplier = sort.dir === "asc" ? 1 : -1;
+    const va = getValue(a);
+    const vb = getValue(b);
+    if (typeof va === "string" || typeof vb === "string") {
+      return String(va).localeCompare(String(vb)) * dirMultiplier;
+    }
+    return (va - vb) * dirMultiplier;
+  });
+
   return (
     <div className="min-h-screen font-inter">
       <div className="max-w-7xl mx-auto">
@@ -97,29 +148,18 @@ const StudentsOverviewDashboard = ({ onStudentClick }) => {
             <table className="w-full">
               <thead className="bg-gray-50">
                 <tr>
-                  <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">
-                    Register No.
-                  </th>
-                  <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">
-                    Student Name
-                  </th>
-                  <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">
-                    Email
-                  </th>
-                  <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">
-                    Exams Taken
-                  </th>
-                  <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">
-                    Avg %
-                  </th>
-
+                  <SortableTh label="Register No." sortKey="registerNumber" sort={sort} onSort={handleSort} />
+                  <SortableTh label="Student Name" sortKey="name" sort={sort} onSort={handleSort} />
+                  <SortableTh label="Email" sortKey="email" sort={sort} onSort={handleSort} />
+                  <SortableTh label="Exams Taken" sortKey="totalExams" sort={sort} onSort={handleSort} />
+                  <SortableTh label="Avg %" sortKey="avgPercentage" sort={sort} onSort={handleSort} />
                   <th className="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">
                     Action
                   </th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-200">
-                {students.map((student) => (
+                {sortedStudents.map((student) => (
                   <tr
                     key={student._id}
                     className="hover:bg-indigo-50 transition-colors"
