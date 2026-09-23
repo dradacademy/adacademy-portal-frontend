@@ -1,10 +1,13 @@
 import axios from "axios";
 import download from "downloadjs";
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import toast from "react-hot-toast";
 import { Dialog } from "@mui/material";
 import { MdClose } from "react-icons/md";
 import {
+  ArrowDown,
+  ArrowUp,
+  ArrowUpDown,
   Search,
   Users,
   CheckCircle2,
@@ -51,6 +54,28 @@ const Field = ({ label, value }) => (
 );
 
 const formatDate = (value) => (value ? new Date(value).toLocaleDateString() : "—");
+
+// Same click-to-sort header pattern used on Test Tracking / Attendance
+// Report — first click ascending, second click on the same column flips to
+// descending, a different column starts fresh ascending.
+const SortableTh = ({ label, sortKey, sort, onSort, className = "" }) => {
+  const active = sort.key === sortKey;
+  const Icon = active ? (sort.dir === "asc" ? ArrowUp : ArrowDown) : ArrowUpDown;
+  return (
+    <th className={`px-4 py-3 ${className}`}>
+      <button
+        type="button"
+        onClick={() => onSort(sortKey)}
+        className={`flex items-center gap-1 uppercase tracking-wide font-semibold hover:text-indigo-600 duration-150 ${
+          active ? "text-indigo-600" : ""
+        }`}
+      >
+        {label}
+        <Icon className="h-3 w-3" />
+      </button>
+    </th>
+  );
+};
 
 // Read-only mirror of the student-facing StudentProfilePage — every section
 // rendered exactly as the student filled it in, matching the admin's
@@ -290,6 +315,7 @@ const StudentProfilesAdminPage = () => {
   const [detailStudentId, setDetailStudentId] = useState(null);
   const [detailStudentName, setDetailStudentName] = useState("");
   const [downloadingPdf, setDownloadingPdf] = useState(false);
+  const [sort, setSort] = useState({ key: null, dir: "asc" });
 
   // Admin-only PDF export — never wired up anywhere on the student-facing
   // StudentProfilePage. Fetched as a blob (the endpoint requires the same
@@ -337,6 +363,41 @@ const StudentProfilesAdminPage = () => {
     return () => clearTimeout(timeout);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [search, category, status]);
+
+  // Name-wise (Student, Course, Status) and value-wise (the two signed
+  // checkmarks, Last Updated) sorting, same pattern as Test Tracking /
+  // Attendance Report.
+  const SORTERS = {
+    name: (r) => (r.name || "").toLowerCase(),
+    category: (r) => (getCategoryLabel(r.category) || "").toLowerCase(),
+    profileStatus: (r) => (r.profileStatus || "").toLowerCase(),
+    studentAgreed: (r) => (r.studentAgreed ? 1 : 0),
+    parentAgreed: (r) => (r.parentAgreed ? 1 : 0),
+    lastUpdatedAt: (r) => (r.lastUpdatedAt ? new Date(r.lastUpdatedAt).getTime() : null),
+  };
+
+  const handleSort = (key) => {
+    setSort((prev) =>
+      prev.key === key ? { key, dir: prev.dir === "asc" ? "desc" : "asc" } : { key, dir: "asc" }
+    );
+  };
+
+  const sortedRows = useMemo(() => {
+    if (!sort.key || !SORTERS[sort.key]) return rows;
+    const getValue = SORTERS[sort.key];
+    const dirMultiplier = sort.dir === "asc" ? 1 : -1;
+    return [...rows].sort((a, b) => {
+      const va = getValue(a);
+      const vb = getValue(b);
+      if (va === null || va === undefined) return vb === null || vb === undefined ? 0 : 1;
+      if (vb === null || vb === undefined) return -1;
+      if (typeof va === "string" || typeof vb === "string") {
+        return String(va).localeCompare(String(vb)) * dirMultiplier;
+      }
+      return (va - vb) * dirMultiplier;
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [rows, sort]);
 
   return (
     <div className="flex flex-col gap-6 w-full font-inter">
@@ -387,13 +448,28 @@ const StudentProfilesAdminPage = () => {
       <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-x-auto">
         <table className="w-full text-sm min-w-[900px]">
           <thead>
-            <tr className="bg-gray-50 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">
-              <th className="px-4 py-3">Student</th>
-              <th className="px-4 py-3">Course</th>
-              <th className="px-4 py-3">Status</th>
-              <th className="px-4 py-3">Student Signed</th>
-              <th className="px-4 py-3">Parent Signed</th>
-              <th className="px-4 py-3">Last Updated</th>
+            <tr className="bg-gray-50 text-left text-xs text-gray-500">
+              <SortableTh label="Student" sortKey="name" sort={sort} onSort={handleSort} />
+              <SortableTh label="Course" sortKey="category" sort={sort} onSort={handleSort} />
+              <SortableTh label="Status" sortKey="profileStatus" sort={sort} onSort={handleSort} />
+              <SortableTh
+                label="Student Signed"
+                sortKey="studentAgreed"
+                sort={sort}
+                onSort={handleSort}
+              />
+              <SortableTh
+                label="Parent Signed"
+                sortKey="parentAgreed"
+                sort={sort}
+                onSort={handleSort}
+              />
+              <SortableTh
+                label="Last Updated"
+                sortKey="lastUpdatedAt"
+                sort={sort}
+                onSort={handleSort}
+              />
               <th className="px-4 py-3"></th>
             </tr>
           </thead>
@@ -404,7 +480,7 @@ const StudentProfilesAdminPage = () => {
                   Loading…
                 </td>
               </tr>
-            ) : rows.length === 0 ? (
+            ) : sortedRows.length === 0 ? (
               <tr>
                 <td colSpan={7} className="text-center text-gray-400 py-10">
                   <div className="flex flex-col items-center gap-2 py-4">
@@ -414,7 +490,7 @@ const StudentProfilesAdminPage = () => {
                 </td>
               </tr>
             ) : (
-              rows.map((row) => (
+              sortedRows.map((row) => (
                 <tr key={row.studentId} className="border-t border-gray-50 hover:bg-gray-50/60">
                   <td className="px-4 py-3">
                     <p className="font-medium text-gray-800">{row.name}</p>

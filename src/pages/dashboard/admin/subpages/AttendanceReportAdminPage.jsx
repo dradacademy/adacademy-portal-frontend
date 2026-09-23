@@ -1,11 +1,41 @@
 import axios from "axios";
 import React, { useEffect, useMemo, useState } from "react";
 import toast from "react-hot-toast";
-import { Download, ClipboardCheck } from "lucide-react";
+import {
+  ArrowDown,
+  ArrowUp,
+  ArrowUpDown,
+  Download,
+  ClipboardCheck,
+} from "lucide-react";
 import {
   EXAM_CATEGORY_OPTIONS,
   getCategoryLabel,
 } from "../../../../constants/examCategories";
+
+// Same click-to-sort header used on the Test Tracking page — first click
+// ascending, second click on the same column flips to descending, a
+// different column starts fresh ascending. Kept as a local copy (not a
+// shared import) since these two pages' tables are otherwise unrelated and
+// this is a small, self-contained piece.
+const SortableTh = ({ label, sortKey, sort, onSort, className = "" }) => {
+  const active = sort.key === sortKey;
+  const Icon = active ? (sort.dir === "asc" ? ArrowUp : ArrowDown) : ArrowUpDown;
+  return (
+    <th className={`px-4 py-3 ${className}`}>
+      <button
+        type="button"
+        onClick={() => onSort(sortKey)}
+        className={`flex items-center gap-1 uppercase tracking-wide font-semibold hover:text-indigo-600 duration-150 ${
+          active ? "text-indigo-600" : ""
+        }`}
+      >
+        {label}
+        <Icon className="h-3 w-3" />
+      </button>
+    </th>
+  );
+};
 
 const formatDateTime = (value) => {
   if (!value) return "—";
@@ -43,6 +73,7 @@ const AttendanceReportAdminPage = () => {
   const [typeFilter, setTypeFilter] = useState("all"); // all | Recorded | Live
   const [statusFilter, setStatusFilter] = useState("all");
   const [search, setSearch] = useState("");
+  const [sort, setSort] = useState({ key: null, dir: "asc" });
 
   const fetchReport = async () => {
     try {
@@ -84,8 +115,45 @@ const AttendanceReportAdminPage = () => {
     return filtered;
   }, [rows, typeFilter, statusFilter, search]);
 
+  // One value-extractor per sortable column — name-wise (student, class
+  // name, type, status) and value-wise (duration, watched time, watch %,
+  // last watched) alike.
+  const SORTERS = {
+    studentName: (r) => (r.studentName || "").toLowerCase(),
+    contentTitle: (r) => (r.contentTitle || "").toLowerCase(),
+    sessionType: (r) => (r.sessionType || "").toLowerCase(),
+    durationSeconds: (r) => r.durationSeconds ?? null,
+    watchedSeconds: (r) => r.watchedSeconds ?? null,
+    watchPercent: (r) => r.watchPercent ?? null,
+    attendanceStatus: (r) => (r.attendanceStatus || "").toLowerCase(),
+    lastWatchedAt: (r) => (r.lastWatchedAt ? new Date(r.lastWatchedAt).getTime() : null),
+  };
+
+  const handleSort = (key) => {
+    setSort((prev) =>
+      prev.key === key ? { key, dir: prev.dir === "asc" ? "desc" : "asc" } : { key, dir: "asc" }
+    );
+  };
+
+  const sortedRows = useMemo(() => {
+    if (!sort.key || !SORTERS[sort.key]) return filteredRows;
+    const getValue = SORTERS[sort.key];
+    const dirMultiplier = sort.dir === "asc" ? 1 : -1;
+    return [...filteredRows].sort((a, b) => {
+      const va = getValue(a);
+      const vb = getValue(b);
+      if (va === null || va === undefined) return vb === null || vb === undefined ? 0 : 1;
+      if (vb === null || vb === undefined) return -1;
+      if (typeof va === "string" || typeof vb === "string") {
+        return String(va).localeCompare(String(vb)) * dirMultiplier;
+      }
+      return (va - vb) * dirMultiplier;
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [filteredRows, sort]);
+
   const handleExportCsv = () => {
-    if (filteredRows.length === 0) {
+    if (sortedRows.length === 0) {
       toast.error("Nothing to export.");
       return;
     }
@@ -100,7 +168,7 @@ const AttendanceReportAdminPage = () => {
       "Attendance Status",
       "Last Watched",
     ];
-    const csvRows = filteredRows.map((r) => [
+    const csvRows = sortedRows.map((r) => [
       r.studentName,
       r.studentEmail,
       r.sessionType,
@@ -195,15 +263,15 @@ const AttendanceReportAdminPage = () => {
       <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-x-auto">
         <table className="w-full text-sm min-w-[900px]">
           <thead>
-            <tr className="bg-gray-50 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">
-              <th className="px-4 py-3">Student Name</th>
-              <th className="px-4 py-3">Video / Class Name</th>
-              <th className="px-4 py-3">Type</th>
-              <th className="px-4 py-3">Duration</th>
-              <th className="px-4 py-3">Watched Time</th>
-              <th className="px-4 py-3">Watch %</th>
-              <th className="px-4 py-3">Attendance Status</th>
-              <th className="px-4 py-3">Last Watched</th>
+            <tr className="bg-gray-50 text-left text-xs text-gray-500">
+              <SortableTh label="Student Name" sortKey="studentName" sort={sort} onSort={handleSort} />
+              <SortableTh label="Video / Class Name" sortKey="contentTitle" sort={sort} onSort={handleSort} />
+              <SortableTh label="Type" sortKey="sessionType" sort={sort} onSort={handleSort} />
+              <SortableTh label="Duration" sortKey="durationSeconds" sort={sort} onSort={handleSort} />
+              <SortableTh label="Watched Time" sortKey="watchedSeconds" sort={sort} onSort={handleSort} />
+              <SortableTh label="Watch %" sortKey="watchPercent" sort={sort} onSort={handleSort} />
+              <SortableTh label="Attendance Status" sortKey="attendanceStatus" sort={sort} onSort={handleSort} />
+              <SortableTh label="Last Watched" sortKey="lastWatchedAt" sort={sort} onSort={handleSort} />
             </tr>
           </thead>
           <tbody>
@@ -213,14 +281,14 @@ const AttendanceReportAdminPage = () => {
                   Loading…
                 </td>
               </tr>
-            ) : filteredRows.length === 0 ? (
+            ) : sortedRows.length === 0 ? (
               <tr>
                 <td colSpan={8} className="text-center text-gray-400 py-10">
                   No attendance records yet.
                 </td>
               </tr>
             ) : (
-              filteredRows.map((row, idx) => (
+              sortedRows.map((row, idx) => (
                 <tr
                   key={`${row.studentId}-${row.contentId}-${idx}`}
                   className="border-t border-gray-50 hover:bg-gray-50/60"

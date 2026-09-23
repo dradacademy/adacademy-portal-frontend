@@ -1,9 +1,10 @@
 import axios from "axios";
 import React, { useEffect, useMemo, useState } from "react";
 import {
+  ArrowDown,
+  ArrowUp,
+  ArrowUpDown,
   CheckCircle2,
-  ChevronDown,
-  ChevronRight,
   Clock3,
   Search,
   Target,
@@ -12,6 +13,31 @@ import {
   Users,
 } from "lucide-react";
 import { EXAM_CATEGORY_OPTIONS } from "../../../../constants/examCategories";
+
+// Generic click-to-sort column header, reused across every column below —
+// first click sorts ascending, a second click on the same column flips to
+// descending, clicking a different column starts a fresh ascending sort on
+// that one. `sortKey` identifies the column; the actual value extraction
+// per row lives in the `SORTERS` map further down so this stays generic
+// over both text (name-wise) and numeric (value-wise) columns alike.
+const SortableTh = ({ label, sortKey, sort, onSort, className = "" }) => {
+  const active = sort.key === sortKey;
+  const Icon = active ? (sort.dir === "asc" ? ArrowUp : ArrowDown) : ArrowUpDown;
+  return (
+    <th className={`px-4 py-3 ${className}`}>
+      <button
+        type="button"
+        onClick={() => onSort(sortKey)}
+        className={`flex items-center gap-1 uppercase tracking-wide font-semibold hover:text-indigo-600 duration-150 ${
+          active ? "text-indigo-600" : ""
+        }`}
+      >
+        {label}
+        <Icon className="h-3 w-3" />
+      </button>
+    </th>
+  );
+};
 
 const MetricBadge = ({ value, tone }) => {
   if (value === null || value === undefined) {
@@ -67,6 +93,7 @@ const TestTrackingAdminPage = () => {
   const [performanceFilter, setPerformanceFilter] = useState("all");
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
+  const [sort, setSort] = useState({ key: null, dir: "asc" });
 
   useEffect(() => {
     const fetchData = async () => {
@@ -181,6 +208,69 @@ const TestTrackingAdminPage = () => {
     dateTo,
   ]);
 
+  // One value-extractor per sortable column — always reads off the LATEST
+  // attempt (see the "only the last attempt's marks" change below), so
+  // sorting by Score/Speed/Accuracy/Completed On/On Time is sorting by
+  // whatever the row is actually displaying, not some other attempt.
+  // Missing values sort to the end regardless of direction, so "which
+  // students haven't scored yet" doesn't get scattered through the middle
+  // of a numeric sort.
+  const SORTERS = {
+    test: (r) => `${r.subjectName || ""} ${r.subTopicName || ""}`.toLowerCase(),
+    student: (r) => (r.studentName || "").toLowerCase(),
+    posted: (r) => (r.postedDate ? new Date(r.postedDate).getTime() : null),
+    scheduled: (r) => (r.scheduledDate ? new Date(r.scheduledDate).getTime() : null),
+    madeAvailable: (r) =>
+      r.madeAvailableDate ? new Date(r.madeAvailableDate).getTime() : null,
+    status: (r) => r.status,
+    attempts: (r) => (r.attempts || []).length,
+    completedOn: (r) => {
+      const latest = (r.attempts || [])[r.attempts.length - 1];
+      return latest?.completedAt ? new Date(latest.completedAt).getTime() : null;
+    },
+    score: (r) => {
+      const latest = (r.attempts || [])[r.attempts.length - 1];
+      return latest?.percentage ?? null;
+    },
+    speed: (r) => {
+      const latest = (r.attempts || [])[r.attempts.length - 1];
+      return latest?.speedPercent ?? null;
+    },
+    accuracy: (r) => {
+      const latest = (r.attempts || [])[r.attempts.length - 1];
+      return latest?.accuracyPercent ?? null;
+    },
+    onTime: (r) => {
+      const latest = (r.attempts || [])[r.attempts.length - 1];
+      if (latest?.onTime === null || latest?.onTime === undefined) return null;
+      return latest.onTime ? 1 : 0;
+    },
+  };
+
+  const handleSort = (key) => {
+    setSort((prev) =>
+      prev.key === key ? { key, dir: prev.dir === "asc" ? "desc" : "asc" } : { key, dir: "asc" }
+    );
+  };
+
+  const sortedRows = useMemo(() => {
+    if (!sort.key || !SORTERS[sort.key]) return filtered;
+    const getValue = SORTERS[sort.key];
+    const dirMultiplier = sort.dir === "asc" ? 1 : -1;
+    return [...filtered].sort((a, b) => {
+      const va = getValue(a);
+      const vb = getValue(b);
+      // Nulls/undefined always sink to the bottom, in either direction.
+      if (va === null || va === undefined) return vb === null || vb === undefined ? 0 : 1;
+      if (vb === null || vb === undefined) return -1;
+      if (typeof va === "string" || typeof vb === "string") {
+        return String(va).localeCompare(String(vb)) * dirMultiplier;
+      }
+      return (va - vb) * dirMultiplier;
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [filtered, sort]);
+
   // Stats are computed over every individual ATTEMPT (not one per exam+
   // student row), since a single row can now carry up to 3+ attempts.
   const stats = useMemo(() => {
@@ -199,16 +289,6 @@ const TestTrackingAdminPage = () => {
       : 0;
     return { total, completed, pending, onTime, late, avgPercentage };
   }, [filtered]);
-
-  const [expandedRowKeys, setExpandedRowKeys] = useState(() => new Set());
-  const toggleExpanded = (key) => {
-    setExpandedRowKeys((prev) => {
-      const next = new Set(prev);
-      if (next.has(key)) next.delete(key);
-      else next.add(key);
-      return next;
-    });
-  };
 
   const clearFilters = () => {
     setSearchTerm("");
@@ -379,200 +459,142 @@ const TestTrackingAdminPage = () => {
         </div>
       </div>
 
-      {/* Table */}
+      {/* Table — each row shows only the LATEST attempt's marks (per the
+          admin's request), with the total attempt count noted as its own
+          column rather than an expandable per-attempt breakdown. Every
+          column header is click-to-sort. */}
       <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-x-auto">
         <table className="w-full text-sm min-w-[1250px]">
           <thead>
-            <tr className="bg-gray-50 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">
-              <th className="px-4 py-3 w-8"></th>
-              <th className="px-4 py-3">Test</th>
-              <th className="px-4 py-3">Student</th>
-              <th className="px-4 py-3">Posted</th>
-              <th className="px-4 py-3">Scheduled</th>
-              <th className="px-4 py-3">Made Available</th>
-              <th className="px-4 py-3">Status</th>
-              <th className="px-4 py-3">Attempt #</th>
-              <th className="px-4 py-3">Completed On</th>
-              <th className="px-4 py-3">Score</th>
-              <th className="px-4 py-3">Speed %</th>
-              <th className="px-4 py-3">Accuracy %</th>
-              <th className="px-4 py-3">On Time?</th>
+            <tr className="bg-gray-50 text-left text-xs text-gray-500">
+              <SortableTh label="Test" sortKey="test" sort={sort} onSort={handleSort} />
+              <SortableTh label="Student" sortKey="student" sort={sort} onSort={handleSort} />
+              <SortableTh label="Posted" sortKey="posted" sort={sort} onSort={handleSort} />
+              <SortableTh label="Scheduled" sortKey="scheduled" sort={sort} onSort={handleSort} />
+              <SortableTh
+                label="Made Available"
+                sortKey="madeAvailable"
+                sort={sort}
+                onSort={handleSort}
+              />
+              <SortableTh label="Status" sortKey="status" sort={sort} onSort={handleSort} />
+              <SortableTh label="Attempts" sortKey="attempts" sort={sort} onSort={handleSort} />
+              <SortableTh
+                label="Completed On"
+                sortKey="completedOn"
+                sort={sort}
+                onSort={handleSort}
+              />
+              <SortableTh label="Score" sortKey="score" sort={sort} onSort={handleSort} />
+              <SortableTh label="Speed %" sortKey="speed" sort={sort} onSort={handleSort} />
+              <SortableTh label="Accuracy %" sortKey="accuracy" sort={sort} onSort={handleSort} />
+              <SortableTh label="On Time?" sortKey="onTime" sort={sort} onSort={handleSort} />
             </tr>
           </thead>
           <tbody>
-            {filtered.map((row) => {
+            {sortedRows.map((row) => {
               const rowKey = `${row.examId}-${row.studentId}`;
               const attempts = row.attempts || [];
-              const hasMultiple = attempts.length > 1;
-              const isExpanded = expandedRowKeys.has(rowKey);
               const latest = attempts.length
                 ? attempts[attempts.length - 1]
                 : null;
 
               return (
-                <React.Fragment key={rowKey}>
-                  <tr
-                    className={`border-t border-gray-50 hover:bg-gray-50/60 ${
-                      hasMultiple ? "cursor-pointer" : ""
-                    }`}
-                    onClick={() => hasMultiple && toggleExpanded(rowKey)}
-                  >
-                    <td className="px-4 py-3 text-gray-400">
-                      {hasMultiple ? (
-                        isExpanded ? (
-                          <ChevronDown className="h-4 w-4" />
-                        ) : (
-                          <ChevronRight className="h-4 w-4" />
-                        )
-                      ) : null}
-                    </td>
-                    <td className="px-4 py-3">
-                      <div className="font-medium text-gray-800 capitalize">
-                        {row.subjectName}
-                      </div>
-                      <div className="text-xs text-gray-500 capitalize">
-                        {row.subTopicName} · Order {row.order} ·{" "}
-                        <span className="font-mono">{row.examCode}</span>
-                      </div>
-                    </td>
-                    <td className="px-4 py-3">
-                      <div className="text-gray-800">{row.studentName}</div>
-                      <div className="text-xs text-gray-400">{row.studentEmail}</div>
-                    </td>
-                    <td className="px-4 py-3 text-gray-600">
-                      {formatDateTime(row.postedDate)}
-                    </td>
-                    <td className="px-4 py-3 text-gray-600">
-                      {row.scheduledDate ? (
-                        formatDateTime(row.scheduledDate)
-                      ) : (
-                        <span className="text-gray-400">Not set</span>
-                      )}
-                    </td>
-                    <td className="px-4 py-3 text-gray-600">
-                      {formatDateTime(row.madeAvailableDate)}
-                    </td>
-                    <td className="px-4 py-3">
-                      {row.status === "Completed" ? (
-                        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-emerald-100 text-emerald-700">
-                          <CheckCircle2 className="h-3.5 w-3.5" /> Completed
-                        </span>
-                      ) : (
-                        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-amber-100 text-amber-700">
-                          <Clock3 className="h-3.5 w-3.5" /> Pending
-                        </span>
-                      )}
-                    </td>
-                    <td className="px-4 py-3 text-gray-600">
-                      {attempts.length > 0
-                        ? hasMultiple
-                          ? `${attempts.length} attempts`
-                          : `#${latest.attemptNumber}`
-                        : "—"}
-                    </td>
-                    <td className="px-4 py-3 text-gray-600">
-                      {latest ? formatDateTime(latest.completedAt) : "—"}
-                    </td>
-                    <td className="px-4 py-3 text-gray-600">
-                      {latest ? (
-                        <span
-                          className={`font-medium ${
-                            latest.percentage >= 75
-                              ? "text-emerald-600"
-                              : latest.percentage < 40
-                              ? "text-rose-600"
-                              : "text-gray-800"
-                          }`}
-                        >
-                          {latest.obtainedMark}/{row.totalPossibleMarks} ({latest.percentage}%)
-                        </span>
-                      ) : (
-                        "—"
-                      )}
-                    </td>
-                    <td className="px-4 py-3">
-                      <MetricBadge value={latest?.speedPercent} tone="speed" />
-                    </td>
-                    <td className="px-4 py-3">
-                      <MetricBadge value={latest?.accuracyPercent} tone="accuracy" />
-                    </td>
-                    <td className="px-4 py-3">
-                      {latest?.onTime === null || latest?.onTime === undefined ? (
-                        <span className="text-xs text-gray-400">—</span>
-                      ) : latest.onTime ? (
-                        <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-700">
-                          On Time
-                        </span>
-                      ) : (
-                        <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-rose-100 text-rose-700">
-                          Late
-                        </span>
-                      )}
-                    </td>
-                  </tr>
-
-                  {hasMultiple &&
-                    isExpanded &&
-                    attempts.map((attempt) => (
-                      <tr
-                        key={`${rowKey}-${attempt.attemptNumber}`}
-                        className="border-t border-gray-50 bg-gray-50/40 text-gray-600"
+                <tr key={rowKey} className="border-t border-gray-50 hover:bg-gray-50/60">
+                  <td className="px-4 py-3">
+                    <div className="font-medium text-gray-800 capitalize">
+                      {row.subjectName}
+                    </div>
+                    <div className="text-xs text-gray-500 capitalize">
+                      {row.subTopicName} · Order {row.order} ·{" "}
+                      <span className="font-mono">{row.examCode}</span>
+                    </div>
+                  </td>
+                  <td className="px-4 py-3">
+                    <div className="text-gray-800">{row.studentName}</div>
+                    <div className="text-xs text-gray-400">{row.studentEmail}</div>
+                  </td>
+                  <td className="px-4 py-3 text-gray-600">
+                    {formatDateTime(row.postedDate)}
+                  </td>
+                  <td className="px-4 py-3 text-gray-600">
+                    {row.scheduledDate ? (
+                      formatDateTime(row.scheduledDate)
+                    ) : (
+                      <span className="text-gray-400">Not set</span>
+                    )}
+                  </td>
+                  <td className="px-4 py-3 text-gray-600">
+                    {formatDateTime(row.madeAvailableDate)}
+                  </td>
+                  <td className="px-4 py-3">
+                    {row.status === "Completed" ? (
+                      <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-emerald-100 text-emerald-700">
+                        <CheckCircle2 className="h-3.5 w-3.5" /> Completed
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-amber-100 text-amber-700">
+                        <Clock3 className="h-3.5 w-3.5" /> Pending
+                      </span>
+                    )}
+                  </td>
+                  {/* Attempt count only — this is the "note down the number
+                      of attempts" part; the marks columns below always
+                      reflect the latest attempt only, never a breakdown. */}
+                  <td className="px-4 py-3 text-gray-600">
+                    {attempts.length > 0 ? (
+                      <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-indigo-50 text-indigo-700">
+                        {attempts.length} attempt{attempts.length > 1 ? "s" : ""}
+                      </span>
+                    ) : (
+                      "—"
+                    )}
+                  </td>
+                  <td className="px-4 py-3 text-gray-600">
+                    {latest ? formatDateTime(latest.completedAt) : "—"}
+                  </td>
+                  <td className="px-4 py-3 text-gray-600">
+                    {latest ? (
+                      <span
+                        className={`font-medium ${
+                          latest.percentage >= 75
+                            ? "text-emerald-600"
+                            : latest.percentage < 40
+                            ? "text-rose-600"
+                            : "text-gray-800"
+                        }`}
                       >
-                        <td className="px-4 py-2"></td>
-                        <td className="px-4 py-2 text-xs text-gray-400" colSpan={4}>
-                          ↳ Attempt {attempt.attemptNumber}
-                        </td>
-                        <td className="px-4 py-2">
-                          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-emerald-100 text-emerald-700">
-                            <CheckCircle2 className="h-3.5 w-3.5" /> Completed
-                          </span>
-                        </td>
-                        <td className="px-4 py-2 text-gray-600">
-                          #{attempt.attemptNumber}
-                        </td>
-                        <td className="px-4 py-2 text-gray-600">
-                          {formatDateTime(attempt.completedAt)}
-                        </td>
-                        <td className="px-4 py-2 text-gray-600">
-                          <span
-                            className={`font-medium ${
-                              attempt.percentage >= 75
-                                ? "text-emerald-600"
-                                : attempt.percentage < 40
-                                ? "text-rose-600"
-                                : "text-gray-800"
-                            }`}
-                          >
-                            {attempt.obtainedMark}/{row.totalPossibleMarks} ({attempt.percentage}%)
-                          </span>
-                        </td>
-                        <td className="px-4 py-2">
-                          <MetricBadge value={attempt.speedPercent} tone="speed" />
-                        </td>
-                        <td className="px-4 py-2">
-                          <MetricBadge value={attempt.accuracyPercent} tone="accuracy" />
-                        </td>
-                        <td className="px-4 py-2">
-                          {attempt.onTime === null || attempt.onTime === undefined ? (
-                            <span className="text-xs text-gray-400">—</span>
-                          ) : attempt.onTime ? (
-                            <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-700">
-                              On Time
-                            </span>
-                          ) : (
-                            <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-rose-100 text-rose-700">
-                              Late
-                            </span>
-                          )}
-                        </td>
-                      </tr>
-                    ))}
-                </React.Fragment>
+                        {latest.obtainedMark}/{row.totalPossibleMarks} ({latest.percentage}%)
+                      </span>
+                    ) : (
+                      "—"
+                    )}
+                  </td>
+                  <td className="px-4 py-3">
+                    <MetricBadge value={latest?.speedPercent} tone="speed" />
+                  </td>
+                  <td className="px-4 py-3">
+                    <MetricBadge value={latest?.accuracyPercent} tone="accuracy" />
+                  </td>
+                  <td className="px-4 py-3">
+                    {latest?.onTime === null || latest?.onTime === undefined ? (
+                      <span className="text-xs text-gray-400">—</span>
+                    ) : latest.onTime ? (
+                      <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-700">
+                        On Time
+                      </span>
+                    ) : (
+                      <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-rose-100 text-rose-700">
+                        Late
+                      </span>
+                    )}
+                  </td>
+                </tr>
               );
             })}
           </tbody>
         </table>
-        {filtered.length === 0 && (
+        {sortedRows.length === 0 && (
           <div className="text-center text-gray-400 text-sm py-10">
             No records match the selected filters.
           </div>

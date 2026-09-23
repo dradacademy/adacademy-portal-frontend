@@ -1015,8 +1015,13 @@ const Sidebar = () => {
                 </>
               )}
 
-              {/* Comment (for evaluator and admin) */}
-              {(userData.role === "evaluator" || userData.role === "admin") && (
+              {/* Comment — evaluator only now; removed from the admin panel
+                  per the admin's own request (admin has every other tool
+                  already, and evaluators are the ones actually using this
+                  for submission review). The /dashboard/comment route and
+                  CommentDashboard.jsx are untouched, so this is purely a
+                  nav-visibility change, not a feature removal. */}
+              {userData.role === "evaluator" && (
                 <div className="flex items-center">
                   <div
                     className={`h-10 w-2 ${

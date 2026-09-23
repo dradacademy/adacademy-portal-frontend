@@ -439,7 +439,9 @@ const UsersAdminPage = () => {
           }
         />
         <Column
+          field="batch"
           header="Batch"
+          sortable
           body={(rowData) =>
             rowData.role === "student" ? (
               <div className="flex items-center gap-1.5">
