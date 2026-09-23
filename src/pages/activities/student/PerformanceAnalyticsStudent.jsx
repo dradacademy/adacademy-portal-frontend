@@ -14,23 +14,19 @@ import {
   Minus,
   Crown,
   Medal,
-  LineChart as LineChartIcon,
-  Compass,
+  BarChart3,
+  Table2,
   Sparkles,
 } from "lucide-react";
 import {
   ResponsiveContainer,
-  LineChart,
-  Line,
-  ScatterChart,
-  Scatter,
+  BarChart,
+  Bar,
   XAxis,
   YAxis,
-  ZAxis,
   CartesianGrid,
   Tooltip,
   Legend,
-  ReferenceLine,
 } from "recharts";
 
 // Fixed split for the Speed vs. Accuracy quadrant — matches the app's own
@@ -246,17 +242,21 @@ const PerformanceAnalyticsStudent = () => {
     subjectName: a.subjectName,
   }));
 
-  const quadrantChartPoints = (trendData?.attempts || [])
-    .filter((a) => a.speedPercent !== null && a.accuracyPercent !== null)
-    .map((a) => ({
+  // Attempt numbers here match the Performance Trend chart's "#N" labels
+  // (same underlying array, same index), even though this list then filters
+  // out attempts missing speed/accuracy — so "#3" means the same attempt in
+  // both places, with no silent renumbering.
+  const quadrantRows = (trendData?.attempts || [])
+    .map((a, i) => ({
+      attemptNumber: i + 1,
       speedPercent: a.speedPercent,
       accuracyPercent: a.accuracyPercent,
       percentage: a.percentage,
       examCode: a.examCode,
       subjectName: a.subjectName,
       date: formatShortDate(a.completedAt),
-      fill: quadrantColor(a.speedPercent, a.accuracyPercent),
-    }));
+    }))
+    .filter((a) => a.speedPercent !== null && a.accuracyPercent !== null);
 
   return (
     <div className="p-5">
@@ -573,13 +573,14 @@ const PerformanceAnalyticsStudent = () => {
             right now. */}
         <div className="mt-8">
           <div className="mb-4 flex items-center gap-2">
-            <LineChartIcon className="h-5 w-5 text-indigo-500" />
+            <BarChart3 className="h-5 w-5 text-indigo-500" />
             <h2 className="text-xl font-bold text-gray-900 font-poppins">
               Performance Trend
             </h2>
           </div>
           <p className="text-gray-600 text-sm mb-4">
-            Your score, speed, and accuracy across every attempt, in order.
+            Your score, speed, and accuracy across every attempt, in order —
+            each attempt's three bars side by side.
           </p>
 
           {trendLoading ? (
@@ -604,7 +605,7 @@ const PerformanceAnalyticsStudent = () => {
           ) : (
             <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
               <ResponsiveContainer width="100%" height={300}>
-                <LineChart data={trendChartData} margin={{ top: 5, right: 10, left: -20, bottom: 5 }}>
+                <BarChart data={trendChartData} margin={{ top: 5, right: 10, left: -20, bottom: 5 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
                   <XAxis dataKey="label" tick={{ fontSize: 11, fill: "#94a3b8" }} interval="preserveStartEnd" />
                   <YAxis domain={[0, 100]} tick={{ fontSize: 11, fill: "#94a3b8" }} />
@@ -620,10 +621,10 @@ const PerformanceAnalyticsStudent = () => {
                     }
                   />
                   <Legend wrapperStyle={{ fontSize: 12 }} />
-                  <Line type="monotone" dataKey="percentage" name="Score %" stroke="#6366f1" strokeWidth={2} dot={{ r: 3 }} />
-                  <Line type="monotone" dataKey="speedPercent" name="Speed %" stroke="#0ea5e9" strokeWidth={2} dot={{ r: 3 }} connectNulls />
-                  <Line type="monotone" dataKey="accuracyPercent" name="Accuracy %" stroke="#8b5cf6" strokeWidth={2} dot={{ r: 3 }} connectNulls />
-                </LineChart>
+                  <Bar dataKey="percentage" name="Score %" fill="#6366f1" radius={[4, 4, 0, 0]} />
+                  <Bar dataKey="speedPercent" name="Speed %" fill="#0ea5e9" radius={[4, 4, 0, 0]} />
+                  <Bar dataKey="accuracyPercent" name="Accuracy %" fill="#8b5cf6" radius={[4, 4, 0, 0]} />
+                </BarChart>
               </ResponsiveContainer>
             </div>
           )}
@@ -636,14 +637,15 @@ const PerformanceAnalyticsStudent = () => {
             slow-but-accurate needs pacing practice, not more revision). */}
         <div className="mt-8">
           <div className="mb-4 flex items-center gap-2">
-            <Compass className="h-5 w-5 text-indigo-500" />
+            <Table2 className="h-5 w-5 text-indigo-500" />
             <h2 className="text-xl font-bold text-gray-900 font-poppins">
               Speed vs. Accuracy
             </h2>
           </div>
           <p className="text-gray-600 text-sm mb-4">
-            Where each of your attempts falls — split at {QUADRANT_SPLIT}% on
-            both axes, the same "Good" threshold used elsewhere in the app.
+            Each attempt's speed and accuracy, and which zone it falls into —
+            split at {QUADRANT_SPLIT}% on both, the same "Good" threshold
+            used elsewhere in the app.
           </p>
 
           {trendLoading ? (
@@ -654,63 +656,54 @@ const PerformanceAnalyticsStudent = () => {
             <div className="text-center text-gray-400 py-10">
               No exam category is set on your account yet.
             </div>
-          ) : quadrantChartPoints.length === 0 ? (
+          ) : quadrantRows.length === 0 ? (
             <div className="text-center text-gray-400 py-10">
               No completed attempts with speed/accuracy data yet.
             </div>
           ) : (
-            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
-              <ResponsiveContainer width="100%" height={340}>
-                <ScatterChart margin={{ top: 10, right: 20, left: -10, bottom: 10 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
-                  <XAxis
-                    type="number"
-                    dataKey="speedPercent"
-                    name="Speed"
-                    unit="%"
-                    domain={[0, 100]}
-                    tick={{ fontSize: 11, fill: "#94a3b8" }}
-                    label={{ value: "Speed %", position: "insideBottom", offset: -5, fontSize: 12, fill: "#94a3b8" }}
-                  />
-                  <YAxis
-                    type="number"
-                    dataKey="accuracyPercent"
-                    name="Accuracy"
-                    unit="%"
-                    domain={[0, 100]}
-                    tick={{ fontSize: 11, fill: "#94a3b8" }}
-                    label={{ value: "Accuracy %", angle: -90, position: "insideLeft", fontSize: 12, fill: "#94a3b8" }}
-                  />
-                  <ZAxis range={[80, 80]} />
-                  <ReferenceLine x={QUADRANT_SPLIT} stroke="#e2e8f0" />
-                  <ReferenceLine y={QUADRANT_SPLIT} stroke="#e2e8f0" />
-                  <Tooltip
-                    cursor={{ strokeDasharray: "3 3" }}
-                    formatter={(value, name) => [`${value}%`, name]}
-                    labelFormatter={() => ""}
-                    content={({ active, payload }) => {
-                      if (!active || !payload?.length) return null;
-                      const p = payload[0].payload;
-                      return (
-                        <div className="bg-white border border-gray-100 shadow-sm rounded-lg px-3 py-2 text-xs">
-                          <p className="font-semibold text-gray-800">
-                            {p.subjectName} · {p.examCode}
+            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-x-auto">
+              <table className="w-full text-sm min-w-[600px]">
+                <thead>
+                  <tr className="bg-gray-50 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">
+                    <th className="px-5 py-3">#</th>
+                    <th className="px-5 py-3">Test</th>
+                    <th className="px-5 py-3">Date</th>
+                    <th className="px-5 py-3">Speed</th>
+                    <th className="px-5 py-3">Accuracy</th>
+                    <th className="px-5 py-3">Zone</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {quadrantRows.map((r) => {
+                    const zoneLabel = quadrantLabel(r.speedPercent, r.accuracyPercent);
+                    const zoneColor = quadrantColor(r.speedPercent, r.accuracyPercent);
+                    return (
+                      <tr key={r.attemptNumber} className="border-t border-gray-50">
+                        <td className="px-5 py-3 text-gray-400">#{r.attemptNumber}</td>
+                        <td className="px-5 py-3">
+                          <p className="font-medium text-gray-800 capitalize">
+                            {r.subjectName}
                           </p>
-                          <p className="text-gray-500">{p.date}</p>
-                          <p className="text-gray-700 mt-1">
-                            Speed {p.speedPercent}% · Accuracy {p.accuracyPercent}%
-                          </p>
-                          <p className="font-medium mt-1" style={{ color: p.fill }}>
-                            {quadrantLabel(p.speedPercent, p.accuracyPercent)}
-                          </p>
-                        </div>
-                      );
-                    }}
-                  />
-                  <Scatter data={quadrantChartPoints} fill="#6366f1" />
-                </ScatterChart>
-              </ResponsiveContainer>
-              <div className="flex flex-wrap gap-x-5 gap-y-2 mt-2 text-xs text-gray-500">
+                          <p className="text-xs text-gray-400 font-mono">{r.examCode}</p>
+                        </td>
+                        <td className="px-5 py-3 text-gray-500">{r.date}</td>
+                        <td className="px-5 py-3 text-gray-700">{r.speedPercent}%</td>
+                        <td className="px-5 py-3 text-gray-700">{r.accuracyPercent}%</td>
+                        <td className="px-5 py-3">
+                          <span
+                            className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs font-medium"
+                            style={{ background: `${zoneColor}1a`, color: zoneColor }}
+                          >
+                            <span className="h-2 w-2 rounded-full shrink-0" style={{ background: zoneColor }} />
+                            {zoneLabel}
+                          </span>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+              <div className="flex flex-wrap gap-x-5 gap-y-2 px-5 py-4 border-t border-gray-50 text-xs text-gray-500">
                 <span className="inline-flex items-center gap-1.5">
                   <span className="h-2.5 w-2.5 rounded-full" style={{ background: "#10b981" }} />
                   Ready (fast + accurate)
