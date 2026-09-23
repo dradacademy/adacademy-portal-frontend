@@ -1,7 +1,9 @@
 import axios from "axios";
+import download from "downloadjs";
+import toast from "react-hot-toast";
 import React, { useEffect, useState } from "react";
 import { BiBarChart, BiHash } from "react-icons/bi";
-import { FaUser } from "react-icons/fa";
+import { FaUser, FaFilePdf, FaFileWord } from "react-icons/fa";
 import { IoIosArrowBack } from "react-icons/io";
 import { useNavigate, useParams } from "react-router-dom";
 
@@ -11,6 +13,9 @@ const ViewQuestionOfExamAdminPage = () => {
 
   const [examDetails, setExamDetails] = useState(null);
   const [loading, setLoading] = useState(true);
+  // "pdf" | "word" | null — tracks which export is in flight so only that
+  // one button shows a busy state instead of disabling both together.
+  const [exporting, setExporting] = useState(null);
 
   const fetchExamDetails = async () => {
     if (!examId) return;
@@ -31,6 +36,34 @@ const ViewQuestionOfExamAdminPage = () => {
   useEffect(() => {
     fetchExamDetails();
   }, [examId]);
+
+  // Shared by both "Download PDF" / "Download Word" buttons — fetches the
+  // formatted question paper as a blob (the global Authorization header
+  // from AuthContext covers auth automatically, same pattern used for the
+  // student profile PDF in StudentProfilesAdminPage.jsx) and hands it to
+  // downloadjs to save.
+  const handleExport = async (format) => {
+    if (!examId) return;
+    setExporting(format);
+    try {
+      const response = await axios.get(
+        `${import.meta.env.VITE_APP_API_URL}/exams/${examId}/export/${format}`,
+        { responseType: "blob" }
+      );
+      const safeCode = (examDetails?.examCode || examId).replace(/[^a-z0-9]+/gi, "-").toLowerCase();
+      const ext = format === "pdf" ? "pdf" : "docx";
+      const mimeType =
+        format === "pdf"
+          ? "application/pdf"
+          : "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
+      download(response.data, `${safeCode}-question-paper.${ext}`, mimeType);
+    } catch (error) {
+      console.error("Exam export failed:", error);
+      toast.error(`Failed to generate the ${format === "pdf" ? "PDF" : "Word"} document.`);
+    } finally {
+      setExporting(null);
+    }
+  };
 
   const renderAnswers = (question) => {
     switch (question.questionType) {
@@ -153,7 +186,7 @@ const ViewQuestionOfExamAdminPage = () => {
                 {examDetails.subTopic}
               </p>
             </div>
-            <div className="flex gap-2">
+            <div className="flex flex-wrap items-center gap-2">
               <button className=" text-sm font-medium py-1 px-4 rounded-3xl bg-indigo-100 text-indigo-400">
                 Order: {examDetails.order}
               </button>
@@ -165,6 +198,26 @@ const ViewQuestionOfExamAdminPage = () => {
                 } `}
               >
                 {examDetails.status}
+              </button>
+              <button
+                type="button"
+                onClick={() => handleExport("pdf")}
+                disabled={exporting !== null}
+                className="flex items-center gap-1.5 text-sm font-medium py-1.5 px-4 rounded-xl bg-rose-50 text-rose-600 hover:bg-rose-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                title="Download this test as a formatted PDF question paper"
+              >
+                <FaFilePdf className="h-3.5 w-3.5" />
+                {exporting === "pdf" ? "Generating…" : "Download PDF"}
+              </button>
+              <button
+                type="button"
+                onClick={() => handleExport("word")}
+                disabled={exporting !== null}
+                className="flex items-center gap-1.5 text-sm font-medium py-1.5 px-4 rounded-xl bg-blue-50 text-blue-600 hover:bg-blue-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                title="Download this test as a formatted Word question paper"
+              >
+                <FaFileWord className="h-3.5 w-3.5" />
+                {exporting === "word" ? "Generating…" : "Download Word"}
               </button>
             </div>
           </div>

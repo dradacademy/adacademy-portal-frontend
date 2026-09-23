@@ -8,6 +8,7 @@ import {
   ChevronRight,
   ZoomIn,
   ZoomOut,
+  RotateCw,
 } from "lucide-react";
 
 // Renders PDFs by drawing each page onto a <canvas> with PDF.js, loaded at
@@ -43,6 +44,11 @@ const MIN_SCALE = 0.6;
 const MAX_SCALE = 2.4;
 const SCALE_STEP = 0.2;
 
+// Leaves a little breathing room around the fitted page inside the
+// scrollable viewer area (the canvas itself also has `my-4`, so this is on
+// top of that) rather than fitting edge-to-edge.
+const FIT_PADDING_PX = 24;
+
 // Blob-based, view-only material viewer. Deliberately never exposes the raw
 // file URL: the file is fetched through an authenticated axios request
 // (so the same category+enrollment gate the backend enforces on
@@ -65,9 +71,14 @@ const AttachmentViewer = ({ attachment, onClose }) => {
   const [numPages, setNumPages] = useState(0);
   const [currentPage, setCurrentPage] = useState(1);
   const [scale, setScale] = useState(1);
+  // 0/90/180/270, clockwise. Reset per attachment; deliberately NOT reset
+  // per page, since a student rotating page 3 to read a landscape diagram
+  // almost certainly wants the same rotation on page 4 too.
+  const [rotation, setRotation] = useState(0);
   const [rendering, setRendering] = useState(false);
 
   const canvasRef = useRef(null);
+  const containerRef = useRef(null);
   const pdfDocRef = useRef(null);
   const renderTaskRef = useRef(null);
 
@@ -103,6 +114,7 @@ const AttachmentViewer = ({ attachment, onClose }) => {
         setNumPages(pdfDoc.numPages);
         setCurrentPage(1);
         setScale(1);
+        setRotation(0);
       } catch (err) {
         if (!cancelled) {
           setError(
@@ -127,7 +139,54 @@ const AttachmentViewer = ({ attachment, onClose }) => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [attachment?._id]);
 
-  // Render whichever page/scale is current onto the canvas.
+  // Auto-fit the page (at the current rotation) to the viewer's available
+  // space whenever the page or rotation changes. This is what stops a
+  // landscape-oriented page from having its sides cut off: without it, the
+  // scale carried over from a portrait page (or the initial scale of 1)
+  // has no relationship to how wide the rotated page actually is, so a
+  // wide page just overflows and requires scrolling/zooming out manually
+  // even at "full zoom out". Manual Zoom In/Out still works afterwards —
+  // this only sets the starting point for a given page/rotation.
+  useEffect(() => {
+    const pdfDoc = pdfDocRef.current;
+    const container = containerRef.current;
+    if (!pdfDoc || !container) return;
+
+    let cancelled = false;
+
+    (async () => {
+      try {
+        const page = await pdfDoc.getPage(currentPage);
+        if (cancelled) return;
+
+        // rotation is baked into this viewport's width/height already —
+        // PDF.js swaps them for us at 90/270, so there's no manual
+        // portrait/landscape swapping to get wrong here.
+        const unscaledViewport = page.getViewport({ scale: 1, rotation });
+        const availableWidth = container.clientWidth - FIT_PADDING_PX;
+        const availableHeight = container.clientHeight - FIT_PADDING_PX;
+        if (availableWidth <= 0 || availableHeight <= 0) return;
+
+        const fitScale = Math.min(
+          availableWidth / unscaledViewport.width,
+          availableHeight / unscaledViewport.height
+        );
+        if (!cancelled) {
+          setScale(Math.max(MIN_SCALE, Math.min(MAX_SCALE, fitScale)));
+        }
+      } catch {
+        // Non-fatal — worst case the page keeps whatever scale it already
+        // had, rather than the viewer breaking.
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentPage, rotation, numPages]);
+
+  // Render whichever page/scale/rotation is current onto the canvas.
   useEffect(() => {
     const pdfDoc = pdfDocRef.current;
     if (!pdfDoc || !canvasRef.current) return;
@@ -146,7 +205,7 @@ const AttachmentViewer = ({ attachment, onClose }) => {
       const page = await pdfDoc.getPage(currentPage);
       if (cancelled) return;
 
-      const viewport = page.getViewport({ scale });
+      const viewport = page.getViewport({ scale, rotation });
       const canvas = canvasRef.current;
       if (!canvas) return;
       const context = canvas.getContext("2d");
@@ -177,7 +236,7 @@ const AttachmentViewer = ({ attachment, onClose }) => {
     return () => {
       cancelled = true;
     };
-  }, [currentPage, scale, numPages]);
+  }, [currentPage, scale, rotation, numPages]);
 
   if (!attachment) return null;
 
@@ -211,6 +270,13 @@ const AttachmentViewer = ({ attachment, onClose }) => {
               >
                 <ZoomIn className="h-4 w-4" />
               </button>
+              <button
+                onClick={() => setRotation((r) => (r + 90) % 360)}
+                className="p-1.5 rounded-full hover:bg-gray-100 text-gray-500"
+                title="Rotate page (portrait ↔ landscape)"
+              >
+                <RotateCw className="h-4 w-4" />
+              </button>
 
               <button
                 onClick={() => canGoPrev && setCurrentPage((p) => p - 1)}
@@ -242,7 +308,10 @@ const AttachmentViewer = ({ attachment, onClose }) => {
           </button>
         </div>
 
-        <div className="flex-1 bg-gray-50 overflow-auto flex items-start justify-center">
+        <div
+          ref={containerRef}
+          className="flex-1 bg-gray-50 overflow-auto flex items-center justify-center"
+        >
           {!attachment.isPreviewable ? (
             <div className="h-full flex flex-col items-center justify-center gap-3 text-center px-8">
               <AlertTriangle className="h-8 w-8 text-amber-400" />

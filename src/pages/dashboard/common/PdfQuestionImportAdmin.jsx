@@ -6,11 +6,13 @@ import { MathText } from "../../../utils/mathText";
 import {
   CheckCircle2,
   FileText,
+  KeyRound,
   Loader2,
   Sparkles,
   Trash2,
   Upload,
   Wand2,
+  X,
 } from "lucide-react";
 
 // Renders questionText with inline KaTeX whenever it looks like it contains
@@ -55,11 +57,20 @@ const textToAnswers = (text) =>
 // exactly like the existing Excel import does.
 const PdfQuestionImportAdmin = ({ onImportQuestions }) => {
   const [file, setFile] = useState(null);
+  // Optional — only needed when the answer key was uploaded as its own PDF
+  // rather than being embedded in (or alongside) the question paper. Left
+  // unset, extraction behaves exactly as before (best-effort guess from
+  // the question paper alone, or whatever answer key it can find inline).
+  const [answerKeyFile, setAnswerKeyFile] = useState(null);
   const [isExtracting, setIsExtracting] = useState(false);
   const [draftQuestions, setDraftQuestions] = useState(null); // null = no review in progress
 
   const handleFileChange = (e) => {
     setFile(e.target.files[0] || null);
+  };
+
+  const handleAnswerKeyFileChange = (e) => {
+    setAnswerKeyFile(e.target.files[0] || null);
   };
 
   const handleExtract = async () => {
@@ -70,6 +81,9 @@ const PdfQuestionImportAdmin = ({ onImportQuestions }) => {
 
     const formData = new FormData();
     formData.append("file", file);
+    if (answerKeyFile) {
+      formData.append("answerKeyFile", answerKeyFile);
+    }
 
     setIsExtracting(true);
     try {
@@ -86,7 +100,9 @@ const PdfQuestionImportAdmin = ({ onImportQuestions }) => {
       }));
 
       setDraftQuestions(extracted);
-      toast.success(data.message || `Extracted ${extracted.length} question(s).`);
+      toast.success(data.message || `Extracted ${extracted.length} question(s).`, {
+        duration: 6000,
+      });
     } catch (error) {
       console.error("PDF extraction failed:", error);
       toast.error(
@@ -130,6 +146,7 @@ const PdfQuestionImportAdmin = ({ onImportQuestions }) => {
     toast.success(`${cleaned.length} question(s) added to the exam!`);
     setDraftQuestions(null);
     setFile(null);
+    setAnswerKeyFile(null);
   };
 
   const handleCancelReview = () => {
@@ -221,6 +238,68 @@ const PdfQuestionImportAdmin = ({ onImportQuestions }) => {
               )}
             </button>
           </div>
+
+          {/* Optional separate answer key PDF. When the answer key is a
+              distinct document rather than being embedded in (or absent
+              from) the question paper above, uploading it here lets
+              extraction cross-reference the two by question number instead
+              of falling back to a best-effort guess. */}
+          <div
+            className={`relative mt-2 border-2 border-dashed rounded-xl p-2.5 transition-all duration-300 ${
+              answerKeyFile
+                ? "border-indigo-300 bg-indigo-50"
+                : "border-gray-200 bg-gray-50 hover:border-gray-300 hover:bg-gray-100"
+            }`}
+          >
+            {!answerKeyFile && (
+              <input
+                type="file"
+                accept=".pdf,application/pdf"
+                onChange={handleAnswerKeyFileChange}
+                className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+              />
+            )}
+            <div className="flex items-center gap-3">
+              <div
+                className={`w-9 h-9 rounded-lg flex items-center justify-center transition-colors shrink-0 ${
+                  answerKeyFile ? "bg-indigo-500" : "bg-gray-400"
+                }`}
+              >
+                <KeyRound className="h-4 w-4 text-white" />
+              </div>
+              {answerKeyFile ? (
+                <>
+                  <div className="flex-1 min-w-0">
+                    <p className="font-semibold text-indigo-700 truncate">
+                      {answerKeyFile.name}
+                    </p>
+                    <p className="text-xs text-indigo-600">
+                      Separate answer key — will be matched by question number
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setAnswerKeyFile(null)}
+                    className="p-1 text-indigo-400 hover:text-indigo-700 shrink-0"
+                    title="Remove answer key PDF"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                </>
+              ) : (
+                <div>
+                  <p className="text-sm font-medium text-gray-600">
+                    Optional: upload a separate answer key PDF
+                  </p>
+                  <p className="text-xs text-gray-400">
+                    Only needed if the answer key isn't already in the file
+                    above — otherwise it's extracted from there automatically
+                  </p>
+                </div>
+              )}
+            </div>
+          </div>
+
           {isExtracting && (
             <p className="text-xs text-gray-500 mt-2">
               This can take up to a minute for longer papers — please don't
@@ -325,6 +404,28 @@ const PdfQuestionImportAdmin = ({ onImportQuestions }) => {
                       className="w-full text-sm border border-gray-200 rounded-lg px-2 py-1.5"
                       placeholder="Correct answer(s), comma separated"
                     />
+
+                    <div>
+                      <label className="text-[11px] text-gray-500 flex items-center gap-1">
+                        <KeyRound className="h-3 w-3" />
+                        Answer key explanation
+                        {answerKeyFile || q.answerKeyText ? "" : " (optional)"}
+                      </label>
+                      <textarea
+                        value={q.answerKeyText || ""}
+                        onChange={(e) =>
+                          updateDraft(index, "answerKeyText", e.target.value)
+                        }
+                        rows={2}
+                        className="w-full text-sm border border-gray-200 rounded-lg px-2 py-1.5"
+                        placeholder="Step-by-step explanation — auto-filled when found in the PDF(s); edit or add one manually, or leave blank and fill it in later from the exam builder"
+                      />
+                      <p className="text-[10px] text-gray-400 mt-0.5">
+                        A diagram in the answer key still needs to be pasted
+                        in manually afterward via the exam builder's Answer
+                        Key Image field — same as before.
+                      </p>
+                    </div>
 
                     <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                       <div>

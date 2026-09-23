@@ -100,6 +100,20 @@ const NumericKeypad = ({ value, onChange }) => {
         ))}
       </div>
 
+      {/* Scientific/power notation, e.g. tapping 1 . 5 then this then - 7
+          builds "1.5×10^-7" — accepted as equal to its decimal form
+          (0.00000015) by the grading logic in ExamSubmissionHelper.js, so
+          an answer with a very small/large magnitude doesn't have to be
+          typed out digit-by-digit in decimal form. */}
+      <button
+        type="button"
+        onClick={() => insertAtCaret("×10^")}
+        className={keyClass}
+        title="Insert ×10^ for scientific notation, e.g. 1.5×10^-7"
+      >
+        ×10^
+      </button>
+
       <div className="grid grid-cols-2 gap-2">
         <button
           type="button"
