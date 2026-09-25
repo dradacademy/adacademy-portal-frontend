@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import axios from "axios";
 import toast from "react-hot-toast";
 import { useNavigate, useSearchParams } from "react-router-dom";
@@ -42,6 +42,23 @@ const sampleExcelData = [
   ["Fill in the Blanks", "ques 3", null, ["true", "yes"], null, 1, "", "", ""],
   ["Short Answer", "ques 4", null, ["one ", "two", "three"], null, 3, "", "", ""],
 ];
+
+// Mirrors the numeric formats parseNumericAnswer (backend) and
+// looksLikeNumber (CreateExamAdminForm.jsx) accept — plain decimals,
+// JS exponential notation, and base^exponent / coefficient×base^exponent
+// power notation — so a NAT range's bounds are validated the same way
+// they'll actually be parsed at grading time.
+const VALIDATE_PLAIN_NUMBER_RE = /^[+-]?(\d+\.?\d*|\.\d+)(?:[eE][+-]?\d+)?$/;
+const VALIDATE_POWER_NOTATION_RE =
+  /^(?:([+-]?(?:\d+\.?\d*|\.\d+))\s*[x×*]\s*)?([+-]?(?:\d+\.?\d*|\.\d+))\s*(?:\^|\*\*)\s*([+-]?(?:\d+\.?\d*|\.\d+))$/i;
+const isValidRangeBound = (raw) => {
+  const str = (raw || "").trim();
+  if (!str) return false;
+  return (
+    VALIDATE_PLAIN_NUMBER_RE.test(str) ||
+    VALIDATE_POWER_NOTATION_RE.test(str.replace(/\s+/g, " "))
+  );
+};
 
 const CreateExamAdminPage = () => {
   const navigate = useNavigate();
@@ -87,22 +104,35 @@ const CreateExamAdminPage = () => {
     }));
   }, [subject, subTopic]);
 
-  const [newQuestions, setNewQuestions] = useState([
-    {
-      questionType: "MCQ",
-      questionText: "",
-      level: 2,
-      marks: null,
-      negativeMark: null,
-      duration: null,
-      options: [{ text: "", image: null }, { text: "", image: null }],
-      correctAnswers: [],
-      isNumericAnswer: false,
-      image: null,
-      answerKeyText: "",
-      answerKeyImage: null,
-    },
-  ]);
+  // A fresh, blank question — used for the very first row, "Add Another
+  // Question", and the reset-for-a-new-exam branch below, so all three
+  // stay in sync (a field added to one but not the others would silently
+  // default to undefined wherever it was missed).
+  const blankQuestion = () => ({
+    questionType: "MCQ",
+    questionText: "",
+    level: 2,
+    marks: null,
+    negativeMark: null,
+    duration: null,
+    options: [{ text: "", image: null }, { text: "", image: null }],
+    correctAnswers: [],
+    isNumericAnswer: false,
+    // NAT range-grading: "exact" (default, existing behavior — comma-
+    // separated list of accepted values) or "range" (any value between
+    // rangeMin/rangeMax counts as correct). rangeRawText is only the
+    // admin's typed text ("10 to 15") — rangeMin/rangeMax are what's
+    // actually sent to the backend, parsed from it as they type.
+    natAnswerMode: "exact",
+    rangeMin: "",
+    rangeMax: "",
+    rangeRawText: "",
+    image: null,
+    answerKeyText: "",
+    answerKeyImage: null,
+  });
+
+  const [newQuestions, setNewQuestions] = useState([blankQuestion()]);
 
   const { subjects } = useContext(ExamContext);
   const [subtopics, setSubtopics] = useState([]);
@@ -130,6 +160,230 @@ const CreateExamAdminPage = () => {
   const categoryFilteredSubjects = selectedCategory
     ? subjects.filter((s) => s.category === selectedCategory)
     : subjects;
+
+  // ---- Draft persistence (unsubmitted question/answer data) ----
+  // Admins were losing in-progress questions whenever they navigated away
+  // from this page before hitting Create/Update Exam. We autosave the
+  // builder's state to localStorage and offer to restore it next time this
+  // page is opened for the same exam (or the same "new exam" slot).
+  // Restoring is always an explicit admin choice (a banner with
+  // Restore/Discard buttons) — never automatic — so a draft can never
+  // silently overwrite freshly-loaded server data, and freshly-loaded
+  // server data can never silently discard a draft either.
+  const draftKey = examId
+    ? `examBuilderDraft_edit_${examId}`
+    : "examBuilderDraft_new";
+  const [draftBanner, setDraftBanner] = useState(null); // parsed draft awaiting a Restore/Discard decision
+  const [lastDraftSavedAt, setLastDraftSavedAt] = useState(null);
+  const [isRegrading, setIsRegrading] = useState(false);
+  const draftCheckedRef = useRef(false); // have we looked for an existing draft yet under this key?
+  const suppressAutosaveRef = useRef(true); // stays true until the initial draft check/restore decision is settled
+  const autosaveTimerRef = useRef(null);
+  // Mirrors the latest builder state so the beforeunload/unmount flush (set
+  // up once on mount) always saves the CURRENT data rather than whatever
+  // was in scope the moment that listener was registered.
+  const draftStateRef = useRef(null);
+  useEffect(() => {
+    draftStateRef.current = {
+      selectedCategory,
+      formData: {
+        subject: formData.subject,
+        subTopic: formData.subTopic,
+        status: formData.status,
+        passPercentage: formData.passPercentage,
+        scheduledDate: formData.scheduledDate,
+        allNumericAnswerKeypad: formData.allNumericAnswerKeypad,
+      },
+      newQuestions,
+      questionSets,
+      activeQuestionSetIndex,
+    };
+  });
+
+  // File objects (freshly-picked images that haven't been uploaded to
+  // Cloudinary yet) can't be serialized into localStorage — swap them for a
+  // small marker so the rest of the question survives, and warn the admin
+  // on restore that those specific images need to be re-added.
+  const stripImagesForDraft = (questions) =>
+    (questions || []).map((q) => ({
+      ...q,
+      image:
+        q.image && typeof q.image === "object"
+          ? { __imagePending: true }
+          : q.image,
+      answerKeyImage:
+        q.answerKeyImage && typeof q.answerKeyImage === "object"
+          ? { __imagePending: true }
+          : q.answerKeyImage,
+      options: q.options
+        ? q.options.map((opt) =>
+            opt && opt.image && typeof opt.image === "object"
+              ? { ...opt, image: { __imagePending: true } }
+              : opt,
+          )
+        : q.options,
+    }));
+
+  const restoreImagesFromDraft = (questions) => {
+    let droppedAny = false;
+    const restored = (questions || []).map((q) => {
+      const next = { ...q };
+      if (next.image && next.image.__imagePending) {
+        next.image = null;
+        droppedAny = true;
+      }
+      if (next.answerKeyImage && next.answerKeyImage.__imagePending) {
+        next.answerKeyImage = null;
+        droppedAny = true;
+      }
+      if (next.options) {
+        next.options = next.options.map((opt) => {
+          if (opt && opt.image && opt.image.__imagePending) {
+            droppedAny = true;
+            return { ...opt, image: null };
+          }
+          return opt;
+        });
+      }
+      return next;
+    });
+    return { restored, droppedAny };
+  };
+
+  const isDraftMeaningful = (draft) => {
+    if (!draft) return false;
+    if (draft.formData?.subject || draft.formData?.subTopic) return true;
+    return (draft.newQuestions || []).some(
+      (q) =>
+        (q.questionText || "").trim() ||
+        (q.correctAnswers || []).length > 0 ||
+        q.rangeRawText ||
+        q.image ||
+        q.answerKeyText,
+    );
+  };
+
+  const saveDraftNow = () => {
+    const snapshot = draftStateRef.current;
+    if (!snapshot) return;
+    try {
+      const draft = {
+        savedAt: Date.now(),
+        selectedCategory: snapshot.selectedCategory,
+        formData: snapshot.formData,
+        newQuestions: stripImagesForDraft(snapshot.newQuestions),
+        questionSets: snapshot.questionSets,
+        activeQuestionSetIndex: snapshot.activeQuestionSetIndex,
+      };
+      localStorage.setItem(draftKey, JSON.stringify(draft));
+      setLastDraftSavedAt(draft.savedAt);
+    } catch (err) {
+      // Private browsing / storage quota exceeded / serialization failure —
+      // draft-saving is a convenience and should never block or interrupt
+      // exam building.
+      console.error("Unable to save exam draft:", err);
+    }
+  };
+
+  const clearDraft = () => {
+    try {
+      localStorage.removeItem(draftKey);
+    } catch (err) {
+      // ignore
+    }
+    setLastDraftSavedAt(null);
+  };
+
+  // One-time check for an existing draft under this key.
+  useEffect(() => {
+    if (draftCheckedRef.current) return;
+    draftCheckedRef.current = true;
+    try {
+      const raw = localStorage.getItem(draftKey);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (isDraftMeaningful(parsed)) {
+          setDraftBanner(parsed);
+          return; // keep autosave suppressed until the admin decides
+        }
+      }
+    } catch (err) {
+      console.error("Unable to read saved exam draft:", err);
+    }
+    suppressAutosaveRef.current = false;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [draftKey]);
+
+  const handleRestoreDraft = () => {
+    if (!draftBanner) return;
+    const { restored, droppedAny } = restoreImagesFromDraft(
+      draftBanner.newQuestions,
+    );
+    if (draftBanner.selectedCategory) {
+      setSelectedCategory(draftBanner.selectedCategory);
+    }
+    if (draftBanner.formData) {
+      setFormData((prev) => ({ ...prev, ...draftBanner.formData }));
+    }
+    if (restored.length > 0) setNewQuestions(restored);
+    if (draftBanner.questionSets) setQuestionSets(draftBanner.questionSets);
+    if (typeof draftBanner.activeQuestionSetIndex === "number") {
+      setActiveQuestionSetIndex(draftBanner.activeQuestionSetIndex);
+    }
+    if (droppedAny) {
+      toast(
+        "Restored your unsaved questions — images couldn't be kept in the draft, please re-add them.",
+      );
+    } else {
+      toast.success("Restored your unsaved questions.");
+    }
+    setDraftBanner(null);
+    suppressAutosaveRef.current = false;
+  };
+
+  const handleDiscardDraft = () => {
+    clearDraft();
+    setDraftBanner(null);
+    suppressAutosaveRef.current = false;
+  };
+
+  const handleManualSaveDraft = () => {
+    if (autosaveTimerRef.current) clearTimeout(autosaveTimerRef.current);
+    saveDraftNow();
+    toast.success("Draft saved.");
+  };
+
+  // Debounced autosave — resets the timer on every render while autosave
+  // isn't suppressed, so it only actually writes ~1.5s after the admin
+  // stops typing/editing rather than on every keystroke.
+  useEffect(() => {
+    if (suppressAutosaveRef.current) return;
+    if (autosaveTimerRef.current) clearTimeout(autosaveTimerRef.current);
+    autosaveTimerRef.current = setTimeout(() => {
+      saveDraftNow();
+    }, 1500);
+    return () => {
+      if (autosaveTimerRef.current) clearTimeout(autosaveTimerRef.current);
+    };
+  });
+
+  // Flush a pending save when the admin closes/refreshes the tab or
+  // navigates away from this page entirely (unmount). Reads from
+  // draftStateRef so it always saves the latest data even though this
+  // effect itself only runs once.
+  useEffect(() => {
+    const flush = () => {
+      if (suppressAutosaveRef.current) return;
+      if (autosaveTimerRef.current) clearTimeout(autosaveTimerRef.current);
+      saveDraftNow();
+    };
+    window.addEventListener("beforeunload", flush);
+    return () => {
+      window.removeEventListener("beforeunload", flush);
+      flush();
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   useEffect(() => {
     axios
@@ -194,6 +448,17 @@ const CreateExamAdminPage = () => {
         options: q.options ? q.options.map(opt => typeof opt === "string" ? { text: opt, image: null } : opt) : q.options,
         answerKeyText: q.answerKeyText || "",
         answerKeyImage: q.answerKeyImage || null,
+        // NAT range-grading fields — reconstruct the admin-facing raw text
+        // ("10 to 15") from the stored rangeMin/rangeMax so re-opening an
+        // existing range question shows a normal-looking range rather than
+        // a blank input.
+        natAnswerMode: q.natAnswerMode || "exact",
+        rangeMin: q.rangeMin ?? "",
+        rangeMax: q.rangeMax ?? "",
+        rangeRawText:
+          q.natAnswerMode === "range" && q.rangeMin != null && q.rangeMax != null
+            ? `${q.rangeMin} to ${q.rangeMax}`
+            : "",
       }));
       setNewQuestions(sourceQuestions);
 
@@ -295,22 +560,7 @@ const CreateExamAdminPage = () => {
 
       setExcelTemplateData(updatedExcelData);
     } else {
-      setNewQuestions([
-        {
-          questionType: "MCQ",
-          questionText: "",
-          level: 2,
-          marks: null,
-          negativeMark: null,
-          duration: null,
-          options: [{ text: "", image: null }, { text: "", image: null }],
-          correctAnswers: [],
-          isNumericAnswer: false,
-          image: null,
-          answerKeyText: "",
-          answerKeyImage: null,
-        },
-      ]);
+      setNewQuestions([blankQuestion()]);
 
       // Reset sets for new exam
       setQuestionSets([
@@ -965,23 +1215,7 @@ const CreateExamAdminPage = () => {
         ),
       );
 
-      return [
-        ...prev,
-        {
-          questionType: "MCQ",
-          questionText: "",
-          level: 2,
-          marks: null,
-          negativeMark: null,
-          duration: null,
-          options: [{ text: "", image: null }, { text: "", image: null }],
-          correctAnswers: [],
-          isNumericAnswer: false,
-          image: null,
-          answerKeyText: "",
-          answerKeyImage: null,
-        },
-      ];
+      return [...prev, blankQuestion()];
     });
   };
 
@@ -1096,6 +1330,17 @@ const CreateExamAdminPage = () => {
       }
 
       if (
+        q.questionType === "Fill in the Blanks" &&
+        q.isNumericAnswer &&
+        q.natAnswerMode === "range"
+      ) {
+        if (!isValidRangeBound(q.rangeMin) || !isValidRangeBound(q.rangeMax)) {
+          toast.error(
+            `Question ${qIndex + 1}: Please enter a valid range (e.g. "10 to 15").`,
+          );
+          return false;
+        }
+      } else if (
         q.questionType === "Fill in the Blanks" &&
         q.correctAnswers.length === 0
       ) {
@@ -1227,13 +1472,28 @@ const CreateExamAdminPage = () => {
             questionSets[activeQuestionSetIndex]._id;
         }
 
-        await axios.put(
+        const { data: updateResult } = await axios.put(
           `${import.meta.env.VITE_APP_API_URL}/exams/update/${
             existingExam._id
           }`,
           updatedFormData,
         );
         toast.success("Exam Updated Successfully!");
+
+        // Any answer-key/marks edit is retroactively applied to every
+        // already-completed submission for this exam (see the backend's
+        // updateExam -> regradeExamSubmissions) — let the admin know when
+        // that actually changed a student's recorded result, since it
+        // happens silently otherwise.
+        const regradeSummary = updateResult?.regradeSummary;
+        if (regradeSummary && (regradeSummary.marksChanged > 0 || regradeSummary.passChanged > 0)) {
+          toast(
+            `Also re-graded ${regradeSummary.totalChecked} previously completed attempt(s): ${regradeSummary.marksChanged} mark(s) updated, ${regradeSummary.passChanged} pass/fail status(es) changed.`,
+            { icon: "🔄", duration: 6000 },
+          );
+        }
+
+        clearDraft();
         navigate("/dashboard/exam/");
       } else {
         await axios.post(
@@ -1241,6 +1501,7 @@ const CreateExamAdminPage = () => {
           updatedFormData,
         );
         toast.success("Exam Created Successfully!");
+        clearDraft();
         navigate("/dashboard/exam/");
       }
     } catch (error) {
@@ -1251,8 +1512,68 @@ const CreateExamAdminPage = () => {
     }
   };
 
+  // On-demand catch-up for exams whose answer key was edited before this
+  // auto-regrade existed (updateExam now re-grades already-completed
+  // submissions on every save — see the backend's regradeHelper). Lets the
+  // admin correct a specific exam's already-completed attempts without
+  // needing to re-save the exam itself.
+  const handleRegradeNow = async () => {
+    if (!examId) return;
+    setIsRegrading(true);
+    try {
+      const { data } = await axios.post(
+        `${import.meta.env.VITE_APP_API_URL}/exams/${examId}/regrade`,
+      );
+      toast.success(
+        data.message ||
+          "Re-graded existing submissions against the current answer key.",
+      );
+    } catch (error) {
+      console.error("Error re-grading exam submissions:", error);
+      toast.error(
+        error?.response?.data?.message ||
+          "Failed to re-grade existing submissions for this exam.",
+      );
+    } finally {
+      setIsRegrading(false);
+    }
+  };
+
   return (
     <div className=" flex flex-col gap-8 w-full">
+      {draftBanner && (
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 rounded-xl border border-amber-300 bg-amber-50 px-4 py-3">
+          <div className="flex flex-col">
+            <p className="text-sm font-medium text-amber-800">
+              You have unsaved questions from a previous visit to this page
+              {draftBanner.savedAt
+                ? ` (saved ${new Date(draftBanner.savedAt).toLocaleString()})`
+                : ""}
+              .
+            </p>
+            <p className="text-xs text-amber-700">
+              Restore them to continue where you left off, or discard to
+              start fresh.
+            </p>
+          </div>
+          <div className="flex items-center gap-2 shrink-0">
+            <button
+              type="button"
+              onClick={handleRestoreDraft}
+              className="bg-amber-500 text-white text-sm font-medium py-2 px-4 rounded-lg cursor-pointer hover:opacity-85 duration-300"
+            >
+              Restore
+            </button>
+            <button
+              type="button"
+              onClick={handleDiscardDraft}
+              className="border border-amber-400 text-amber-700 text-sm font-medium py-2 px-4 rounded-lg cursor-pointer hover:bg-amber-100 duration-300"
+            >
+              Discard
+            </button>
+          </div>
+        </div>
+      )}
       <div className="flex items-center justify-between gap-20 font-inter">
         <div className=" flex flex-col gap-2">
           <div
@@ -1371,14 +1692,44 @@ const CreateExamAdminPage = () => {
             <span className="text-sm font-medium"> Add Another Question</span>
           </button>
         </div>
-        <button
-          onClick={handleSubmit}
-          className=" bg-indigo-400 text-stone-50 font-medium py-[10px] px-4 rounded-xl font-poppins cursor-pointer hover:opacity-85 duration-300"
-        >
-          {examId && allExams.find((exam) => exam._id === examId)
-            ? "Update Exam"
-            : "Create Exam"}
-        </button>
+        <div className="flex items-center gap-3 flex-wrap">
+          {!draftBanner && (
+            <button
+              type="button"
+              onClick={handleManualSaveDraft}
+              className="border border-stone-300 text-stone-600 font-medium py-[10px] px-4 rounded-xl font-poppins cursor-pointer hover:bg-stone-100 duration-300"
+            >
+              Save Draft
+            </button>
+          )}
+          <button
+            onClick={handleSubmit}
+            className=" bg-indigo-400 text-stone-50 font-medium py-[10px] px-4 rounded-xl font-poppins cursor-pointer hover:opacity-85 duration-300"
+          >
+            {examId && allExams.find((exam) => exam._id === examId)
+              ? "Update Exam"
+              : "Create Exam"}
+          </button>
+          {examId && allExams.find((exam) => exam._id === examId) && (
+            <button
+              type="button"
+              onClick={handleRegradeNow}
+              disabled={isRegrading}
+              title="Re-check every already-completed attempt on this exam against the current answer key and correct its marks/pass-fail if the key has changed since they submitted."
+              className="border border-indigo-300 text-indigo-600 font-medium py-[10px] px-4 rounded-xl font-poppins cursor-pointer hover:bg-indigo-50 duration-300 disabled:opacity-60 disabled:cursor-not-allowed"
+            >
+              {isRegrading ? "Re-grading..." : "Re-grade Existing Submissions"}
+            </button>
+          )}
+        </div>
+        {lastDraftSavedAt && (
+          <p className="text-xs text-stone-400">
+            Draft last saved at{" "}
+            {new Date(lastDraftSavedAt).toLocaleTimeString()} — your
+            unsubmitted questions and answer key are kept even if you leave
+            this page.
+          </p>
+        )}
       </div>
     </div>
   );

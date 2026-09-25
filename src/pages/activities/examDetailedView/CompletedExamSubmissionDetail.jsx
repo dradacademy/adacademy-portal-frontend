@@ -26,6 +26,7 @@ import { MarkContext } from "../../../context/MarkContext";
 import {
   resolveQuestionMarks,
   calculateTotalPossibleMarks,
+  isNumericAnswerInRange,
 } from "../../../utils/examMarks";
 import { toPng } from "html-to-image";
 import download from "downloadjs";
@@ -213,6 +214,19 @@ const CompletedExamSubmissionDetail = () => {
       // Fill in the Blanks: Full positive mark or zero (no negative marks, no partial marks)
       if (!studentAnswer || studentAnswer.trim() === "") {
         return 0;
+      }
+
+      // A NAT question graded in "range" mode has no fixed correctAnswers
+      // list to string-match against (rangeMin/rangeMax hold the real
+      // answer key) — check numeric range membership instead, mirroring
+      // the backend's isNumericInRange.
+      if (questionId?.natAnswerMode === "range") {
+        const isCorrect = isNumericAnswerInRange(
+          questionId.rangeMin,
+          questionId.rangeMax,
+          studentAnswer,
+        );
+        return isCorrect ? positiveMark : 0;
       }
 
       const normalizedStudentAnswer = studentAnswer
@@ -822,19 +836,29 @@ const CompletedExamSubmissionDetail = () => {
                               ? "Keywords:"
                               : "Correct Answer:"}
                           </div>
-                          <div className="flex flex-wrap gap-2">
-                            {(Array.isArray(question.correctAnswer)
-                              ? question.correctAnswer
-                              : [question.correctAnswer]
-                            ).map((answer, ansIndex) => (
-                              <span
-                                key={ansIndex}
-                                className="px-2 py-1 bg-indigo-50 text-indigo-700 rounded-md text-sm border border-indigo-100"
-                              >
-                                {answer}
+                          {question.questionId.natAnswerMode === "range" ? (
+                            <div className="flex flex-wrap gap-2">
+                              <span className="px-2 py-1 bg-indigo-50 text-indigo-700 rounded-md text-sm border border-indigo-100">
+                                {question.questionId.rangeMin} to{" "}
+                                {question.questionId.rangeMax} (any value in
+                                this range)
                               </span>
-                            ))}
-                          </div>
+                            </div>
+                          ) : (
+                            <div className="flex flex-wrap gap-2">
+                              {(Array.isArray(question.correctAnswer)
+                                ? question.correctAnswer
+                                : [question.correctAnswer]
+                              ).map((answer, ansIndex) => (
+                                <span
+                                  key={ansIndex}
+                                  className="px-2 py-1 bg-indigo-50 text-indigo-700 rounded-md text-sm border border-indigo-100"
+                                >
+                                  {answer}
+                                </span>
+                              ))}
+                            </div>
+                          )}
                         </div>
                         {question.questionId.questionType ===
                           "Short Answer" && (
