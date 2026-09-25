@@ -277,13 +277,19 @@ const TestTrackingAdminPage = () => {
     const total = filtered.length;
     const completed = filtered.filter((r) => r.status === "Completed").length;
     const pending = total - completed;
-    const allAttempts = filtered.flatMap((r) => r.attempts || []);
-    const onTime = allAttempts.filter((a) => a.onTime === true).length;
-    const late = allAttempts.filter((a) => a.onTime === false).length;
-    const avgPercentage = allAttempts.length
+    // "Last attempt only" rule: these stat cards must agree with the table
+    // rows below them, which already show only each student's latest
+    // attempt per test — so roll up one attempt per row (the last one in
+    // its `attempts` array), not every retake ever made.
+    const latestAttempts = filtered
+      .map((r) => (r.attempts || [])[r.attempts.length - 1])
+      .filter(Boolean);
+    const onTime = latestAttempts.filter((a) => a.onTime === true).length;
+    const late = latestAttempts.filter((a) => a.onTime === false).length;
+    const avgPercentage = latestAttempts.length
       ? Math.round(
-          (allAttempts.reduce((sum, a) => sum + (a.percentage || 0), 0) /
-            allAttempts.length) *
+          (latestAttempts.reduce((sum, a) => sum + (a.percentage || 0), 0) /
+            latestAttempts.length) *
             10
         ) / 10
       : 0;
