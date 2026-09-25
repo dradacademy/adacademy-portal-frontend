@@ -1,6 +1,7 @@
 import axios from "axios";
-import { useEffect } from "react";
+import { useEffect, useMemo } from "react";
 import { useState } from "react";
+import { Autocomplete, TextField } from "@mui/material";
 import {
   FaBook,
   FaChartBar,
@@ -21,8 +22,20 @@ const ExamOverviewDashboard = ({ onExamClick }) => {
   // at a time (GATE / TNPSC AE / TNPSC JDO / SSC JE-RRB JE) or "All".
   const [activeCategory, setActiveCategory] = useState("all");
 
+  // Subject-wise / Exam-wise quick-search filters for the "All
+  // Examinations" grid below — MUI Autocomplete gives free type-to-search
+  // filtering out of the box, no new dependency needed. Values are
+  // {label, value} option objects, or null for "All".
+  const [subjectFilter, setSubjectFilter] = useState(null);
+  const [examFilter, setExamFilter] = useState(null);
+
   useEffect(() => {
     fetchOverviewData();
+    // A category switch reloads a different set of exams entirely, so any
+    // subject/exam filter picked under the previous category no longer
+    // applies — reset both rather than silently filtering to nothing.
+    setSubjectFilter(null);
+    setExamFilter(null);
   }, [activeCategory]);
 
   const fetchOverviewData = async () => {
@@ -73,6 +86,67 @@ const ExamOverviewDashboard = ({ onExamClick }) => {
   }
 
   const { exams, statistics } = data;
+
+  return (
+    <ExamOverviewDashboardBody
+      exams={exams}
+      statistics={statistics}
+      activeCategory={activeCategory}
+      setActiveCategory={setActiveCategory}
+      subjectFilter={subjectFilter}
+      setSubjectFilter={setSubjectFilter}
+      examFilter={examFilter}
+      setExamFilter={setExamFilter}
+      onExamClick={onExamClick}
+    />
+  );
+};
+
+// Split out so the subject/exam filter options (useMemo, derived from
+// `exams`) only ever compute once real data exists — avoids a `data` null
+// guard inside every memo above the early loading/error returns.
+const ExamOverviewDashboardBody = ({
+  exams,
+  statistics,
+  activeCategory,
+  setActiveCategory,
+  subjectFilter,
+  setSubjectFilter,
+  examFilter,
+  setExamFilter,
+  onExamClick,
+}) => {
+  // One option per distinct subject name appearing in this category's exams.
+  const subjectOptions = useMemo(() => {
+    const seen = new Map();
+    exams.forEach((exam) => {
+      const name = exam.subject?.name;
+      if (name && !seen.has(name)) seen.set(name, { label: name, value: name });
+    });
+    return Array.from(seen.values()).sort((a, b) => a.label.localeCompare(b.label));
+  }, [exams]);
+
+  // Exam options narrow to the picked subject (if any), so the two
+  // dropdowns work together rather than as two independent filters.
+  const examOptions = useMemo(() => {
+    return exams
+      .filter((exam) => !subjectFilter || exam.subject?.name === subjectFilter.value)
+      .map((exam) => ({
+        label: `${exam.subject?.name || "Subject"}${
+          exam.subTopic?.name ? ` - ${exam.subTopic.name}` : ""
+        } - ${exam.examCode} (Order ${exam.order})`,
+        value: exam._id,
+      }))
+      .sort((a, b) => a.label.localeCompare(b.label));
+  }, [exams, subjectFilter]);
+
+  const filteredExams = useMemo(() => {
+    return exams.filter((exam) => {
+      if (subjectFilter && exam.subject?.name !== subjectFilter.value) return false;
+      if (examFilter && exam._id !== examFilter.value) return false;
+      return true;
+    });
+  }, [exams, subjectFilter, examFilter]);
 
   return (
     <div className="min-h-screen font-inter">
@@ -206,11 +280,49 @@ const ExamOverviewDashboard = ({ onExamClick }) => {
 
         {/* Exams Grid - Bento Style Cards */}
         <div className="mb-8">
-          <h2 className="text-lg font-bold text-gray-900 mb-6 font-poppins">
-            All Examinations
-          </h2>
+          <div className="flex items-center justify-between flex-wrap gap-4 mb-6">
+            <h2 className="text-lg font-bold text-gray-900 font-poppins">
+              All Examinations
+            </h2>
+            {/* Subject-wise / Exam-wise quick search — type to filter either
+                dropdown's options instantly (Autocomplete's built-in
+                behavior); picking a subject also narrows the exam options
+                to that subject. */}
+            <div className="flex items-center gap-3 flex-wrap">
+              <Autocomplete
+                size="small"
+                options={subjectOptions}
+                value={subjectFilter}
+                onChange={(_, newValue) => {
+                  setSubjectFilter(newValue);
+                  setExamFilter(null);
+                }}
+                isOptionEqualToValue={(opt, val) => opt.value === val.value}
+                sx={{ width: 220 }}
+                renderInput={(params) => (
+                  <TextField {...params} label="Subject-wise" placeholder="Search subject..." />
+                )}
+              />
+              <Autocomplete
+                size="small"
+                options={examOptions}
+                value={examFilter}
+                onChange={(_, newValue) => setExamFilter(newValue)}
+                isOptionEqualToValue={(opt, val) => opt.value === val.value}
+                sx={{ width: 280 }}
+                renderInput={(params) => (
+                  <TextField {...params} label="Exam-wise" placeholder="Search exam..." />
+                )}
+              />
+            </div>
+          </div>
+          {filteredExams.length === 0 && (
+            <p className="text-sm text-gray-500 mb-4">
+              No exams match the selected filter.
+            </p>
+          )}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {exams.map((exam) => (
+            {filteredExams.map((exam) => (
               <div
                 key={exam._id}
                 onClick={() => onExamClick(exam)}

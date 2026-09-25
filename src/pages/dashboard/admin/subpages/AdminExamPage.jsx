@@ -20,7 +20,7 @@ import {
   BiRightArrowAlt,
 } from "react-icons/bi";
 import { MdClose } from "react-icons/md";
-import { Dialog } from "@mui/material";
+import { Dialog, Autocomplete, TextField } from "@mui/material";
 import { DurationContext } from "../../../../context/DurationContext";
 
 const AdminExamPage = () => {
@@ -28,6 +28,12 @@ const AdminExamPage = () => {
   const [allExams, setAllExams] = useState([]);
   const [openDeletePopup, setOpenDeletePopup] = useState(false);
   const [deletionExamId, setDeletionExamId] = useState("");
+
+  // Subject-wise / Exam-wise quick-search filters for the exam cards grid
+  // below — MUI Autocomplete gives type-to-search filtering for free.
+  // Values are {label, value} option objects, or null for "All".
+  const [subjectFilter, setSubjectFilter] = useState(null);
+  const [examFilter, setExamFilter] = useState(null);
 
   const fetchExams = useCallback(async () => {
     try {
@@ -79,6 +85,39 @@ const AdminExamPage = () => {
       const fallback = durationData?.[`level${q.level}Duration`] || 3600;
       return sum + (q.duration ?? fallback);
     }, 0);
+
+  // One option per distinct subject name currently on screen.
+  const subjectOptions = useMemo(() => {
+    const seen = new Map();
+    processedExams.forEach((exam) => {
+      if (exam.subject && !seen.has(exam.subject)) {
+        seen.set(exam.subject, { label: exam.subject, value: exam.subject });
+      }
+    });
+    return Array.from(seen.values()).sort((a, b) => a.label.localeCompare(b.label));
+  }, [processedExams]);
+
+  // Exam options narrow to the picked subject (if any), so the two
+  // dropdowns work together rather than as two independent filters.
+  const examOptions = useMemo(() => {
+    return processedExams
+      .filter((exam) => !subjectFilter || exam.subject === subjectFilter.value)
+      .map((exam) => ({
+        label: `${exam.subject}${exam.subTopic ? ` - ${exam.subTopic}` : ""} - ${
+          exam.examCode
+        } (Order ${exam.order})`,
+        value: exam._id,
+      }))
+      .sort((a, b) => a.label.localeCompare(b.label));
+  }, [processedExams, subjectFilter]);
+
+  const filteredExams = useMemo(() => {
+    return processedExams.filter((exam) => {
+      if (subjectFilter && exam.subject !== subjectFilter.value) return false;
+      if (examFilter && exam._id !== examFilter.value) return false;
+      return true;
+    });
+  }, [processedExams, subjectFilter, examFilter]);
 
   const handleDeleteExam = async (e) => {
     e.preventDefault();
@@ -137,9 +176,43 @@ const AdminExamPage = () => {
         </Link>
       </div>
 
+      {/* Subject-wise / Exam-wise quick search — type to filter either
+          dropdown's options instantly; picking a subject also narrows the
+          exam options to that subject. */}
+      <div className="flex items-center gap-3 flex-wrap">
+        <Autocomplete
+          size="small"
+          options={subjectOptions}
+          value={subjectFilter}
+          onChange={(_, newValue) => {
+            setSubjectFilter(newValue);
+            setExamFilter(null);
+          }}
+          isOptionEqualToValue={(opt, val) => opt.value === val.value}
+          sx={{ width: 220, bgcolor: "white" }}
+          renderInput={(params) => (
+            <TextField {...params} label="Subject-wise" placeholder="Search subject..." />
+          )}
+        />
+        <Autocomplete
+          size="small"
+          options={examOptions}
+          value={examFilter}
+          onChange={(_, newValue) => setExamFilter(newValue)}
+          isOptionEqualToValue={(opt, val) => opt.value === val.value}
+          sx={{ width: 280, bgcolor: "white" }}
+          renderInput={(params) => (
+            <TextField {...params} label="Exam-wise" placeholder="Search exam..." />
+          )}
+        />
+      </div>
+      {filteredExams.length === 0 && (
+        <p className="text-sm text-stone-500">No exams match the selected filter.</p>
+      )}
+
       {/* Exam Cards Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 w-full">
-        {processedExams.map((exam, index) => {
+        {filteredExams.map((exam, index) => {
           const {
             _id,
             subject,
