@@ -180,6 +180,11 @@ const AttendExamStudent = () => {
           const initialAnswers = data.exam.questions.map((q) => ({
             questionId: q._id,
             studentAnswer: q.questionType === "MSQ" ? [] : "",
+            // Index-based identity for the option(s) actually clicked, kept
+            // alongside studentAnswer — see the backend's matching comment
+            // on Question.correctOptionIndexes. Only meaningful for
+            // MCQ/MSQ; harmless (and unused) for other question types.
+            studentAnswerIndexes: [],
             isVisited: false,
             isAnswered: false,
             isMarkedForReview: false,
@@ -275,38 +280,56 @@ const AttendExamStudent = () => {
   }, [currentQuestionIndex, goToQuestion]);
 
   const handleAnswerChange = useCallback(
-    (value) => {
+    // `optIndex` is only passed for MCQ/MSQ option clicks (see the option
+    // rendering below); it's the option's position, which is what actually
+    // identifies the selection unambiguously when multiple options share
+    // identical/blank text (the normal case for image-only options) — see
+    // the backend's matching comment on Question.correctOptionIndexes.
+    // `value` (option TEXT) is kept in parallel for backward compatibility
+    // and for non-MCQ/MSQ question types, where there is no index.
+    (value, optIndex) => {
       setAnswers((prev) => {
         const updatedAnswers = [...prev];
         const currentQuestion = examData.questions[currentQuestionIndex];
+        const current = updatedAnswers[currentQuestionIndex];
 
         if (currentQuestion.questionType === "MCQ") {
-          if (updatedAnswers[currentQuestionIndex].studentAnswer === value) {
-            updatedAnswers[currentQuestionIndex].studentAnswer = "";
-            updatedAnswers[currentQuestionIndex].isAnswered = false;
+          const currentIndexes = current.studentAnswerIndexes || [];
+          const isSameSelection =
+            optIndex !== undefined
+              ? currentIndexes[0] === optIndex
+              : current.studentAnswer === value;
+
+          if (isSameSelection) {
+            current.studentAnswer = "";
+            current.studentAnswerIndexes = [];
+            current.isAnswered = false;
           } else {
-            updatedAnswers[currentQuestionIndex].studentAnswer = value;
-            updatedAnswers[currentQuestionIndex].isAnswered = true;
+            current.studentAnswer = value;
+            current.studentAnswerIndexes = optIndex !== undefined ? [optIndex] : [];
+            current.isAnswered = true;
           }
         } else if (currentQuestion.questionType === "MSQ") {
-          const currentAnswers =
-            updatedAnswers[currentQuestionIndex].studentAnswer || [];
+          const currentIndexes = current.studentAnswerIndexes || [];
+          const currentAnswers = current.studentAnswer || [];
+          const isSelected =
+            optIndex !== undefined
+              ? currentIndexes.includes(optIndex)
+              : currentAnswers.includes(value);
 
-          if (currentAnswers.includes(value)) {
-            updatedAnswers[currentQuestionIndex].studentAnswer =
-              currentAnswers.filter((a) => a !== value);
+          if (isSelected) {
+            current.studentAnswer = currentAnswers.filter((a) => a !== value);
+            current.studentAnswerIndexes = currentIndexes.filter((i) => i !== optIndex);
           } else {
-            updatedAnswers[currentQuestionIndex].studentAnswer = [
-              ...currentAnswers,
-              value,
-            ];
+            current.studentAnswer = [...currentAnswers, value];
+            current.studentAnswerIndexes =
+              optIndex !== undefined ? [...currentIndexes, optIndex] : currentIndexes;
           }
 
-          updatedAnswers[currentQuestionIndex].isAnswered =
-            updatedAnswers[currentQuestionIndex].studentAnswer.length > 0;
+          current.isAnswered = current.studentAnswer.length > 0;
         } else {
-          updatedAnswers[currentQuestionIndex].studentAnswer = value;
-          updatedAnswers[currentQuestionIndex].isAnswered = value.trim() !== "";
+          current.studentAnswer = value;
+          current.isAnswered = value.trim() !== "";
         }
 
         return updatedAnswers;
@@ -695,13 +718,21 @@ const AttendExamStudent = () => {
                     {currentQuestion.options.map((opt, index) => {
                       const optionText = typeof opt === "object" && opt !== null ? opt.text : opt;
                       const optionImage = typeof opt === "object" && opt !== null ? opt.image : null;
+                      // Prefer index-based identity (unambiguous even when
+                      // options share identical/blank text) whenever this
+                      // answer already has index data; fall back to the
+                      // legacy text comparison otherwise.
+                      const currentIndexes = answers[currentQuestionIndex]?.studentAnswerIndexes;
+                      const isSelected =
+                        Array.isArray(currentIndexes) && currentIndexes.length > 0
+                          ? currentIndexes[0] === index
+                          : answers[currentQuestionIndex]?.studentAnswer === optionText;
                       return (
                       <div
                         key={index}
-                        onClick={() => handleAnswerChange(optionText)}
+                        onClick={() => handleAnswerChange(optionText, index)}
                         className={`p-4 rounded-xl border ${
-                          answers[currentQuestionIndex]?.studentAnswer ===
-                          optionText
+                          isSelected
                             ? "border-blue-300 bg-blue-50"
                             : "border-gray-200 hover:border-blue-200 hover:bg-blue-50/30"
                         } cursor-pointer transition-colors`}
@@ -709,8 +740,7 @@ const AttendExamStudent = () => {
                         <div className="flex items-start gap-3">
                           <div
                             className={`w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 ${
-                              answers[currentQuestionIndex]?.studentAnswer ===
-                              optionText
+                              isSelected
                                 ? "bg-blue-600 text-white"
                                 : "bg-gray-100 text-gray-400"
                             }`}
@@ -736,23 +766,28 @@ const AttendExamStudent = () => {
                     {currentQuestion.options.map((opt, index) => {
                       const optionText = typeof opt === "object" && opt !== null ? opt.text : opt;
                       const optionImage = typeof opt === "object" && opt !== null ? opt.image : null;
+                      // Prefer index-based identity (unambiguous even when
+                      // options share identical/blank text) whenever this
+                      // answer already has index data; fall back to the
+                      // legacy text comparison otherwise.
+                      const currentIndexes = answers[currentQuestionIndex]?.studentAnswerIndexes;
+                      const isSelected =
+                        Array.isArray(currentIndexes) && currentIndexes.length > 0
+                          ? currentIndexes.includes(index)
+                          : answers[currentQuestionIndex]?.studentAnswer?.includes(optionText);
                       return (
                       <div
                         key={index}
-                        onClick={() => handleAnswerChange(optionText)}
+                        onClick={() => handleAnswerChange(optionText, index)}
                         className={`p-4 rounded-xl border ${
-                          answers[
-                            currentQuestionIndex
-                          ]?.studentAnswer?.includes(optionText)
+                          isSelected
                             ? "border-purple-400 bg-purple-50"
                             : "border-gray-200 hover:border-purple-200 hover:bg-purple-50/30"
                         } cursor-pointer transition-colors`}
                       >
                         <div className="flex items-start gap-3">
                           <div className="flex-shrink-0 mt-0.5">
-                            {answers[
-                              currentQuestionIndex
-                            ]?.studentAnswer?.includes(optionText) ? (
+                            {isSelected ? (
                               <CheckSquare className="h-5 w-5 text-purple-600" />
                             ) : (
                               <Square className="h-5 w-5 text-gray-400" />

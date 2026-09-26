@@ -173,6 +173,28 @@ const AttemptedExamSubmissionDetail = () => {
       resolveQuestionMarks(questionId, markData);
 
     if (questionType === "MCQ") {
+      // Prefer index-based identity (see the backend's matching comment on
+      // Question.correctOptionIndexes) whenever both this question's
+      // correctOptionIndexes and this submission's studentAnswerIndexes are
+      // available — comparing by option TEXT alone can't tell two options
+      // with identical/blank text apart, the routine case for image-only
+      // options. Falls back to the legacy text comparison for any
+      // question/submission recorded before this fix existed.
+      const studentAnswerIndexes = question.studentAnswerIndexes;
+      const correctOptionIndexes = questionId?.correctOptionIndexes;
+      const hasIndexData =
+        Array.isArray(correctOptionIndexes) &&
+        correctOptionIndexes.length > 0 &&
+        Array.isArray(studentAnswerIndexes);
+
+      if (hasIndexData) {
+        if (studentAnswerIndexes.length === 0) return 0;
+        const isCorrect =
+          studentAnswerIndexes.length === 1 &&
+          correctOptionIndexes.includes(studentAnswerIndexes[0]);
+        return isCorrect ? positiveMark : -negativeMark;
+      }
+
       // MCQ: Full positive mark or negative mark (no partial marks)
       if (!studentAnswer || studentAnswer.trim() === "") {
         return 0;
@@ -229,6 +251,37 @@ const AttemptedExamSubmissionDetail = () => {
     }
 
     if (questionType === "MSQ") {
+      // Prefer index-based identity — see the MCQ branch above and the
+      // backend's matching comment on Question.correctOptionIndexes.
+      const studentAnswerIndexes = question.studentAnswerIndexes;
+      const correctOptionIndexes = questionId?.correctOptionIndexes;
+      const hasIndexData =
+        Array.isArray(correctOptionIndexes) &&
+        correctOptionIndexes.length > 0 &&
+        Array.isArray(studentAnswerIndexes);
+
+      if (hasIndexData) {
+        if (studentAnswerIndexes.length === 0) return 0;
+
+        const correctSet = new Set(correctOptionIndexes);
+        const studentSet = new Set(studentAnswerIndexes);
+
+        let correctSelections = 0;
+        studentSet.forEach((i) => {
+          if (correctSet.has(i)) correctSelections++;
+        });
+
+        const hasWrongSelections = [...studentSet].some(
+          (i) => !correctSet.has(i),
+        );
+
+        if (!hasWrongSelections && correctSelections > 0) {
+          return (correctSelections / correctSet.size) * positiveMark;
+        }
+
+        return 0;
+      }
+
       // MSQ: Full positive mark or partial marks (no negative marks)
       if (!Array.isArray(studentAnswer) || studentAnswer.length === 0) {
         return 0;
@@ -763,12 +816,29 @@ const AttemptedExamSubmissionDetail = () => {
                               const optionText = typeof opt === "object" && opt !== null ? opt.text : opt;
                               const optionImage = typeof opt === "object" && opt !== null ? opt.image : null;
 
-                              const isSelected = Array.isArray(
-                                question.studentAnswer,
-                              )
-                                ? question.studentAnswer.includes(optionText)
-                                : question.studentAnswer === optionText;
-                              const isCorrectOption = Array.isArray(question.correctAnswer) ? question.correctAnswer.includes(optionText) : question.correctAnswer === optionText;
+                              // Prefer index-based identity — see the
+                              // backend's matching comment on
+                              // Question.correctOptionIndexes. Comparing by
+                              // option TEXT alone can't tell apart two
+                              // options with identical/blank text, the
+                              // routine case for image-only options.
+                              const studentAnswerIndexes = question.studentAnswerIndexes;
+                              const correctOptionIndexes = question.questionId?.correctOptionIndexes;
+                              const hasIndexData =
+                                Array.isArray(correctOptionIndexes) &&
+                                correctOptionIndexes.length > 0 &&
+                                Array.isArray(studentAnswerIndexes);
+
+                              const isSelected = hasIndexData
+                                ? studentAnswerIndexes.includes(optIndex)
+                                : Array.isArray(question.studentAnswer)
+                                  ? question.studentAnswer.includes(optionText)
+                                  : question.studentAnswer === optionText;
+                              const isCorrectOption = hasIndexData
+                                ? correctOptionIndexes.includes(optIndex)
+                                : Array.isArray(question.correctAnswer)
+                                  ? question.correctAnswer.includes(optionText)
+                                  : question.correctAnswer === optionText;
 
                               return (
                                 <div

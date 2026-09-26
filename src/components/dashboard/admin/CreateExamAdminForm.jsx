@@ -28,6 +28,51 @@ const handleImagePaste = (e, onImage) => {
   }
 };
 
+// Best-effort split of an admin-typed NAT range ("10 to 15", "10-15",
+// "-5 to 5", "1e-3 to 1e-2") into its two raw pieces. "to" is tried first
+// since it reads unambiguously even with negative numbers or scientific
+// notation; a bare hyphen falls back to splitting on the LAST "-" that
+// isn't the leading sign of the whole string, so "-5-10" reads as "-5" to
+// "10" rather than splitting on the first, sign-forming hyphen.
+const splitRangeText = (raw) => {
+  const str = (raw || "").trim();
+  if (!str) return null;
+
+  const toParts = str.split(/\s+to\s+/i);
+  if (toParts.length === 2 && toParts[0].trim() && toParts[1].trim()) {
+    return [toParts[0].trim(), toParts[1].trim()];
+  }
+
+  const hyphenIndex = str.lastIndexOf("-");
+  if (hyphenIndex > 0) {
+    const left = str.slice(0, hyphenIndex).trim();
+    const right = str.slice(hyphenIndex + 1).trim();
+    if (left && right) return [left, right];
+  }
+
+  return null;
+};
+
+// Small local mirror of the backend's parseNumericAnswer acceptance rules
+// (ExamSubmissionHelper.js — plain decimals, JS exponential, and
+// base^exponent/coefficient×base^exponent scientific notation), used ONLY
+// to drive the live "Parsed as..." preview below the range input. Grading
+// always happens server-side from the raw rangeMin/rangeMax strings, so
+// this never needs to be kept byte-for-byte in sync — it just needs to
+// recognize the same formats well enough to reassure the admin the range
+// will actually grade correctly.
+const RANGE_PLAIN_NUMBER_RE = /^[+-]?(\d+\.?\d*|\.\d+)(?:[eE][+-]?\d+)?$/;
+const RANGE_POWER_NOTATION_RE =
+  /^(?:([+-]?(?:\d+\.?\d*|\.\d+))\s*[x×*]\s*)?([+-]?(?:\d+\.?\d*|\.\d+))\s*(?:\^|\*\*)\s*([+-]?(?:\d+\.?\d*|\.\d+))$/i;
+const looksLikeNumber = (raw) => {
+  const str = (raw || "").trim();
+  if (!str) return false;
+  return (
+    RANGE_PLAIN_NUMBER_RE.test(str) ||
+    RANGE_POWER_NOTATION_RE.test(str.replace(/\s+/g, " "))
+  );
+};
+
 const CreateExamAdminForm = ({
   subjects,
   subtopics,
@@ -497,17 +542,28 @@ const CreateExamAdminForm = ({
                     <div className="mt-2">
                     {question.questionType === "MCQ" ? (
                       <Radio
-                        checked={question.correctAnswers[0] === optionText}
+                        checked={
+                          Array.isArray(question.correctOptionIndexes) &&
+                          question.correctOptionIndexes.length > 0
+                            ? question.correctOptionIndexes[0] === optIndex
+                            : question.correctAnswers[0] === optionText
+                        }
                         onChange={() =>
-                          handleCorrectAnswerChange(qIndex, optionText)
+                          handleCorrectAnswerChange(qIndex, optIndex, optionText)
                         }
                       />
                     ) : (
                       <Checkbox
-                        checked={question.correctAnswers.includes(optionText)}
+                        checked={
+                          Array.isArray(question.correctOptionIndexes) &&
+                          question.correctOptionIndexes.length > 0
+                            ? question.correctOptionIndexes.includes(optIndex)
+                            : question.correctAnswers.includes(optionText)
+                        }
                         onChange={(e) =>
                           handleMSQCorrectAnswerChange(
                             qIndex,
+                            optIndex,
                             optionText,
                             e.target.checked,
                           )
@@ -585,24 +641,6 @@ const CreateExamAdminForm = ({
           )}
           {question.questionType === "Fill in the Blanks" && (
             <>
-              <input
-                type="text"
-                placeholder={`Correct Answers (Enter multiple correct answers, separated by commas)`}
-                name="correctAnswers"
-                className=" border border-stone-300 py-[10px] px-4 focus:outline-none rounded-lg bg-white w-full"
-                value={question.correctAnswers.join(", ")}
-                onChange={(e) => {
-                  const answers = e.target.value
-                    .split(",")
-                    .map((ans) => ans.trim());
-                  setNewQuestions((prev) => {
-                    const updated = [...prev];
-                    updated[qIndex].correctAnswers = answers;
-                    return updated;
-                  });
-                }}
-                required
-              />
               <label className="flex items-center gap-2 text-sm text-stone-600 select-none">
                 <Checkbox
                   checked={!!question.isNumericAnswer}
@@ -619,6 +657,94 @@ const CreateExamAdminForm = ({
                 number pad instead of a text box, and grade by value (so
                 "2.3" and "2.30" both count as correct)
               </label>
+
+              {question.isNumericAnswer && (
+                <div className="flex items-center gap-4 text-sm text-stone-600">
+                  <label className="flex items-center gap-1.5 cursor-pointer select-none">
+                    <Radio
+                      size="small"
+                      checked={(question.natAnswerMode || "exact") === "exact"}
+                      onChange={() =>
+                        handleQuestionChange(qIndex, {
+                          target: { name: "natAnswerMode", value: "exact" },
+                        })
+                      }
+                    />
+                    Exact value(s)
+                  </label>
+                  <label className="flex items-center gap-1.5 cursor-pointer select-none">
+                    <Radio
+                      size="small"
+                      checked={question.natAnswerMode === "range"}
+                      onChange={() =>
+                        handleQuestionChange(qIndex, {
+                          target: { name: "natAnswerMode", value: "range" },
+                        })
+                      }
+                    />
+                    Range (any value in between is correct)
+                  </label>
+                </div>
+              )}
+
+              {question.isNumericAnswer && question.natAnswerMode === "range" ? (
+                <div className="flex flex-col gap-1">
+                  <input
+                    type="text"
+                    placeholder={`Correct Range — e.g. "10 to 15" or "10-15"`}
+                    className=" border border-stone-300 py-[10px] px-4 focus:outline-none rounded-lg bg-white w-full"
+                    value={question.rangeRawText || ""}
+                    onChange={(e) => {
+                      const text = e.target.value;
+                      const parts = splitRangeText(text);
+                      setNewQuestions((prev) => {
+                        const updated = [...prev];
+                        updated[qIndex].rangeRawText = text;
+                        updated[qIndex].rangeMin = parts ? parts[0] : "";
+                        updated[qIndex].rangeMax = parts ? parts[1] : "";
+                        return updated;
+                      });
+                    }}
+                    required
+                  />
+                  {question.rangeRawText ? (
+                    question.rangeMin &&
+                    question.rangeMax &&
+                    looksLikeNumber(question.rangeMin) &&
+                    looksLikeNumber(question.rangeMax) ? (
+                      <span className="text-xs text-emerald-600">
+                        Parsed as: {question.rangeMin} to {question.rangeMax} —
+                        any value in this range (inclusive) will be marked
+                        correct.
+                      </span>
+                    ) : (
+                      <span className="text-xs text-red-500">
+                        Couldn't read this as a range. Use a format like "10
+                        to 15" or "10-15".
+                      </span>
+                    )
+                  ) : null}
+                </div>
+              ) : (
+                <input
+                  type="text"
+                  placeholder={`Correct Answers (Enter multiple correct answers, separated by commas)`}
+                  name="correctAnswers"
+                  className=" border border-stone-300 py-[10px] px-4 focus:outline-none rounded-lg bg-white w-full"
+                  value={question.correctAnswers.join(", ")}
+                  onChange={(e) => {
+                    const answers = e.target.value
+                      .split(",")
+                      .map((ans) => ans.trim());
+                    setNewQuestions((prev) => {
+                      const updated = [...prev];
+                      updated[qIndex].correctAnswers = answers;
+                      return updated;
+                    });
+                  }}
+                  required
+                />
+              )}
             </>
           )}
           {question.questionType === "Short Answer" && (

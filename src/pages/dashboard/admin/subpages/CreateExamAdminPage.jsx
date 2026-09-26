@@ -117,6 +117,12 @@ const CreateExamAdminPage = () => {
     duration: null,
     options: [{ text: "", image: null }, { text: "", image: null }],
     correctAnswers: [],
+    // Index-based identity for the correct option(s), parallel to (and
+    // preferred over) correctAnswers — see the matching backend comment on
+    // Question.correctOptionIndexes. Needed because two options can share
+    // identical (often blank) text when they're image-only, which makes
+    // text alone unable to tell them apart.
+    correctOptionIndexes: [],
     isNumericAnswer: false,
     // NAT range-grading: "exact" (default, existing behavior — comma-
     // separated list of accepted values) or "range" (any value between
@@ -847,11 +853,33 @@ const CreateExamAdminPage = () => {
         const negativeMark = parseOptionalNumber(row[colIndex["NegativeMark"]]);
         const duration = parseOptionalNumber(row[colIndex["Duration"]]);
 
+        // Compute the parallel index-based correct-answer identity too, so
+        // a bulk-imported MCQ/MSQ question gets the same collision-proof
+        // grading as one built in the builder — matters even for
+        // spreadsheet-only imports if two options happen to share text.
+        const correctOptionIndexes =
+          (questionType === "MCQ" || questionType === "MSQ") && options.length > 0
+            ? [
+                ...new Set(
+                  correctAnswers
+                    .map((ans) =>
+                      options.findIndex((opt) => {
+                        const text =
+                          typeof opt === "object" && opt !== null ? opt.text : opt;
+                        return text === ans;
+                      }),
+                    )
+                    .filter((i) => i !== -1),
+                ),
+              ]
+            : [];
+
         return {
           questionText,
           questionType,
           options,
           correctAnswers,
+          correctOptionIndexes,
           image,
           level,
           marks,
@@ -1012,6 +1040,7 @@ const CreateExamAdminPage = () => {
 
       if (name === "questionType") {
         updated[index].correctAnswers = [];
+        updated[index].correctOptionIndexes = [];
         if (value === "MCQ" || value === "MSQ") {
           updated[index].options = [{ text: "", image: null }, { text: "", image: null }];
         }
@@ -1112,11 +1141,35 @@ const CreateExamAdminPage = () => {
       if (updated[qIndex].options.length > 2) {
         const optionToRemove = updated[qIndex].options[optionIndex];
         const optionTextToRemove = typeof optionToRemove === "object" ? optionToRemove.text : optionToRemove;
-        
+
         updated[qIndex].options.splice(optionIndex, 1);
-        updated[qIndex].correctAnswers = updated[qIndex].correctAnswers.filter(
-          (answer) => answer !== optionTextToRemove,
-        );
+
+        // Re-index correctOptionIndexes: drop the removed index, shift
+        // every index after it down by one so positions still line up with
+        // the shortened options array.
+        const hadIndexes =
+          Array.isArray(updated[qIndex].correctOptionIndexes) &&
+          updated[qIndex].correctOptionIndexes.length > 0;
+        if (hadIndexes) {
+          updated[qIndex].correctOptionIndexes = updated[
+            qIndex
+          ].correctOptionIndexes
+            .filter((i) => i !== optionIndex)
+            .map((i) => (i > optionIndex ? i - 1 : i));
+          // Rebuild the text mirror from the surviving indexes rather than
+          // the fragile text-filter below, so it can't drop a blank/
+          // duplicate-text correct answer that still has a surviving index.
+          updated[qIndex].correctAnswers = updated[qIndex].correctOptionIndexes
+            .map((i) => {
+              const opt = updated[qIndex].options[i];
+              return typeof opt === "object" && opt !== null ? opt.text : opt;
+            })
+            .filter((text) => text !== undefined);
+        } else {
+          updated[qIndex].correctAnswers = updated[qIndex].correctAnswers.filter(
+            (answer) => answer !== optionTextToRemove,
+          );
+        }
       } else {
         toast.error("MCQ/MSQ questions must have at least 2 options!");
       }
@@ -1130,14 +1183,28 @@ const CreateExamAdminPage = () => {
       const updated = [...prev];
       const oldOption = updated[qIndex].options[optionIndex];
       const oldValue = typeof oldOption === "object" ? oldOption.text : oldOption;
-      
+
       if (typeof updated[qIndex].options[optionIndex] === "object") {
         updated[qIndex].options[optionIndex].text = value;
       } else {
         updated[qIndex].options[optionIndex] = { text: value, image: null };
       }
 
-      if (updated[qIndex].correctAnswers.includes(oldValue)) {
+      const hasIndexes =
+        Array.isArray(updated[qIndex].correctOptionIndexes) &&
+        updated[qIndex].correctOptionIndexes.length > 0;
+      if (hasIndexes) {
+        // Authoritative path: correctAnswers is a derived text mirror of
+        // correctOptionIndexes, so just re-derive it from the (now-edited)
+        // options array — this can't miss/mismatch the way comparing old
+        // vs. new TEXT below can when multiple options share text.
+        updated[qIndex].correctAnswers = updated[qIndex].correctOptionIndexes.map(
+          (i) => {
+            const opt = updated[qIndex].options[i];
+            return typeof opt === "object" && opt !== null ? opt.text : opt;
+          },
+        );
+      } else if (updated[qIndex].correctAnswers.includes(oldValue)) {
         updated[qIndex].correctAnswers = updated[qIndex].correctAnswers.map(
           (answer) => (answer === oldValue ? value : answer),
         );
@@ -1168,25 +1235,35 @@ const CreateExamAdminPage = () => {
     });
   };
 
-  const handleCorrectAnswerChange = (qIndex, value) => {
+  const handleCorrectAnswerChange = (qIndex, optIndex, value) => {
     setNewQuestions((prev) => {
       const updated = [...prev];
       updated[qIndex].correctAnswers = [value];
+      updated[qIndex].correctOptionIndexes =
+        optIndex !== undefined ? [optIndex] : [];
       return updated;
     });
   };
 
-  const handleMSQCorrectAnswerChange = (qIndex, value, isChecked) => {
+  const handleMSQCorrectAnswerChange = (qIndex, optIndex, value, isChecked) => {
     setNewQuestions((prev) => {
       const updated = [...prev];
+      const currentIndexes = Array.isArray(updated[qIndex].correctOptionIndexes)
+        ? updated[qIndex].correctOptionIndexes
+        : [];
       if (isChecked) {
         updated[qIndex].correctAnswers = [
           ...updated[qIndex].correctAnswers,
           value,
         ];
+        updated[qIndex].correctOptionIndexes =
+          optIndex !== undefined ? [...currentIndexes, optIndex] : currentIndexes;
       } else {
         updated[qIndex].correctAnswers = updated[qIndex].correctAnswers.filter(
           (v) => v !== value,
+        );
+        updated[qIndex].correctOptionIndexes = currentIndexes.filter(
+          (i) => i !== optIndex,
         );
       }
       return updated;
