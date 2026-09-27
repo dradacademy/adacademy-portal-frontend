@@ -52,7 +52,7 @@ const MarkAndDurationAdmin = () => {
     setBackfillLoading(true);
     try {
       const response = await axios.post(
-        `${import.meta.env.VITE_APP_API_URL}/exam/short-answer-range-backfill`
+        `${import.meta.env.VITE_APP_API_URL}/exams/short-answer-range-backfill`
       );
       toast.success(response.data.message || "Backfill complete", {
         duration: 8000,
