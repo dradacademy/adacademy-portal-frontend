@@ -4,6 +4,7 @@ import { DurationContext } from "../../../context/DurationContext";
 import { MarkContext } from "../../../context/MarkContext";
 import UpdateMarkAdminPopup from "../../common/popup/UpdateMarkAdminPopup";
 import EditStudentExamPopup from "../../common/popup/EditStudentExamPopup";
+import DeleteHistoryAdminPopup from "../../common/popup/DeleteHistoryAdminPopup";
 import toast from "react-hot-toast";
 import axios from "axios";
 
@@ -21,6 +22,51 @@ const MarkAndDurationAdmin = () => {
   const [popupType, setPopupType] = useState("");
 
   const [studentExamUpdatePopup, setStudentExamUpdatePopup] = useState(false);
+
+  // Delete-history popup (separate from the shared studentExamUpdate flow
+  // above since this one drives its own two-step confirmation state).
+  const [deleteHistoryPopup, setDeleteHistoryPopup] = useState(false);
+  const [deleteHistoryMode, setDeleteHistoryMode] = useState("exam");
+  const handleOpenDeleteHistoryPopup = (mode) => {
+    setDeleteHistoryMode(mode);
+    setDeleteHistoryPopup(true);
+  };
+  const handleCloseDeleteHistoryPopup = () => setDeleteHistoryPopup(false);
+
+  // One-time (safely re-runnable) fix for Short Answer questions that
+  // already state a numeric tolerance range in their answer explanation
+  // (e.g. "1.10 (Range: 1.09 to 1.11)") but were created before Short
+  // Answer supported structured range-mode grading, so in-range answers
+  // were wrongly marked incorrect. Sets the range on every matching
+  // question and re-grades every already-completed submission affected —
+  // covers both previously-completed and future attempts in one click.
+  const [backfillLoading, setBackfillLoading] = useState(false);
+  const handleBackfillShortAnswerRanges = async () => {
+    if (
+      !window.confirm(
+        "This scans every Short Answer question for a stated answer range (e.g. \"Range: 1.09 to 1.11\") that isn't yet set up for range grading, switches those questions to range mode, and re-grades every affected exam's already-completed submissions.\n\nThis cannot be undone automatically. Continue?"
+      )
+    ) {
+      return;
+    }
+    setBackfillLoading(true);
+    try {
+      const response = await axios.post(
+        `${import.meta.env.VITE_APP_API_URL}/exam/short-answer-range-backfill`
+      );
+      toast.success(response.data.message || "Backfill complete", {
+        duration: 8000,
+      });
+    } catch (error) {
+      toast.error(
+        error.response?.data?.message ||
+          "Failed to backfill Short Answer range grading"
+      );
+    } finally {
+      setBackfillLoading(false);
+    }
+  };
+
   const handleOpenStudentExamUpdatePopup = (type) => {
     setStudentExamUpdatePopup(true);
     setPopupType(type);
@@ -136,6 +182,27 @@ const MarkAndDurationAdmin = () => {
           >
             Grant Extra Attempt
           </button>
+          <button
+            onClick={() => handleOpenDeleteHistoryPopup("exam")}
+            className=" bg-red-500 font-medium text-white py-2 px-4 rounded-md cursor-pointer hover:opacity-85 duration-300"
+          >
+            Delete Exam History
+          </button>
+          <button
+            onClick={() => handleOpenDeleteHistoryPopup("student")}
+            className=" bg-red-500 font-medium text-white py-2 px-4 rounded-md cursor-pointer hover:opacity-85 duration-300"
+          >
+            Delete Student History
+          </button>
+          <button
+            onClick={handleBackfillShortAnswerRanges}
+            disabled={backfillLoading}
+            className=" bg-emerald-600 font-medium text-white py-2 px-4 rounded-md cursor-pointer hover:opacity-85 duration-300 disabled:opacity-60 disabled:cursor-not-allowed"
+          >
+            {backfillLoading
+              ? "Fixing Short Answer Ranges..."
+              : "Fix Short Answer Ranges"}
+          </button>
         </div>
       </div>
 
@@ -148,6 +215,11 @@ const MarkAndDurationAdmin = () => {
         studentExamUpdatePopup={studentExamUpdatePopup}
         handleCloseStudentExamUpdatePopup={handleCloseStudentExamUpdatePopup}
         handleSubmit={handleSubmit}
+      />
+      <DeleteHistoryAdminPopup
+        open={deleteHistoryPopup}
+        mode={deleteHistoryMode}
+        onClose={handleCloseDeleteHistoryPopup}
       />
     </div>
   );

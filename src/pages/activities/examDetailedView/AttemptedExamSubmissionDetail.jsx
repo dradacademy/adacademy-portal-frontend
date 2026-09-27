@@ -30,7 +30,7 @@ import {
   isNumericAnswerInRange,
 } from "../../../utils/examMarks";
 import "katex/dist/katex.min.css";
-import { MathText } from "../../../utils/mathText";
+import { MathText, AnswerKeyText } from "../../../utils/mathText";
 
 const formatDate = (dateString) => {
   const options = { year: "numeric", month: "short", day: "numeric" };
@@ -317,6 +317,19 @@ const AttemptedExamSubmissionDetail = () => {
       // Short Answer: Partial marks based on keyword matches (no negative marks)
       if (!studentAnswer || studentAnswer.trim() === "") {
         return 0;
+      }
+
+      // A range-graded numeric Short Answer question (see the matching
+      // branch above for Fill in the Blanks) has no fixed keyword list to
+      // string-match against — check numeric range membership instead,
+      // mirroring the backend's isNumericInRange.
+      if (questionId?.natAnswerMode === "range") {
+        const isCorrect = isNumericAnswerInRange(
+          questionId.rangeMin,
+          questionId.rangeMax,
+          studentAnswer,
+        );
+        return isCorrect ? positiveMark : 0;
       }
 
       const keywords = correctAnswer || [];
@@ -958,7 +971,10 @@ const AttemptedExamSubmissionDetail = () => {
                       <div className="mt-4 p-4 bg-indigo-50/50 rounded-lg border border-indigo-100">
                         <div className="text-sm font-semibold text-indigo-800 mb-2">Answer Explanation</div>
                         {question.questionId.answerKeyText && (
-                          <div className="text-sm text-gray-700 mb-3 answer-key-rich-text" dangerouslySetInnerHTML={{ __html: question.questionId.answerKeyText }} />
+                          <AnswerKeyText
+                            text={question.questionId.answerKeyText}
+                            className="text-sm text-gray-700 mb-3 answer-key-rich-text"
+                          />
                         )}
                         {question.questionId.answerKeyImage && (
                           <img src={question.questionId.answerKeyImage} alt="Answer Explanation" className="max-h-48 object-contain rounded border border-gray-200 bg-white p-1" />

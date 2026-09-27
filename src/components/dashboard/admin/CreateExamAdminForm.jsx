@@ -748,30 +748,89 @@ const CreateExamAdminForm = ({
             </>
           )}
           {question.questionType === "Short Answer" && (
-            <div>
-              <div className="flex items-center flex-wrap bg-white rounded-t-lg border border-stone-300 p-2 gap-2">
-                {question.correctAnswers.map((keyword, kIndex) => (
-                  <div
-                    key={kIndex}
-                    className="flex items-center bg-blue-100 focus:outline-none text-indigo-400 px-3 py-1 rounded-full text-sm font-medium gap-2 shadow-sm transition-all duration-200"
-                  >
-                    <span>{keyword}</span>
-                    <button
-                      onClick={() => handleDeleteKeyword(qIndex, kIndex)}
-                      className="text-indigo-400 hover:text-[#FF8383] cursor-pointer font-medium transition-all duration-200"
-                    >
-                      ✕
-                    </button>
+            <div className="flex flex-col gap-3">
+              <label className="flex items-center gap-2 text-sm text-stone-600 select-none">
+                <Checkbox
+                  checked={question.natAnswerMode === "range"}
+                  onChange={(e) =>
+                    handleQuestionChange(qIndex, {
+                      target: {
+                        name: "natAnswerMode",
+                        value: e.target.checked ? "range" : "exact",
+                      },
+                    })
+                  }
+                />
+                Grade as a numeric range instead of keywords — for a
+                GATE-style numeric answer with a rounding-tolerance range
+                (e.g. "1.09 to 1.11"), any value in between is correct
+              </label>
+
+              {question.natAnswerMode === "range" ? (
+                <div className="flex flex-col gap-1">
+                  <input
+                    type="text"
+                    placeholder={`Correct Range — e.g. "1.09 to 1.11" or "1.09-1.11"`}
+                    className=" border border-stone-300 py-[10px] px-4 focus:outline-none rounded-lg bg-white w-full"
+                    value={question.rangeRawText || ""}
+                    onChange={(e) => {
+                      const text = e.target.value;
+                      const parts = splitRangeText(text);
+                      setNewQuestions((prev) => {
+                        const updated = [...prev];
+                        updated[qIndex].rangeRawText = text;
+                        updated[qIndex].rangeMin = parts ? parts[0] : "";
+                        updated[qIndex].rangeMax = parts ? parts[1] : "";
+                        return updated;
+                      });
+                    }}
+                    required
+                  />
+                  {question.rangeRawText ? (
+                    question.rangeMin &&
+                    question.rangeMax &&
+                    looksLikeNumber(question.rangeMin) &&
+                    looksLikeNumber(question.rangeMax) ? (
+                      <span className="text-xs text-emerald-600">
+                        Parsed as: {question.rangeMin} to {question.rangeMax}{" "}
+                        — any value in this range (inclusive) will be marked
+                        correct.
+                      </span>
+                    ) : (
+                      <span className="text-xs text-red-500">
+                        Couldn't read this as a range. Use a format like
+                        "1.09 to 1.11" or "1.09-1.11".
+                      </span>
+                    )
+                  ) : null}
+                </div>
+              ) : (
+                <div>
+                  <div className="flex items-center flex-wrap bg-white rounded-t-lg border border-stone-300 p-2 gap-2">
+                    {question.correctAnswers.map((keyword, kIndex) => (
+                      <div
+                        key={kIndex}
+                        className="flex items-center bg-blue-100 focus:outline-none text-indigo-400 px-3 py-1 rounded-full text-sm font-medium gap-2 shadow-sm transition-all duration-200"
+                      >
+                        <span>{keyword}</span>
+                        <button
+                          onClick={() => handleDeleteKeyword(qIndex, kIndex)}
+                          className="text-indigo-400 hover:text-[#FF8383] cursor-pointer font-medium transition-all duration-200"
+                        >
+                          ✕
+                        </button>
+                      </div>
+                    ))}
                   </div>
-                ))}
-              </div>
-              <input
-                type="text"
-                placeholder="Add Keyword"
-                className="border border-stone-300 py-2 px-4 focus:outline-none rounded-b-lg bg-white w-full text-stone-600"
-                onKeyDown={(event) => handleKeywordKeyDown(qIndex, event)}
-                required
-              />
+                  <input
+                    type="text"
+                    placeholder="Add Keyword"
+                    className="border border-stone-300 py-2 px-4 focus:outline-none rounded-b-lg bg-white w-full text-stone-600"
+                    onKeyDown={(event) => handleKeywordKeyDown(qIndex, event)}
+                    required
+                  />
+                </div>
+              )}
             </div>
           )}
 

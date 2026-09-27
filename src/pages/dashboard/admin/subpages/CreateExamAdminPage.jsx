@@ -1427,7 +1427,17 @@ const CreateExamAdminPage = () => {
         return false;
       }
 
-      if (q.questionType === "Short Answer" && q.correctAnswers.length === 0) {
+      if (q.questionType === "Short Answer" && q.natAnswerMode === "range") {
+        if (!isValidRangeBound(q.rangeMin) || !isValidRangeBound(q.rangeMax)) {
+          toast.error(
+            `Question ${qIndex + 1}: Please enter a valid range (e.g. "1.09 to 1.11").`,
+          );
+          return false;
+        }
+      } else if (
+        q.questionType === "Short Answer" &&
+        q.correctAnswers.length === 0
+      ) {
         toast.error("Short Answer questions must have at least one keyword!");
         return false;
       }
