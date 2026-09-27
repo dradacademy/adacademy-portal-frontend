@@ -155,4 +155,40 @@ export const MathText = ({ text, className }) => {
   );
 };
 
+// answerKeyText is written by two different paths that don't agree on
+// format: the admin's manual exam-builder field is a ReactQuill rich-text
+// editor, which always saves real HTML (at minimum wrapped in <p>...</p>,
+// often with <br>, bold, lists, etc.); the AI-assisted PDF import path
+// (pdfImportController.js) instead saves a PLAIN string straight from the
+// extraction model — ordinary prose with literal "\n" line breaks and
+// \(...\)/\[...\] LaTeX delimiters, no HTML tags at all. Both are stored in
+// the same field, so a renderer has to tell them apart: an HTML-authored
+// value must still go through dangerouslySetInnerHTML (its formatting is
+// real markup, and MathText would show the tags as literal text), while a
+// plain extracted value needs to run through MathText (to actually render
+// its LaTeX) with line breaks preserved (its "\n"s otherwise collapse under
+// normal HTML whitespace rules, since it has none of its own markup to
+// break lines for it). A rich-text editor's output always contains at
+// least one tag, so "does this look like it has an HTML tag in it" is a
+// reliable, cheap way to pick the right path without a stored format flag.
+const HTML_TAG_RE = /<\/?[a-z][a-z0-9]*(\s[^>]*)?>/i;
+
+/**
+ * Renders a Question's answerKeyText field, whichever of the two authoring
+ * paths above produced it. See the comment above for why this dual-path
+ * check exists instead of always using one renderer.
+ */
+export const AnswerKeyText = ({ text, className }) => {
+  if (!text) return null;
+  if (HTML_TAG_RE.test(text)) {
+    return <div className={className} dangerouslySetInnerHTML={{ __html: text }} />;
+  }
+  return (
+    <MathText
+      text={text}
+      className={`${className || ""} whitespace-pre-line block`}
+    />
+  );
+};
+
 export default MathText;
