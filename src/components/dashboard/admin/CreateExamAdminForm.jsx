@@ -670,7 +670,7 @@ const CreateExamAdminForm = ({
                         })
                       }
                     />
-                    Exact value(s)
+                    Auto (default)
                   </label>
                   <label className="flex items-center gap-1.5 cursor-pointer select-none">
                     <Radio
@@ -682,9 +682,17 @@ const CreateExamAdminForm = ({
                         })
                       }
                     />
-                    Range (any value in between is correct)
+                    Custom range
                   </label>
                 </div>
+              )}
+              {question.isNumericAnswer && (question.natAnswerMode || "exact") === "exact" && (
+                <p className="text-xs text-stone-500 -mt-1">
+                  A decimal answer (e.g. "2.30") is automatically graded correct
+                  within a rounding tolerance of its last decimal place (2.29 to
+                  2.31) — no setup needed. A whole-number answer stays an exact
+                  match. Pick "Custom range" only if you need a different range.
+                </p>
               )}
 
               {question.isNumericAnswer && question.natAnswerMode === "range" ? (
@@ -761,10 +769,16 @@ const CreateExamAdminForm = ({
                     })
                   }
                 />
-                Grade as a numeric range instead of keywords — for a
-                GATE-style numeric answer with a rounding-tolerance range
-                (e.g. "1.09 to 1.11"), any value in between is correct
+                Use a custom numeric range instead of the automatic one
               </label>
+              {question.natAnswerMode !== "range" && (
+                <p className="text-xs text-stone-500 -mt-1">
+                  When the Expected Keyword is a single decimal number (e.g.
+                  "1.10"), it's automatically graded correct within a rounding
+                  tolerance of its last decimal place (1.09 to 1.11) — no
+                  setup needed. Check this only if you need a different range.
+                </p>
+              )}
 
               {question.natAnswerMode === "range" ? (
                 <div className="flex flex-col gap-1">

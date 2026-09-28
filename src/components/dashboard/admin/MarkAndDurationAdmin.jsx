@@ -33,18 +33,21 @@ const MarkAndDurationAdmin = () => {
   };
   const handleCloseDeleteHistoryPopup = () => setDeleteHistoryPopup(false);
 
-  // One-time (safely re-runnable) fix for Short Answer questions that
-  // already state a numeric tolerance range in their answer explanation
-  // (e.g. "1.10 (Range: 1.09 to 1.11)") but were created before Short
-  // Answer supported structured range-mode grading, so in-range answers
-  // were wrongly marked incorrect. Sets the range on every matching
-  // question and re-grades every already-completed submission affected —
-  // covers both previously-completed and future attempts in one click.
+  // Numeric-answer grading (Short Answer with one numeric keyword, and
+  // numeric Fill in the Blanks) now automatically applies a GATE-style
+  // rounding-tolerance range derived from the stored correct answer itself
+  // (e.g. "1.10" accepts 1.09 to 1.11) — no per-question setup needed, and
+  // it applies to every already-created question as well as every future
+  // one, since it's computed fresh at grading time rather than stored on
+  // the question. The only thing still needed after a grading-logic change
+  // like this is re-checking submissions that were already marked under
+  // the old (exact-match-only) logic — this action does that, across every
+  // exam, in one click. Safe to re-run any time.
   const [backfillLoading, setBackfillLoading] = useState(false);
   const handleBackfillShortAnswerRanges = async () => {
     if (
       !window.confirm(
-        "This scans every Short Answer question for a stated answer range (e.g. \"Range: 1.09 to 1.11\") that isn't yet set up for range grading, switches those questions to range mode, and re-grades every affected exam's already-completed submissions.\n\nThis cannot be undone automatically. Continue?"
+        "This re-grades every already-completed submission on every exam against the current numeric-answer grading (which now automatically accepts a rounding-tolerance range around numeric answers, e.g. \"1.10\" accepts 1.09 to 1.11). Marks and pass/fail status may change for affected students.\n\nThis cannot be undone automatically. Continue?"
       )
     ) {
       return;
@@ -54,13 +57,13 @@ const MarkAndDurationAdmin = () => {
       const response = await axios.post(
         `${import.meta.env.VITE_APP_API_URL}/exams/short-answer-range-backfill`
       );
-      toast.success(response.data.message || "Backfill complete", {
+      toast.success(response.data.message || "Re-grade complete", {
         duration: 8000,
       });
     } catch (error) {
       toast.error(
         error.response?.data?.message ||
-          "Failed to backfill Short Answer range grading"
+          "Failed to re-grade exams against the current numeric-answer grading"
       );
     } finally {
       setBackfillLoading(false);
@@ -200,8 +203,8 @@ const MarkAndDurationAdmin = () => {
             className=" bg-emerald-600 font-medium text-white py-2 px-4 rounded-md cursor-pointer hover:opacity-85 duration-300 disabled:opacity-60 disabled:cursor-not-allowed"
           >
             {backfillLoading
-              ? "Fixing Short Answer Ranges..."
-              : "Fix Short Answer Ranges"}
+              ? "Re-grading All Exams..."
+              : "Re-grade All Exams (Numeric Tolerance)"}
           </button>
         </div>
       </div>
