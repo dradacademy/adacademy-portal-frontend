@@ -3,6 +3,7 @@ import axios from "axios";
 import toast from "react-hot-toast";
 import "katex/dist/katex.min.css";
 import { MathText, plainAnswerKeyToHtml } from "../../../utils/mathText";
+import { describeNumericAcceptance } from "../../../utils/examMarks";
 import {
   ArrowLeft,
   ArrowRight,
@@ -787,6 +788,27 @@ const PdfQuestionImportAdmin = ({ onImportQuestions }) => {
                       className="w-full text-sm border border-gray-200 rounded-lg px-2 py-1.5"
                       placeholder="Correct answer(s), comma separated"
                     />
+
+                    {q.questionType === "Fill in the Blanks" &&
+                      describeNumericAcceptance(q.correctAnswers) && (
+                        <div className="text-xs text-emerald-700 flex flex-wrap items-center gap-x-3 gap-y-1">
+                          <span>
+                            Numeric answer — {describeNumericAcceptance(q.correctAnswers)}{" "}
+                            (automatic).
+                          </span>
+                          <label className="flex items-center gap-1 text-gray-600 cursor-pointer">
+                            <input
+                              type="checkbox"
+                              checked={!!q.isNumericAnswer}
+                              onChange={(e) =>
+                                updateDraft(index, "isNumericAnswer", e.target.checked)
+                              }
+                              className="h-3.5 w-3.5 accent-purple-600"
+                            />
+                            show students the number pad
+                          </label>
+                        </div>
+                      )}
 
                     {q.answerKeyWarning && (
                       <div className="text-xs bg-amber-50 border border-amber-300 text-amber-800 rounded-lg px-2 py-1.5">

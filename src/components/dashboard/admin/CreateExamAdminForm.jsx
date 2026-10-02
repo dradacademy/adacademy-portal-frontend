@@ -5,6 +5,7 @@ import { Box, IconButton, Radio, Checkbox } from "@mui/material";
 import { MathText } from "../../../utils/mathText";
 import "katex/dist/katex.min.css";
 import AnswerKeyImagesEditor from "./AnswerKeyImagesEditor";
+import { describeNumericAcceptance } from "../../../utils/examMarks";
 
 import ReactQuill from "react-quill";
 import "react-quill/dist/quill.snow.css";
@@ -239,15 +240,15 @@ const CreateExamAdminForm = ({
               })
             }
           />
-          Numeric answer keypad for ALL "Fill in the Blanks" questions in
+          Force the number pad for EVERY "Fill in the Blanks" question in
           this exam
         </label>
         <p className="text-xs text-stone-400 pl-6">
-          Turns on the on-screen number pad (and value-based grading) for
-          every Fill-in-the-Blanks question here at once — you don't need to
-          tick each question's own "Numeric answer" box individually. That
-          per-question box below still works on its own for exams where only
-          some questions are numeric.
+          Normally not needed: a Fill-in-the-Blanks question whose correct
+          answer is a number automatically gets the on-screen number pad and
+          value-based grading, and one that expects words keeps its text box.
+          Tick this only if you want the number pad on every blank here,
+          including ones with word answers (students could not type those).
         </p>
       </div>
 
@@ -654,9 +655,10 @@ const CreateExamAdminForm = ({
                     })
                   }
                 />
-                Numeric answer (NAT-style) — show students the on-screen
-                number pad instead of a text box, and grade by value (so
-                "2.3" and "2.30" both count as correct)
+                Numeric answer (NAT-style) — automatic whenever the correct
+                answer is a number (students get the on-screen number pad and
+                grading is by value, so "2.3" and "2.30" both count). Tick
+                this only to force it for an answer that is not a plain number.
               </label>
 
               {question.isNumericAnswer && (
@@ -695,6 +697,16 @@ const CreateExamAdminForm = ({
                   match. Pick "Custom range" only if you need a different range.
                 </p>
               )}
+              {(question.natAnswerMode || "exact") === "exact" &&
+                describeNumericAcceptance(question.correctAnswers) && (
+                  <p className="text-xs text-emerald-700 -mt-1">
+                    {describeNumericAcceptance(question.correctAnswers)} —
+                    applied automatically
+                    {question.isNumericAnswer
+                      ? "."
+                      : ", even though the number-pad box above is not ticked (tick it only to show students the number pad)."}
+                  </p>
+                )}
 
               {question.isNumericAnswer && question.natAnswerMode === "range" ? (
                 <div className="flex flex-col gap-1">

@@ -27,13 +27,14 @@ import {
   resolveQuestionMarks,
   calculateTotalPossibleMarks,
   isNumericAnswerInRange,
+  isNumericAnswerCorrect,
+  isNumericAnswerKey,
+  isShortAnswerNumericAutoMatch,
 } from "../../../utils/examMarks";
 import { toPng } from "html-to-image";
 import download from "downloadjs";
 import "katex/dist/katex.min.css";
 import { MathText, AnswerKeyText } from "../../../utils/mathText";
-import AnswerKeyImages from "../../../components/common/AnswerKeyImages";
-import { getAnswerKeyImageUrls } from "../../../utils/answerKeyImages";
 
 const formatDate = (dateString) => {
   const options = { year: "numeric", month: "short", day: "numeric" };
@@ -253,6 +254,16 @@ const CompletedExamSubmissionDetail = () => {
         return isCorrect ? positiveMark : 0;
       }
 
+      // Numeric (NAT) answer - flagged or simply a number key: graded by value
+      // with the automatic rounding tolerance, exactly like the backend.
+      if (questionId?.isNumericAnswer || isNumericAnswerKey(correctAnswer)) {
+        const isCorrect = isNumericAnswerCorrect(
+          { correctAnswers: correctAnswer, natAnswerMode: questionId?.natAnswerMode },
+          studentAnswer,
+        );
+        return isCorrect ? positiveMark : 0;
+      }
+
       const normalizedStudentAnswer = studentAnswer
         .toLowerCase()
         .trim()
@@ -355,6 +366,13 @@ const CompletedExamSubmissionDetail = () => {
 
       const keywords = correctAnswer || [];
       if (!Array.isArray(keywords)) return 0;
+
+      // A single-number keyword is graded by value with the automatic
+      // rounding tolerance (null = not numeric, keep keyword matching).
+      const autoNumeric = isShortAnswerNumericAutoMatch(keywords, studentAnswer);
+      if (autoNumeric !== null) {
+        return autoNumeric ? positiveMark : 0;
+      }
 
       const normalizedStudentAnswer = studentAnswer.toLowerCase().trim();
       const matches = keywords.filter((keyword) =>
@@ -957,7 +975,7 @@ const CompletedExamSubmissionDetail = () => {
                       </div>
                     )}
                     
-                    {(question.questionId.answerKeyText || getAnswerKeyImageUrls(question.questionId).length > 0) && (
+                    {(question.questionId.answerKeyText || question.questionId.answerKeyImage) && (
                       <div className="mt-4 p-4 bg-indigo-50/50 rounded-lg border border-indigo-100">
                         <div className="text-sm font-semibold text-indigo-800 mb-2">Answer Explanation</div>
                         {question.questionId.answerKeyText && (
@@ -966,7 +984,9 @@ const CompletedExamSubmissionDetail = () => {
                             className="text-sm text-gray-700 mb-3 answer-key-rich-text"
                           />
                         )}
-                        <AnswerKeyImages images={getAnswerKeyImageUrls(question.questionId)} />
+                        {question.questionId.answerKeyImage && (
+                          <img src={question.questionId.answerKeyImage} alt="Answer Explanation" className="max-h-48 object-contain rounded border border-gray-200 bg-white p-1" />
+                        )}
                       </div>
                     )}
                   </div>

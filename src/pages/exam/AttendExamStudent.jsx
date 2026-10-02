@@ -41,6 +41,7 @@ import { MarkContext } from "../../context/MarkContext";
 import { DurationContext } from "../../context/DurationContext";
 import "katex/dist/katex.min.css";
 import { MathText } from "../../utils/mathText";
+import { usesNumericKeypad } from "../../utils/examMarks";
 
 const formatTime = (seconds) => {
   const minutes = Math.floor(seconds / 60);
@@ -701,7 +702,7 @@ const AttendExamStudent = () => {
                 )}
                 {currentQuestion.questionType === "Fill in the Blanks" && (
                   <p className="text-sm text-gray-500 italic">
-                    {examData.allNumericAnswerKeypad || currentQuestion.isNumericAnswer
+                    {usesNumericKeypad(currentQuestion, examData)
                       ? "Enter a numeric answer using the keypad below."
                       : "Fill in the blank with the appropriate word or phrase."}
                   </p>
@@ -808,7 +809,7 @@ const AttendExamStudent = () => {
                   </div>
                 )}
                 {currentQuestion.questionType === "Fill in the Blanks" &&
-                  (examData.allNumericAnswerKeypad || currentQuestion.isNumericAnswer ? (
+                  (usesNumericKeypad(currentQuestion, examData) ? (
                     <NumericKeypad
                       value={answers[currentQuestionIndex]?.studentAnswer || ""}
                       onChange={handleAnswerChange}
