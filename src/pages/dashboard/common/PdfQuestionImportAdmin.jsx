@@ -4,6 +4,7 @@ import toast from "react-hot-toast";
 import "katex/dist/katex.min.css";
 import { MathText, plainAnswerKeyToHtml } from "../../../utils/mathText";
 import { describeNumericAcceptance } from "../../../utils/examMarks";
+import AiUsagePanel from "../../../components/dashboard/admin/AiUsagePanel";
 import {
   ArrowLeft,
   ArrowRight,
@@ -115,6 +116,8 @@ const PdfQuestionImportAdmin = ({ onImportQuestions }) => {
   const [answerKeyFile, setAnswerKeyFile] = useState(null);
   const [isExtracting, setIsExtracting] = useState(false);
   const [draftQuestions, setDraftQuestions] = useState(null); // null = no review in progress
+  // Bumped after every extraction attempt so the AI-credits meter refreshes.
+  const [usageRefresh, setUsageRefresh] = useState(0);
 
   // Screenshots: [{ id, file, url }] in the order they will be read.
   const [images, setImages] = useState([]);
@@ -299,6 +302,7 @@ const PdfQuestionImportAdmin = ({ onImportQuestions }) => {
       );
     } finally {
       setIsExtracting(false);
+      setUsageRefresh((n) => n + 1);
     }
   };
 
@@ -365,6 +369,8 @@ const PdfQuestionImportAdmin = ({ onImportQuestions }) => {
           </div>
         </div>
       </div>
+
+      <AiUsagePanel refreshKey={usageRefresh} />
 
       {draftQuestions === null ? (
         <div>
