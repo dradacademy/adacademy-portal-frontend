@@ -4,6 +4,7 @@ import { MdDelete } from "react-icons/md";
 import { Box, IconButton, Radio, Checkbox } from "@mui/material";
 import { MathText } from "../../../utils/mathText";
 import "katex/dist/katex.min.css";
+import AnswerKeyImagesEditor from "./AnswerKeyImagesEditor";
 
 import ReactQuill from "react-quill";
 import "react-quill/dist/quill.snow.css";
@@ -862,49 +863,15 @@ const CreateExamAdminForm = ({
                   />
                 </div>
               </div>
-              <div className="grid grid-cols-2 gap-3 mt-2">
-                <div>
-                  <label className="text-xs text-stone-500 mb-1 block">Answer Key Image</label>
-                  <div
-                    tabIndex={0}
-                    onPaste={(e) =>
-                      handleImagePaste(e, (file) =>
-                        handleAnswerKeyChange(qIndex, "answerKeyImage", file)
-                      )
-                    }
-                    className="flex flex-col gap-1 border-2 border-dashed border-stone-300 rounded-xl p-1 bg-white focus:outline-none focus:border-indigo-400"
-                  >
-                    <input
-                      type="file"
-                      accept="image/*"
-                      onChange={(e) => {
-                        if (e.target.files && e.target.files[0]) {
-                          handleAnswerKeyChange(qIndex, "answerKeyImage", e.target.files[0]);
-                        }
-                      }}
-                      className="w-full py-1 px-3 font-medium text-center text-sm flex items-center justify-center cursor-pointer duration-300"
-                    />
-                    <span className="text-[10px] text-stone-400 text-center">
-                      or click here and paste (Ctrl+V) a screenshot
-                    </span>
-                  </div>
-                </div>
-                {question.answerKeyImage ? (
-                  <img
-                    src={
-                      typeof question.answerKeyImage === "string"
-                        ? question.answerKeyImage
-                        : URL.createObjectURL(question.answerKeyImage)
-                    }
-                    className="max-h-24 object-contain flex items-center justify-center border border-stone-200 rounded-lg p-1"
-                    alt="Answer Key Preview"
-                  />
-                ) : (
-                  <div className="flex items-center justify-center text-stone-400 text-sm border-2 border-dashed border-stone-200 rounded-xl h-24">
-                    No Image
-                  </div>
-                )}
-              </div>
+              <AnswerKeyImagesEditor
+                question={question}
+                onChange={(list) => {
+                  // answerKeyImages is the full ordered list; answerKeyImage
+                  // always mirrors its first entry (what older code reads).
+                  handleAnswerKeyChange(qIndex, "answerKeyImages", list);
+                  handleAnswerKeyChange(qIndex, "answerKeyImage", list[0] || null);
+                }}
+              />
             </div>
           </div>
 

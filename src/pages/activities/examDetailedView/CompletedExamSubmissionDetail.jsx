@@ -32,6 +32,8 @@ import { toPng } from "html-to-image";
 import download from "downloadjs";
 import "katex/dist/katex.min.css";
 import { MathText, AnswerKeyText } from "../../../utils/mathText";
+import AnswerKeyImages from "../../../components/common/AnswerKeyImages";
+import { getAnswerKeyImageUrls } from "../../../utils/answerKeyImages";
 
 const formatDate = (dateString) => {
   const options = { year: "numeric", month: "short", day: "numeric" };
@@ -955,7 +957,7 @@ const CompletedExamSubmissionDetail = () => {
                       </div>
                     )}
                     
-                    {(question.questionId.answerKeyText || question.questionId.answerKeyImage) && (
+                    {(question.questionId.answerKeyText || getAnswerKeyImageUrls(question.questionId).length > 0) && (
                       <div className="mt-4 p-4 bg-indigo-50/50 rounded-lg border border-indigo-100">
                         <div className="text-sm font-semibold text-indigo-800 mb-2">Answer Explanation</div>
                         {question.questionId.answerKeyText && (
@@ -964,9 +966,7 @@ const CompletedExamSubmissionDetail = () => {
                             className="text-sm text-gray-700 mb-3 answer-key-rich-text"
                           />
                         )}
-                        {question.questionId.answerKeyImage && (
-                          <img src={question.questionId.answerKeyImage} alt="Answer Explanation" className="max-h-48 object-contain rounded border border-gray-200 bg-white p-1" />
-                        )}
+                        <AnswerKeyImages images={getAnswerKeyImageUrls(question.questionId)} />
                       </div>
                     )}
                   </div>

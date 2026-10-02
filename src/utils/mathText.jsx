@@ -1,4 +1,6 @@
-import React from "react";
+import React, { useMemo } from "react";
+import katex from "katex";
+import "katex/dist/katex.min.css";
 import { InlineMath, BlockMath } from "react-katex";
 
 // Defensive normalization: some sources (AI-assisted PDF extraction has done
@@ -173,19 +175,135 @@ export const MathText = ({ text, className }) => {
 // reliable, cheap way to pick the right path without a stored format flag.
 const HTML_TAG_RE = /<\/?[a-z][a-z0-9]*(\s[^>]*)?>/i;
 
+// ---- Step line breaks for flattened explanations -------------------------
+// An explanation that was pasted/saved with its line breaks collapsed reads as
+// one wall of text: "1. Characteristic ... 2. Matrix ... 3. Extracting ...".
+// This re-inserts a break before each "N." step marker, but ONLY when the
+// markers form an unbroken 1, 2, 3 ... run and each follows the end of a
+// sentence or a formula - so a stray "= 2. Then" can never split a line.
+const STEP_MARKER_RE = /(^|>|\s)(\d{1,2})\.\s+(?=[A-Z])/g;
+export function insertStepBreaks(text, breakToken) {
+  if (!text) return text;
+  const candidates = [];
+  let m;
+  const re = new RegExp(STEP_MARKER_RE);
+  while ((m = re.exec(text)) !== null) {
+    const before = text.slice(0, m.index).replace(/\s+$/, "");
+    const last = before.slice(-1);
+    // Step 1 may open the text (or follow an opening tag); later steps must
+    // follow . : ; ! ? ) ] } or a letter, i.e. the end of a sentence/formula.
+    const endsStep = before === "" || /[.:;!?)\]>A-Za-z}]/.test(last);
+    if (endsStep) {
+      candidates.push({ index: m.index, lead: m[1], num: Number(m[2]), len: m[0].length });
+    }
+  }
+  let expected = 1;
+  const accepted = [];
+  for (const c of candidates) {
+    if (c.num === expected) {
+      accepted.push(c);
+      expected += 1;
+    }
+  }
+  if (accepted.length < 2) return text;
+  let out = "";
+  let cursor = 0;
+  accepted.forEach((c, i) => {
+    out += text.slice(cursor, c.index);
+    const keepLead = /\s/.test(c.lead) ? "" : c.lead; // drop the space we replace with a break, keep ">"
+    out += i > 0 ? keepLead + breakToken : keepLead;
+    out += text.slice(c.index + c.lead.length, c.index + c.len);
+    cursor = c.index + c.len;
+  });
+  return out + text.slice(cursor);
+}
+
+// ---- Math inside rich-text (HTML) explanations ---------------------------
+// The exam builder's rich-text editor always saves HTML, and an explanation
+// that came from the AI import still has its math as literal \( ... \) text
+// inside that HTML. dangerouslySetInnerHTML never runs KaTeX, so it showed up
+// as raw source. This walks only the TEXT nodes of the HTML (so markup is never
+// touched), swaps each \( \) / \[ \] span for rendered KaTeX, and leaves a
+// span that fails to parse as its plain source.
+const MATH_SPAN_RE = /\\\[([\s\S]+?)\\\]|\\\(([\s\S]+?)\\\)/g;
+
+export function renderHtmlWithMath(html) {
+  if (!html || typeof DOMParser === "undefined") return html;
+  const doc = new DOMParser().parseFromString(html, "text/html");
+  const walker = doc.createTreeWalker(doc.body, NodeFilter.SHOW_TEXT);
+  const nodes = [];
+  while (walker.nextNode()) nodes.push(walker.currentNode);
+
+  nodes.forEach((node) => {
+    const text = node.nodeValue || "";
+    if (!/\\[([]/.test(text)) return;
+    const frag = doc.createDocumentFragment();
+    const re = new RegExp(MATH_SPAN_RE);
+    let last = 0;
+    let match;
+    while ((match = re.exec(text)) !== null) {
+      if (match.index > last) frag.appendChild(doc.createTextNode(text.slice(last, match.index)));
+      const display = match[1] !== undefined;
+      const source = normalizeUnicodeMath(match[1] !== undefined ? match[1] : match[2]);
+      let rendered;
+      try {
+        rendered = katex.renderToString(source, { displayMode: display, throwOnError: true });
+      } catch (_) {
+        rendered = null;
+      }
+      if (rendered) {
+        const holder = doc.createElement(display ? "div" : "span");
+        holder.innerHTML = rendered;
+        frag.appendChild(holder);
+      } else {
+        frag.appendChild(doc.createTextNode(source));
+      }
+      last = match.index + match[0].length;
+    }
+    if (last === 0) return;
+    if (last < text.length) frag.appendChild(doc.createTextNode(text.slice(last)));
+    node.parentNode.replaceChild(frag, node);
+  });
+  return doc.body.innerHTML;
+}
+
+// Plain extracted text (from the AI import) -> the simple HTML paragraphs the
+// rich-text editor expects, one paragraph per line, so line breaks survive
+// being loaded into the editor. Already-HTML values are returned unchanged.
+export function plainAnswerKeyToHtml(text) {
+  if (!text || HTML_TAG_RE.test(text)) return text;
+  const esc = (s) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  return String(text)
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter(Boolean)
+    .map((line) => `<p>${esc(line)}</p>`)
+    .join("");
+}
+
 /**
  * Renders a Question's answerKeyText field, whichever of the two authoring
  * paths above produced it. See the comment above for why this dual-path
  * check exists instead of always using one renderer.
  */
 export const AnswerKeyText = ({ text, className }) => {
+  const html = useMemo(() => {
+    if (!text || !HTML_TAG_RE.test(text)) return null;
+    // Only a single flattened block gets step breaks; real multi-paragraph
+    // HTML already has its own structure.
+    const blocks = (text.match(/<(p|div|li)[\s>]/gi) || []).length;
+    const stepped = blocks <= 1 && !/<br\s*\/?>/i.test(text) ? insertStepBreaks(text, "<br>") : text;
+    return renderHtmlWithMath(stepped);
+  }, [text]);
+
   if (!text) return null;
-  if (HTML_TAG_RE.test(text)) {
-    return <div className={className} dangerouslySetInnerHTML={{ __html: text }} />;
+  if (html !== null) {
+    return <div className={className} dangerouslySetInnerHTML={{ __html: html }} />;
   }
+  const plain = /\n/.test(text) ? text : insertStepBreaks(text, "\n");
   return (
     <MathText
-      text={text}
+      text={plain}
       className={`${className || ""} whitespace-pre-line block`}
     />
   );

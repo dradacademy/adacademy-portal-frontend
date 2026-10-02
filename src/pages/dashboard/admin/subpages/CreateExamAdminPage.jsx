@@ -136,6 +136,7 @@ const CreateExamAdminPage = () => {
     image: null,
     answerKeyText: "",
     answerKeyImage: null,
+    answerKeyImages: [],
   });
 
   const [newQuestions, setNewQuestions] = useState([blankQuestion()]);
@@ -221,6 +222,11 @@ const CreateExamAdminPage = () => {
         q.answerKeyImage && typeof q.answerKeyImage === "object"
           ? { __imagePending: true }
           : q.answerKeyImage,
+      answerKeyImages: Array.isArray(q.answerKeyImages)
+        ? q.answerKeyImages.map((img) =>
+            img && typeof img === "object" ? { __imagePending: true } : img,
+          )
+        : q.answerKeyImages,
       options: q.options
         ? q.options.map((opt) =>
             opt && opt.image && typeof opt.image === "object"
@@ -238,7 +244,12 @@ const CreateExamAdminPage = () => {
         next.image = null;
         droppedAny = true;
       }
-      if (next.answerKeyImage && next.answerKeyImage.__imagePending) {
+      if (Array.isArray(next.answerKeyImages)) {
+        const kept = next.answerKeyImages.filter((img) => img && !img.__imagePending);
+        if (kept.length !== next.answerKeyImages.length) droppedAny = true;
+        next.answerKeyImages = kept;
+        next.answerKeyImage = kept[0] || null;
+      } else if (next.answerKeyImage && next.answerKeyImage.__imagePending) {
         next.answerKeyImage = null;
         droppedAny = true;
       }
@@ -454,6 +465,12 @@ const CreateExamAdminPage = () => {
         options: q.options ? q.options.map(opt => typeof opt === "string" ? { text: opt, image: null } : opt) : q.options,
         answerKeyText: q.answerKeyText || "",
         answerKeyImage: q.answerKeyImage || null,
+        answerKeyImages:
+          Array.isArray(q.answerKeyImages) && q.answerKeyImages.length > 0
+            ? q.answerKeyImages
+            : q.answerKeyImage
+            ? [q.answerKeyImage]
+            : [],
         // NAT range-grading fields — reconstruct the admin-facing raw text
         // ("10 to 15") from the stored rangeMin/rangeMax so re-opening an
         // existing range question shows a normal-looking range rather than
@@ -1526,7 +1543,21 @@ const CreateExamAdminPage = () => {
           if (question.image && typeof question.image === "object") {
             updatedQ.image = await uploadToCloudinary(question.image) || question.image;
           }
-          if (question.answerKeyImage && typeof question.answerKeyImage === "object") {
+          if (Array.isArray(question.answerKeyImages)) {
+            // Several answer-key screenshots: upload the new ones in order and
+            // keep already-uploaded URLs as they are. answerKeyImage mirrors the first.
+            const uploadedKeyImages = [];
+            for (const img of question.answerKeyImages) {
+              if (img && typeof img === "object") {
+                const url = await uploadToCloudinary(img);
+                if (url) uploadedKeyImages.push(url);
+              } else if (img) {
+                uploadedKeyImages.push(img);
+              }
+            }
+            updatedQ.answerKeyImages = uploadedKeyImages;
+            updatedQ.answerKeyImage = uploadedKeyImages[0] || null;
+          } else if (question.answerKeyImage && typeof question.answerKeyImage === "object") {
             updatedQ.answerKeyImage = await uploadToCloudinary(question.answerKeyImage) || question.answerKeyImage;
           }
           if (question.options) {

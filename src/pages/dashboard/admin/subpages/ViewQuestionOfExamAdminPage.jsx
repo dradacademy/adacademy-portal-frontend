@@ -6,6 +6,9 @@ import { BiBarChart, BiHash } from "react-icons/bi";
 import { FaUser, FaFilePdf, FaFileWord } from "react-icons/fa";
 import { IoIosArrowBack } from "react-icons/io";
 import { useNavigate, useParams } from "react-router-dom";
+import { AnswerKeyText } from "../../../../utils/mathText";
+import AnswerKeyImages from "../../../../components/common/AnswerKeyImages";
+import { getAnswerKeyImageUrls } from "../../../../utils/answerKeyImages";
 
 const ViewQuestionOfExamAdminPage = () => {
   const navigate = useNavigate();
@@ -147,16 +150,15 @@ const ViewQuestionOfExamAdminPage = () => {
   };
 
   const renderAnswerKey = (question) => {
-    if (!question.answerKeyText && !question.answerKeyImage) return null;
+    const keyImages = getAnswerKeyImageUrls(question);
+    if (!question.answerKeyText && keyImages.length === 0) return null;
     return (
       <div className="mt-2 p-4 bg-indigo-50/50 rounded-xl border border-indigo-100">
         <div className="text-sm font-semibold text-indigo-800 mb-2">Answer Key</div>
         {question.answerKeyText && (
-          <div className="text-sm text-gray-700 mb-3" dangerouslySetInnerHTML={{ __html: question.answerKeyText }} />
+          <AnswerKeyText text={question.answerKeyText} className="text-sm text-gray-700 mb-3 answer-key-rich-text" />
         )}
-        {question.answerKeyImage && (
-          <img src={question.answerKeyImage} alt="Answer Key" className="max-h-48 object-contain rounded border border-gray-200 bg-white p-1" />
-        )}
+        <AnswerKeyImages images={keyImages} />
       </div>
     );
   };

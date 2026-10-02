@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useRef, useState } from "react";
 import axios from "axios";
 import toast from "react-hot-toast";
 import "katex/dist/katex.min.css";
-import { MathText } from "../../../utils/mathText";
+import { MathText, plainAnswerKeyToHtml } from "../../../utils/mathText";
 import {
   ArrowLeft,
   ArrowRight,
@@ -328,7 +328,13 @@ const PdfQuestionImportAdmin = ({ onImportQuestions }) => {
       return;
     }
 
-    const cleaned = selected.map(({ selected: _s, ...q }) => q);
+    // answerKeyWarning is only a hint for this review screen (never saved). The
+    // explanation is converted to simple <p> lines so its step-by-step line
+    // breaks survive being loaded into the exam builder's rich-text editor.
+    const cleaned = selected.map(({ selected: _s, answerKeyWarning: _w, ...q }) => ({
+      ...q,
+      answerKeyText: plainAnswerKeyToHtml(q.answerKeyText),
+    }));
     onImportQuestions(cleaned);
     toast.success(`${cleaned.length} question(s) added to the exam!`);
     setDraftQuestions(null);
@@ -781,6 +787,12 @@ const PdfQuestionImportAdmin = ({ onImportQuestions }) => {
                       className="w-full text-sm border border-gray-200 rounded-lg px-2 py-1.5"
                       placeholder="Correct answer(s), comma separated"
                     />
+
+                    {q.answerKeyWarning && (
+                      <div className="text-xs bg-amber-50 border border-amber-300 text-amber-800 rounded-lg px-2 py-1.5">
+                        <strong>Please check this answer:</strong> {q.answerKeyWarning}
+                      </div>
+                    )}
 
                     <div>
                       <label className="text-[11px] text-gray-500 flex items-center gap-1">
