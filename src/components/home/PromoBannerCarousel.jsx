@@ -15,12 +15,6 @@ const SLIDES = [
     to: "#achievers",
   },
   {
-    key: "gate-2027-enrollment",
-    image: "/banner/gate-2027-enrollment.jpg",
-    alt: "GATE 2027 Batch Enrollment Going On — Contact 95668 18665",
-    type: "enroll",
-  },
-  {
     key: "ots-2027",
     image: "/banner/ots-gate-2027.jpg",
     alt: "Online Test Series for GATE 2027 — Contact 95668 18665",
