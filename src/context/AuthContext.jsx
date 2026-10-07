@@ -34,40 +34,99 @@ export const AuthContextProvider = ({ children }) => {
     }
   };
 
-  const fetchUser = async () => {
-    setLoading(true);
+  // ---- Stay-logged-in helpers -------------------------------------------
+  // The login is kept in localStorage (survives the phone killing the tab
+  // when the student switches apps). It is only ever cleared when the
+  // SERVER says the session is no longer valid (401/403 — logout, login on
+  // another device, disabled account, expired token) or on Logout. A
+  // network blip / slow backend while the app is reopening no longer logs
+  // the student out: we fall back to the last known user and retry.
+  const USER_CACHE_KEY = "authUser";
+
+  const cacheUser = (user) => {
+    try {
+      if (user) localStorage.setItem(USER_CACHE_KEY, JSON.stringify(user));
+      else localStorage.removeItem(USER_CACHE_KEY);
+    } catch {
+      /* storage unavailable — ignore */
+    }
+  };
+
+  const readCachedUser = () => {
+    try {
+      const raw = localStorage.getItem(USER_CACHE_KEY);
+      return raw ? JSON.parse(raw) : null;
+    } catch {
+      return null;
+    }
+  };
+
+  const clearLocalSession = () => {
+    localStorage.removeItem("token");
+    cacheUser(null);
+    setAuthHeader(null);
+    setUserData(null);
+  };
+
+  const isAuthRejection = (err) => {
+    const status = err?.response?.status;
+    return status === 401 || status === 403;
+  };
+
+  const fetchUser = async ({ silent = false } = {}) => {
+    if (!silent) setLoading(true);
     try {
       const token = localStorage.getItem("token");
       if (!token) {
-        setUserData(null);
-        setLoading(false);
+        clearLocalSession();
         return;
       }
 
-      // Check if token is expired
-      const decodedToken = jwtDecode(token);
-      const currentTime = Date.now() / 1000;
-      if (decodedToken.exp < currentTime) {
-        localStorage.removeItem("token");
-        setAuthHeader(null);
-        setUserData(null);
-        setLoading(false);
+      // Token past its expiry → genuinely logged out.
+      let decodedToken;
+      try {
+        decodedToken = jwtDecode(token);
+      } catch {
+        clearLocalSession();
+        return;
+      }
+      if (decodedToken.exp && decodedToken.exp < Date.now() / 1000) {
+        clearLocalSession();
         Navigate("/login");
         return;
       }
 
       setAuthHeader(token);
+      // Show the last known user immediately so the app opens straight
+      // into the logged-in view while /me is still loading.
+      const cached = readCachedUser();
+      if (cached && !silent) setUserData(cached);
+
       const res = await api.get(
         `${import.meta.env.VITE_APP_API_URL}/users/me`
       );
-      setUserData(res.data);
+      // Only replace userData if something actually changed, so a
+      // background refresh never re-renders/re-triggers open pages (e.g. a
+      // student mid-exam) for no reason.
+      setUserData((prev) =>
+        JSON.stringify(prev) === JSON.stringify(res.data) ? prev : res.data
+      );
+      cacheUser(res.data);
     } catch (err) {
       console.log("Fetch user error:", err);
-      localStorage.removeItem("token");
-      setAuthHeader(null);
-      setUserData(null);
+      if (isAuthRejection(err)) {
+        // Server rejected the session (logged out elsewhere, disabled,
+        // expired) — this is a real logout.
+        clearLocalSession();
+      } else {
+        // Network error / timeout / server waking up — keep the student
+        // logged in with the last known user; retry when back online or
+        // when the app comes back to the foreground.
+        const cached = readCachedUser();
+        if (cached) setUserData(cached);
+      }
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   };
 
@@ -87,6 +146,22 @@ export const AuthContextProvider = ({ children }) => {
 
   useEffect(() => {
     fetchUser();
+
+    // When the student returns to the app (from another app) or the phone
+    // regains internet, quietly re-confirm the session in the background —
+    // no loading spinner, no redirect unless the server says logged out.
+    const refreshIfLoggedIn = () => {
+      if (localStorage.getItem("token")) fetchUser({ silent: true });
+    };
+    const onVisibility = () => {
+      if (document.visibilityState === "visible") refreshIfLoggedIn();
+    };
+    document.addEventListener("visibilitychange", onVisibility);
+    window.addEventListener("online", refreshIfLoggedIn);
+    return () => {
+      document.removeEventListener("visibilitychange", onVisibility);
+      window.removeEventListener("online", refreshIfLoggedIn);
+    };
   }, []);
 
   useEffect(() => {
@@ -132,6 +207,7 @@ export const AuthContextProvider = ({ children }) => {
       const { data } = response;
       if (data) {
         localStorage.setItem("token", data.token);
+        cacheUser(data.user);
         setAuthHeader(data.token);
         setUserData(data.user);
         // A student who hasn't completed their profile goes straight there
@@ -161,9 +237,7 @@ export const AuthContextProvider = ({ children }) => {
       console.error("Logout API error:", error);
     } finally {
       // Always clear local state
-      localStorage.removeItem("token");
-      setAuthHeader(null);
-      setUserData(null);
+      clearLocalSession();
       Navigate("/login");
     }
   };
