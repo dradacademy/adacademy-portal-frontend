@@ -12,7 +12,9 @@ import {
   ArrowDown,
   ArrowUp,
   ArrowUpDown,
+  Eye,
 } from "lucide-react";
+import AdminVideoPreviewDialog from "../../../../components/dashboard/admin/AdminVideoPreviewDialog";
 import {
   EXAM_CATEGORY_OPTIONS,
   getCategoryLabel,
@@ -92,6 +94,7 @@ const RecordedClassesAdminPage = () => {
   const [recordings, setRecordings] = useState([]);
   const [loading, setLoading] = useState(true);
   const [activeCategory, setActiveCategory] = useState("all");
+  const [preview, setPreview] = useState(null);
 
   const [openFormPopup, setOpenFormPopup] = useState(false);
   const [editingId, setEditingId] = useState(null);
@@ -264,8 +267,9 @@ const RecordedClassesAdminPage = () => {
             Recorded Classes
           </h1>
           <p className="text-stone-400 font-medium">
-            Upload the class recording to YouTube as Unlisted, then paste
-            the link here. Students only see it while their course
+            Live classes are added here automatically when you press End
+            Live. To add any other video, upload it to YouTube as Unlisted
+            and use Add Recording. Students only see it while their course
             enrollment is active.
           </p>
         </div>
@@ -338,7 +342,14 @@ const RecordedClassesAdminPage = () => {
                     <div className="flex items-center gap-2">
                       <Video className="h-4 w-4 text-indigo-400 shrink-0" />
                       <div>
-                        <p className="font-medium text-gray-800">{rec.title}</p>
+                        <p className="font-medium text-gray-800">
+                          {rec.title}
+                          {rec.sourceLiveClassId && (
+                            <span className="ml-2 align-middle px-1.5 py-0.5 rounded bg-rose-50 text-rose-600 text-[10px] font-semibold">
+                              FROM LIVE
+                            </span>
+                          )}
+                        </p>
                         {rec.description && (
                           <p className="text-xs text-gray-400 line-clamp-1">
                             {rec.description}
@@ -377,6 +388,13 @@ const RecordedClassesAdminPage = () => {
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-2">
                       <button
+                        onClick={() => setPreview(rec)}
+                        className="p-1.5 rounded bg-emerald-50 text-emerald-600 hover:bg-emerald-100"
+                        title="View"
+                      >
+                        <Eye className="h-4 w-4" />
+                      </button>
+                      <button
                         onClick={() => handleOpenEdit(rec)}
                         className="p-1.5 rounded bg-indigo-50 text-indigo-600 hover:bg-indigo-100"
                         title="Edit"
@@ -408,6 +426,18 @@ const RecordedClassesAdminPage = () => {
           </tbody>
         </table>
       </div>
+
+      <AdminVideoPreviewDialog
+        open={Boolean(preview)}
+        onClose={() => setPreview(null)}
+        videoId={preview?.youtubeVideoId}
+        title={preview?.title}
+        subtitle={
+          preview
+            ? `${getCategoryLabel(preview.category)}${preview.description ? ` · ${preview.description}` : ""}`
+            : ""
+        }
+      />
 
       {/* Add/edit dialog */}
       <Dialog open={openFormPopup} onClose={saving ? undefined : handleClosePopup}>

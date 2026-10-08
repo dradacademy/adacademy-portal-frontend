@@ -12,7 +12,9 @@ import {
   ArrowDown,
   ArrowUp,
   ArrowUpDown,
+  Eye,
 } from "lucide-react";
+import AdminVideoPreviewDialog from "../../../../components/dashboard/admin/AdminVideoPreviewDialog";
 import {
   EXAM_CATEGORY_OPTIONS,
   getCategoryLabel,
@@ -88,6 +90,7 @@ const LiveClassAdminPage = () => {
   const [editForm, setEditForm] = useState(EMPTY_EDIT_FORM);
   const [editSaving, setEditSaving] = useState(false);
   const [sort, setSort] = useState({ key: null, dir: "asc" });
+  const [preview, setPreview] = useState(null);
 
   const handleSort = (key) => {
     setSort((prev) =>
@@ -153,13 +156,31 @@ const LiveClassAdminPage = () => {
     }
   };
 
+  // Ending a class also adds it to Recorded Classes automatically (same
+  // YouTube video — YouTube keeps the stream as a normal video once it
+  // ends). It can be edited, retired or deleted there like any recording.
   const handleEndLive = async (liveClass) => {
+    const confirmed = window.confirm(
+      `End "${liveClass.title}"?\n\nIt will also be added to Recorded Classes automatically (visible to students for 7 days — you can change that in Recorded Classes).`
+    );
+    if (!confirmed) return;
+
     setEnding(liveClass._id);
     try {
-      await axios.patch(
-        `${import.meta.env.VITE_APP_API_URL}/live-classes/${liveClass._id}/end`
+      const { data } = await axios.patch(
+        `${import.meta.env.VITE_APP_API_URL}/live-classes/${liveClass._id}/end`,
+        { addToRecorded: true }
       );
-      toast.success("Live class ended.");
+      if (data?.recordingCreated) {
+        toast.success("Live class ended and added to Recorded Classes.");
+      } else if (data?.recordedClass) {
+        toast.success("Live class ended. It was already in Recorded Classes.");
+      } else {
+        toast.success("Live class ended.");
+        if (data?.recordingError) {
+          toast.error("Couldn't add it to Recorded Classes automatically — add it with \"Add Recording\" there.");
+        }
+      }
       fetchHistory();
     } catch (error) {
       toast.error("Failed to end the live class.");
@@ -252,8 +273,8 @@ const LiveClassAdminPage = () => {
         <p className="text-stone-400 font-medium">
           Start your YouTube Live stream as usual, then paste its watch link
           here so students in that category can join it from inside the
-          app. Once the class ends, add it to Recorded Classes separately if
-          you want it kept on-demand.
+          app. When you press End Live, the class is added to Recorded
+          Classes automatically.
         </p>
       </div>
 
@@ -278,6 +299,13 @@ const LiveClassAdminPage = () => {
                 </div>
               </div>
               <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setPreview(lc)}
+                  title="View"
+                  className="p-2 rounded-xl bg-emerald-50 text-emerald-600 hover:bg-emerald-100"
+                >
+                  <Eye className="h-4 w-4" />
+                </button>
                 <button
                   onClick={() => handleOpenEdit(lc)}
                   disabled={ending === lc._id || deleting === lc._id}
@@ -420,6 +448,13 @@ const LiveClassAdminPage = () => {
                   <td className="px-4 py-3 text-right">
                     <div className="flex items-center justify-end gap-2">
                       <button
+                        onClick={() => setPreview(lc)}
+                        title="View"
+                        className="p-2 rounded-xl bg-emerald-50 text-emerald-600 hover:bg-emerald-100"
+                      >
+                        <Eye className="h-4 w-4" />
+                      </button>
+                      <button
                         onClick={() => handleOpenEdit(lc)}
                         disabled={deleting === lc._id}
                         title="Edit"
@@ -443,6 +478,18 @@ const LiveClassAdminPage = () => {
           </tbody>
         </table>
       </div>
+
+      <AdminVideoPreviewDialog
+        open={Boolean(preview)}
+        onClose={() => setPreview(null)}
+        videoId={preview?.youtubeVideoId}
+        title={preview?.title}
+        subtitle={
+          preview
+            ? `${getCategoryLabel(preview.category)} · ${preview.active ? "LIVE now" : `started ${formatTime(preview.startedAt)}`}`
+            : ""
+        }
+      />
 
       {/* Edit dialog */}
       <Dialog open={editOpen} onClose={editSaving ? undefined : handleCloseEdit}>
