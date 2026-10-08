@@ -41,14 +41,15 @@ const loadPdfJs = () => {
   return pdfjsLibPromise;
 };
 
-const MIN_SCALE = 0.6;
+// Low enough that a full page always fits on a small phone screen.
+const MIN_SCALE = 0.25;
 const MAX_SCALE = 2.4;
 const SCALE_STEP = 0.2;
 
 // Leaves a little breathing room around the fitted page inside the
-// scrollable viewer area (the canvas itself also has `my-4`, so this is on
-// top of that) rather than fitting edge-to-edge.
-const FIT_PADDING_PX = 24;
+// scrollable viewer area (which has 12px padding on each side, included
+// here) rather than fitting edge-to-edge.
+const FIT_PADDING_PX = 32;
 
 // Blob-based, view-only material viewer. Deliberately never exposes the raw
 // file URL: the file is fetched through an authenticated axios request
@@ -339,12 +340,17 @@ const AttachmentViewer = ({ attachment, onClose, adminMode = false }) => {
           </button>
         </div>
 
+        {/* No items-center/justify-center here on purpose: with those, a
+            zoomed-in page wider/taller than this box overflows to the LEFT
+            and TOP too, where scrolling can't reach (the page looked cut
+            off). The canvas centres itself with m-auto instead, which
+            centres a small page but lets a big one scroll fully. */}
         <div
           ref={containerRef}
-          className="flex-1 bg-gray-50 overflow-auto flex items-center justify-center"
+          className="flex-1 min-h-0 bg-gray-50 overflow-auto flex p-3"
         >
           {!attachment.isPreviewable ? (
-            <div className="h-full flex flex-col items-center justify-center gap-3 text-center px-8">
+            <div className="h-full w-full flex flex-col items-center justify-center gap-3 text-center px-8">
               <AlertTriangle className="h-8 w-8 text-amber-400" />
               <p className="text-gray-600 font-medium">
                 In-app preview isn't available yet for this file type.
@@ -386,7 +392,7 @@ const AttachmentViewer = ({ attachment, onClose, adminMode = false }) => {
           ) : (
             <canvas
               ref={canvasRef}
-              className="my-4 shadow-md"
+              className="m-auto flex-none shadow-md"
               style={{ opacity: rendering ? 0.6 : 1 }}
             />
           )}
