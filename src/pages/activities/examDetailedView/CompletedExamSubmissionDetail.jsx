@@ -35,6 +35,11 @@ import { toPng } from "html-to-image";
 import download from "downloadjs";
 import "katex/dist/katex.min.css";
 import { MathText, AnswerKeyText } from "../../../utils/mathText";
+import {
+  useQuestionInsights,
+  InsightsSummary,
+  QuestionInsightsPanel,
+} from "../../../components/activities/examDetails/QuestionInsights";
 
 const formatDate = (dateString) => {
   const options = { year: "numeric", month: "short", day: "numeric" };
@@ -77,6 +82,8 @@ const CompletedExamSubmissionDetail = () => {
   const { markData } = useContext(MarkContext);
 
   const { examSubmissionId } = useParams();
+  // Rank, your-time-vs-topper, difficulty, bookmarks, doubts.
+  const { insights, toggleBookmark, askDoubt } = useQuestionInsights(examSubmissionId);
   const [generalReviews, setGeneralReviews] = useState([]);
   const [reviewInput, setReviewInput] = useState("");
   const [examData, setExamData] = useState(null);
@@ -729,6 +736,7 @@ const CompletedExamSubmissionDetail = () => {
           <h2 className="text-xl font-bold text-gray-900 mb-6">
             Exam Questions
           </h2>
+          <InsightsSummary insights={insights} />
           <div className="space-y-6">
             {examData.examData.map((question, index) => {
               const isStudentAnswerCorrect = question.isRight;
@@ -810,6 +818,13 @@ const CompletedExamSubmissionDetail = () => {
                     </div>
                   </div>
                   <div className="p-4 border-t border-gray-100">
+                    <QuestionInsightsPanel
+                      questionId={question.questionId?._id}
+                      examId={examData.examId?._id}
+                      insights={insights}
+                      onToggleBookmark={toggleBookmark}
+                      onAskDoubt={askDoubt}
+                    />
                     <div className="mb-4">
                       <div className="text-sm font-medium text-gray-700 mb-1">
                         Question:

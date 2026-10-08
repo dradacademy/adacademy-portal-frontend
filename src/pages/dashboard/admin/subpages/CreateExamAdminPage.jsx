@@ -81,6 +81,7 @@ const CreateExamAdminPage = () => {
     passPercentage: null,
     scheduledDate: "",
     allNumericAnswerKeypad: false,
+    isFreeTest: false,
     questions: [],
   });
 
@@ -200,6 +201,7 @@ const CreateExamAdminPage = () => {
         passPercentage: formData.passPercentage,
         scheduledDate: formData.scheduledDate,
         allNumericAnswerKeypad: formData.allNumericAnswerKeypad,
+        isFreeTest: !!formData.isFreeTest,
       },
       newQuestions,
       questionSets,
@@ -450,6 +452,7 @@ const CreateExamAdminPage = () => {
           ? new Date(existingExam.scheduledDate).toISOString().slice(0, 10)
           : "",
         allNumericAnswerKeypad: !!existingExam.allNumericAnswerKeypad,
+        isFreeTest: !!existingExam.isFreeTest,
       }));
 
       const sourceQuestions = (

@@ -45,6 +45,12 @@ const HeroSectionHome = () => {
               >
                 Explore Courses
               </a>
+              <a
+                href="/free-test"
+                className="px-6 py-3 border border-gold/60 text-gold-light rounded-full font-medium transition-colors hover:bg-white/10"
+              >
+                Take a Free Test
+              </a>
             </div>
             <div className="flex flex-wrap gap-7 mt-11 pt-7 border-t border-white/15">
               <div className="flex items-center gap-2.5">

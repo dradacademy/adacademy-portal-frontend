@@ -214,7 +214,11 @@ export const AuthContextProvider = ({ children }) => {
         // on login — App.jsx's route guard would bounce them there anyway
         // on the next navigation, but this avoids a visible flash of "/"
         // before that redirect kicks in.
-        if (data.user?.role === "student" && !data.user?.profileCompleted) {
+        if (
+          data.user?.role === "student" &&
+          data.user?.accountType !== "free_trial" &&
+          !data.user?.profileCompleted
+        ) {
           Navigate("/profile");
         } else {
           Navigate("/");
@@ -228,6 +232,15 @@ export const AuthContextProvider = ({ children }) => {
       console.log(error);
       toast.error(error?.response?.data?.error);
     }
+  };
+
+  // Used by the public Free Test registration page: the server creates the
+  // account and returns a token, so the visitor is signed in straight away.
+  const loginWithToken = (token, user) => {
+    localStorage.setItem("token", token);
+    cacheUser(user);
+    setAuthHeader(token);
+    setUserData(user);
   };
 
   const handleLogout = async () => {
@@ -258,6 +271,7 @@ export const AuthContextProvider = ({ children }) => {
         handleSubmitLoginUser,
         handleLogout,
         fetchUser,
+        loginWithToken,
       }}
     >
       {children}

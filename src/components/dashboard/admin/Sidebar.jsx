@@ -336,6 +336,8 @@ import {
   Paperclip,
   FileText,
   User as UserIcon,
+  MessageSquare,
+  Gift,
 } from "lucide-react";
 import axios from "axios";
 import toast from "react-hot-toast";
@@ -845,6 +847,68 @@ const Sidebar = () => {
                       />
                       {!showCollapsed && (
                         <h2 className="font-medium text-lg">Attendance Report</h2>
+                      )}
+                    </Link>
+                  </div>
+
+                  {/* Doubts */}
+                  <div className="flex items-center">
+                    <div
+                      className={`h-10 w-2 ${
+                        location.pathname === "/dashboard/doubts" ||
+                        location.pathname === "/dashboard/doubts/"
+                          ? "bg-stone-50"
+                          : "bg-indigo-500"
+                      } rounded-tr-full rounded-br-full`}
+                    ></div>
+                    <Link
+                      to={"/dashboard/doubts"}
+                      className={`flex items-center gap-2 px-[17px] transition-all duration-300 ${
+                        location.pathname === "/dashboard/doubts" ||
+                        location.pathname === "/dashboard/doubts/"
+                          ? "text-stone-50"
+                          : "text-indigo-100 hover:opacity-80 duration-300"
+                      } ${showCollapsed ? "justify-center px-2" : ""}`}
+                      title={showCollapsed ? "Doubts" : ""}
+                    >
+                      <MessageSquare
+                        className={`${
+                          showCollapsed ? "w-5 h-5 sm:w-6 sm:h-6" : "w-6 h-6"
+                        }`}
+                      />
+                      {!showCollapsed && (
+                        <h2 className="font-medium text-lg">Doubts</h2>
+                      )}
+                    </Link>
+                  </div>
+
+                  {/* Free Test Leads */}
+                  <div className="flex items-center">
+                    <div
+                      className={`h-10 w-2 ${
+                        location.pathname === "/dashboard/free-test" ||
+                        location.pathname === "/dashboard/free-test/"
+                          ? "bg-stone-50"
+                          : "bg-indigo-500"
+                      } rounded-tr-full rounded-br-full`}
+                    ></div>
+                    <Link
+                      to={"/dashboard/free-test"}
+                      className={`flex items-center gap-2 px-[17px] transition-all duration-300 ${
+                        location.pathname === "/dashboard/free-test" ||
+                        location.pathname === "/dashboard/free-test/"
+                          ? "text-stone-50"
+                          : "text-indigo-100 hover:opacity-80 duration-300"
+                      } ${showCollapsed ? "justify-center px-2" : ""}`}
+                      title={showCollapsed ? "Free Test Leads" : ""}
+                    >
+                      <Gift
+                        className={`${
+                          showCollapsed ? "w-5 h-5 sm:w-6 sm:h-6" : "w-6 h-6"
+                        }`}
+                      />
+                      {!showCollapsed && (
+                        <h2 className="font-medium text-lg">Free Test Leads</h2>
                       )}
                     </Link>
                   </div>

@@ -63,6 +63,8 @@ const Navbar = ({ dashboard }) => {
   const examsOpen = Boolean(examsAnchorEl);
 
   const { userData, setUserData, handleLogout } = useContext(AuthContext);
+  // Free Test accounts only see Activities + Notebook.
+  const isFreeTrial = userData?.accountType === "free_trial";
 
   // A student who hasn't submitted their profile yet is locked out of
   // everything else in the app (see App.jsx's route guard and the backend's
@@ -127,7 +129,7 @@ const Navbar = ({ dashboard }) => {
                   Activities
                   <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-gold transition-all group-hover:w-full"></span>
                 </Link>
-                {userData?.role === "student" && (
+                {userData?.role === "student" && !isFreeTrial && (
                   <Link
                     to={"/recorded-classes"}
                     className="font-medium hover:text-navy transition-colors relative group"
@@ -136,7 +138,7 @@ const Navbar = ({ dashboard }) => {
                     <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-gold transition-all group-hover:w-full"></span>
                   </Link>
                 )}
-                {userData?.role === "student" && (
+                {userData?.role === "student" && !isFreeTrial && (
                   <Link
                     to={"/attachments"}
                     className="font-medium hover:text-navy transition-colors relative group"
@@ -147,6 +149,15 @@ const Navbar = ({ dashboard }) => {
                 )}
                 {userData?.role === "student" && (
                   <Link
+                    to={"/notebook"}
+                    className="font-medium hover:text-navy transition-colors relative group"
+                  >
+                    Notebook
+                    <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-gold transition-all group-hover:w-full"></span>
+                  </Link>
+                )}
+                {userData?.role === "student" && !isFreeTrial && (
+                  <Link
                     to={"/progress"}
                     className="font-medium hover:text-navy transition-colors relative group"
                   >
@@ -154,7 +165,7 @@ const Navbar = ({ dashboard }) => {
                     <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-gold transition-all group-hover:w-full"></span>
                   </Link>
                 )}
-                {userData?.role === "student" && (
+                {userData?.role === "student" && !isFreeTrial && (
                   <Link
                     to={"/performance-analytics"}
                     className="font-medium hover:text-navy transition-colors relative group"
@@ -163,7 +174,7 @@ const Navbar = ({ dashboard }) => {
                     <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-gold transition-all group-hover:w-full"></span>
                   </Link>
                 )}
-                {userData?.role === "student" && (
+                {userData?.role === "student" && !isFreeTrial && (
                   <Link
                     to={"/profile"}
                     className="font-medium hover:text-navy transition-colors relative group"
@@ -385,7 +396,7 @@ const Navbar = ({ dashboard }) => {
                   >
                     Activities
                   </Link>
-                  {userData?.role === "student" && (
+                  {userData?.role === "student" && !isFreeTrial && (
                     <Link
                       to={"/recorded-classes"}
                       onClick={closeMenu}
@@ -394,7 +405,7 @@ const Navbar = ({ dashboard }) => {
                       Classes
                     </Link>
                   )}
-                  {userData?.role === "student" && (
+                  {userData?.role === "student" && !isFreeTrial && (
                     <Link
                       to={"/attachments"}
                       onClick={closeMenu}
@@ -405,6 +416,15 @@ const Navbar = ({ dashboard }) => {
                   )}
                   {userData?.role === "student" && (
                     <Link
+                      to={"/notebook"}
+                      onClick={closeMenu}
+                      className="block px-6 py-3 text-gray-600 hover:text-navy hover:bg-gray-50 transition-colors font-medium"
+                    >
+                      Notebook
+                    </Link>
+                  )}
+                  {userData?.role === "student" && !isFreeTrial && (
+                    <Link
                       to={"/progress"}
                       onClick={closeMenu}
                       className="block px-6 py-3 text-gray-600 hover:text-navy hover:bg-gray-50 transition-colors font-medium"
@@ -412,7 +432,7 @@ const Navbar = ({ dashboard }) => {
                       My Progress
                     </Link>
                   )}
-                  {userData?.role === "student" && (
+                  {userData?.role === "student" && !isFreeTrial && (
                     <Link
                       to={"/performance-analytics"}
                       onClick={closeMenu}
@@ -421,7 +441,7 @@ const Navbar = ({ dashboard }) => {
                       Performance
                     </Link>
                   )}
-                  {userData?.role === "student" && (
+                  {userData?.role === "student" && !isFreeTrial && (
                     <Link
                       to={"/profile"}
                       onClick={closeMenu}

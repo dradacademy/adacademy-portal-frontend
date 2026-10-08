@@ -86,7 +86,17 @@ const PortalSelectorPopup = ({ open, onClose }) => {
           ))}
         </div>
 
-        <div className="border-t border-line pt-4 text-center">
+        <div className="border-t border-line pt-4 text-center flex flex-col gap-2">
+          <p className="text-xs text-slate font-inter">
+            New here?{" "}
+            <Link
+              to="/free-test"
+              onClick={onClose}
+              className="text-navy font-medium hover:underline"
+            >
+              Take a free test
+            </Link>
+          </p>
           <p className="text-xs text-slate font-inter">
             Staff or Evaluator?{" "}
             <Link

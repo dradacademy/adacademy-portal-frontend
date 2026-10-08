@@ -9,6 +9,7 @@ import StudentActivities from "./pages/activities/student/StudentActivities";
 import RecordedClassesStudent from "./pages/activities/student/RecordedClassesStudent";
 import AttachmentsStudent from "./pages/activities/student/AttachmentsStudent";
 import MyProgressStudent from "./pages/activities/student/MyProgressStudent";
+import MyNotebookStudent from "./pages/activities/student/MyNotebookStudent";
 import PerformanceAnalyticsStudent from "./pages/activities/student/PerformanceAnalyticsStudent";
 import StudentProfilePage from "./pages/activities/student/StudentProfilePage";
 import AttemptedExamSubmissionDetail from "./pages/activities/examDetailedView/AttemptedExamSubmissionDetail";
@@ -22,6 +23,7 @@ const AdminDashboard = lazy(
 );
 const ExamDetailPage = lazy(() => import("./pages/exams/ExamDetailPage"));
 const Careers = lazy(() => import("./pages/careers/Careers"));
+const FreeTestPage = lazy(() => import("./pages/freeTest/FreeTestPage"));
 const OnlineTestSeries = lazy(
   () => import("./pages/onlineTestSeries/OnlineTestSeries"),
 );
@@ -42,7 +44,11 @@ function App() {
   // on the backend for the matching, actually-enforcing check on the APIs
   // themselves; this is what makes the lock visible/navigable rather than
   // just a wall of 403s. Never true for admin/evaluator.
-  const profileLocked = userData?.role === "student" && !userData?.profileCompleted;
+  // Free Test accounts never fill the student profile.
+  const profileLocked =
+    userData?.role === "student" &&
+    userData?.accountType !== "free_trial" &&
+    !userData?.profileCompleted;
 
   // Wraps a student-only route: unauthenticated -> /login, incomplete
   // profile -> /profile, otherwise the real page.
@@ -113,6 +119,7 @@ function App() {
           element={studentGate(<AttachmentsStudent />)}
         />
         <Route path="/progress" element={studentGate(<MyProgressStudent />)} />
+        <Route path="/notebook" element={studentGate(<MyNotebookStudent />)} />
         <Route
           path="/performance-analytics"
           element={studentGate(<PerformanceAnalyticsStudent />)}
@@ -131,6 +138,7 @@ function App() {
         <Route path="/signup" element={<Signup />} />
         <Route path="/exams/:examSlug" element={<ExamDetailPage />} />
         <Route path="/careers" element={<Careers />} />
+        <Route path="/free-test" element={<FreeTestPage />} />
         <Route path="/online-test-series" element={<OnlineTestSeries />} />
         <Route path="/privacy-policy" element={<PrivacyPolicy />} />
         <Route

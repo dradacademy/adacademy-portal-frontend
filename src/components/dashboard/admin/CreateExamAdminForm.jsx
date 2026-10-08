@@ -252,6 +252,30 @@ const CreateExamAdminForm = ({
         </p>
       </div>
 
+      <div className="flex flex-col gap-1 w-full border border-emerald-200 rounded-lg p-3 bg-emerald-50/60">
+        <label className="flex items-center gap-2 text-sm text-emerald-800 select-none font-medium">
+          <Checkbox
+            checked={!!formData.isFreeTest}
+            onChange={(e) =>
+              handleChange({
+                target: {
+                  name: "isFreeTest",
+                  value: e.target.checked,
+                },
+              })
+            }
+          />
+          Free test — anyone can register on the website (Free Test page) and
+          take this test
+        </label>
+        <p className="text-xs text-emerald-700/80 pl-6">
+          Tick this on ONE test per exam (GATE, TNPSC AE, TNPSC JDO, SSC JE &
+          RRB JE) to show visitors how your tests work. Free registrants see
+          only free tests, then their score, rank and full solutions. Status
+          must also be Active. Your enrolled students see it like any other test.
+        </p>
+      </div>
+
       {newQuestions.length > 1 && bulkRangeConfig && (
         <div className="border border-indigo-200 bg-indigo-50/60 rounded-2xl p-4 flex flex-col gap-3">
           <h4 className="font-semibold text-indigo-700 text-sm">

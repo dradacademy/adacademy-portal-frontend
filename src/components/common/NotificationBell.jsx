@@ -1,6 +1,7 @@
 import React, { useContext, useEffect, useRef, useState } from "react";
 import axios from "axios";
-import { Bell, Video, FileText, Paperclip, Megaphone } from "lucide-react";
+import { Bell, Video, FileText, Paperclip, Megaphone, MessageSquare } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import { AuthContext } from "../../context/AuthContext";
 
 const TYPE_ICON = {
@@ -8,6 +9,7 @@ const TYPE_ICON = {
   test: FileText,
   attachment: Paperclip,
   announcement: Megaphone,
+  doubt: MessageSquare,
 };
 
 const formatRelativeTime = (value) => {
@@ -35,6 +37,7 @@ const formatRelativeTime = (value) => {
 const NotificationBell = () => {
   const { userData } = useContext(AuthContext);
   const [open, setOpen] = useState(false);
+  const navigate = useNavigate();
   const [notifications, setNotifications] = useState([]);
   const [loading, setLoading] = useState(false);
   const containerRef = useRef(null);
@@ -118,12 +121,16 @@ const NotificationBell = () => {
             ) : (
               notifications.map((n) => {
                 const Icon = TYPE_ICON[n.type] || Bell;
+                // "Your doubt was answered" opens that test's review page.
+                const target =
+                  n.type === "doubt" && n.refId ? `/activities/attempted/${n.refId}` : null;
                 return (
                   <div
                     key={n._id}
+                    onClick={target ? () => { setOpen(false); navigate(target); } : undefined}
                     className={`px-4 py-3 border-b border-gray-50 last:border-0 flex items-start gap-3 ${
                       n.isNew ? "bg-indigo-50/60" : ""
-                    }`}
+                    } ${target ? "cursor-pointer hover:bg-gray-50" : ""}`}
                   >
                     <div className="mt-0.5 h-7 w-7 rounded-full bg-indigo-100 flex items-center justify-center shrink-0">
                       <Icon className="h-3.5 w-3.5 text-indigo-500" />

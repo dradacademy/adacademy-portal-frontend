@@ -23,6 +23,8 @@ import StudentProgressDashboardAdminPage from "./subpages/StudentProgressDashboa
 import AttachmentsAdminPage from "./subpages/AttachmentsAdminPage";
 import AnswerSheetsAdminPage from "./subpages/AnswerSheetsAdminPage";
 import StudentProfilesAdminPage from "./subpages/StudentProfilesAdminPage";
+import DoubtsAdminPage from "./subpages/DoubtsAdminPage";
+import FreeTestRegistrationsAdminPage from "./subpages/FreeTestRegistrationsAdminPage";
 
 const AdminDashboard = () => {
   return (
@@ -52,6 +54,8 @@ const AdminDashboard = () => {
             <Route path="/attachments" element={<AttachmentsAdminPage />} />
             <Route path="/answer-sheets" element={<AnswerSheetsAdminPage />} />
             <Route path="/student-profiles" element={<StudentProfilesAdminPage />} />
+            <Route path="/doubts" element={<DoubtsAdminPage />} />
+            <Route path="/free-test" element={<FreeTestRegistrationsAdminPage />} />
             {/* <Route path="/trigger-mail" element={<TriggerMailAdminPage />} /> */}
             <Route path="/comment" element={<CommentDashboard />} />
             <Route path="/controllers" element={<MarkAndDurationAdmin />} />
