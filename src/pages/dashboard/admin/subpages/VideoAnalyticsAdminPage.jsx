@@ -216,6 +216,14 @@ const VideoAnalyticsAdminPage = () => {
                   </td>
                   <td className="px-4 py-3 text-gray-600">
                     {formatSeconds(row.totalWatchSeconds)}
+                    {row.estimated && (
+                      <span
+                        className="ml-1.5 px-1 py-0.5 rounded bg-amber-50 text-amber-600 text-[10px] font-semibold align-middle"
+                        title="Includes watching recorded before the 8 Oct 2026 watch-time fix — that part could only be estimated (capped at the class length)."
+                      >
+                        est.
+                      </span>
+                    )}
                   </td>
                   <td className="px-4 py-3 text-gray-600">{row.sessionCount}</td>
                   <td className="px-4 py-3 text-gray-600">

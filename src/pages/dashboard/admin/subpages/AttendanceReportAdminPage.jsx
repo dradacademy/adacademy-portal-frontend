@@ -174,7 +174,7 @@ const AttendanceReportAdminPage = () => {
       r.sessionType,
       r.contentTitle,
       formatDuration(r.durationSeconds),
-      formatDuration(r.watchedSeconds),
+      formatDuration(r.watchedSeconds) + (r.estimated ? " (est.)" : ""),
       `${r.watchPercent}%`,
       r.attendanceStatus,
       formatDateTime(r.lastWatchedAt),
@@ -304,6 +304,14 @@ const AttendanceReportAdminPage = () => {
                   </td>
                   <td className="px-4 py-3 text-gray-600">
                     {formatDuration(row.watchedSeconds)}
+                    {row.estimated && (
+                      <span
+                        className="ml-1.5 px-1 py-0.5 rounded bg-amber-50 text-amber-600 text-[10px] font-semibold align-middle"
+                        title="Includes watching recorded before the 8 Oct 2026 watch-time fix — that part could only be estimated (capped at the class length)."
+                      >
+                        est.
+                      </span>
+                    )}
                   </td>
                   <td className="px-4 py-3 text-gray-600">{row.watchPercent}%</td>
                   <td className="px-4 py-3">

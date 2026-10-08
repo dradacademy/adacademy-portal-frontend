@@ -45,6 +45,7 @@ const SORTERS = {
   category: (r) => (getCategoryLabel(r.category) || "").toLowerCase(),
   startedAt: (r) => (r.startedAt ? new Date(r.startedAt).getTime() : null),
   endedAt: (r) => (r.endedAt ? new Date(r.endedAt).getTime() : null),
+  length: (r) => r.lengthSeconds ?? null,
   status: (r) => (r.active ? 1 : 0),
 };
 
@@ -58,6 +59,22 @@ const EMPTY_EDIT_FORM = {
   title: "",
   category: EXAM_CATEGORY_OPTIONS[0].value,
   youtubeUrl: "",
+  durationMinutes: "",
+};
+
+const formatLength = (seconds) => {
+  if (!seconds) return "—";
+  const h = Math.floor(seconds / 3600);
+  const m = Math.round((seconds % 3600) / 60);
+  return h ? `${h}h ${m}m` : `${m}m`;
+};
+
+// Where a class's length (used for live attendance %) came from.
+const LENGTH_SOURCE_LABEL = {
+  admin: "set by you",
+  recording: "from recording",
+  "start-end": "Go Live → End Live",
+  capped: "capped at 6h — set real length via Edit",
 };
 
 const formatTime = (value) => {
@@ -199,6 +216,9 @@ const LiveClassAdminPage = () => {
       title: liveClass.title,
       category: liveClass.category,
       youtubeUrl: `https://youtu.be/${liveClass.youtubeVideoId}`,
+      durationMinutes: liveClass.durationSeconds
+        ? String(Math.round(liveClass.durationSeconds / 60))
+        : "",
     });
     setEditOpen(true);
   };
@@ -408,6 +428,7 @@ const LiveClassAdminPage = () => {
               <SortableTh label="Category" sortKey="category" sort={sort} onSort={handleSort} />
               <SortableTh label="Started" sortKey="startedAt" sort={sort} onSort={handleSort} />
               <SortableTh label="Ended" sortKey="endedAt" sort={sort} onSort={handleSort} />
+              <SortableTh label="Length" sortKey="length" sort={sort} onSort={handleSort} />
               <SortableTh label="Status" sortKey="status" sort={sort} onSort={handleSort} />
               <th className="px-4 py-3"></th>
             </tr>
@@ -415,13 +436,13 @@ const LiveClassAdminPage = () => {
           <tbody>
             {loading ? (
               <tr>
-                <td colSpan={6} className="text-center text-gray-400 py-10">
+                <td colSpan={7} className="text-center text-gray-400 py-10">
                   Loading…
                 </td>
               </tr>
             ) : sortedHistory.length === 0 ? (
               <tr>
-                <td colSpan={6} className="text-center text-gray-400 py-10">
+                <td colSpan={7} className="text-center text-gray-400 py-10">
                   No live classes started yet.
                 </td>
               </tr>
@@ -434,6 +455,18 @@ const LiveClassAdminPage = () => {
                   </td>
                   <td className="px-4 py-3 text-gray-600">{formatTime(lc.startedAt)}</td>
                   <td className="px-4 py-3 text-gray-600">{formatTime(lc.endedAt)}</td>
+                  <td className="px-4 py-3 text-gray-600">
+                    {lc.active ? "—" : formatLength(lc.lengthSeconds)}
+                    {!lc.active && lc.lengthSource && (
+                      <p
+                        className={`text-[11px] ${
+                          lc.lengthSource === "capped" ? "text-amber-600" : "text-gray-400"
+                        }`}
+                      >
+                        {LENGTH_SOURCE_LABEL[lc.lengthSource]}
+                      </p>
+                    )}
+                  </td>
                   <td className="px-4 py-3">
                     <span
                       className={`px-2 py-0.5 rounded-full text-xs font-medium ${
@@ -544,6 +577,24 @@ const LiveClassAdminPage = () => {
               menuPortalTarget={document.body}
               menuPosition="absolute"
             />
+            <div className="flex flex-col gap-1">
+              <input
+                type="number"
+                min="0"
+                placeholder="Class length in minutes (optional, e.g. 150)"
+                className="border border-stone-300 py-[10px] px-4 focus:outline-stone-300 rounded-2xl bg-white"
+                value={editForm.durationMinutes}
+                onChange={(e) =>
+                  setEditForm({ ...editForm, durationMinutes: e.target.value })
+                }
+                disabled={editSaving}
+              />
+              <p className="text-xs text-gray-400">
+                The real class length, used for live attendance %. Set it if
+                End Live was pressed late. Leave blank to use the recording's
+                length (if you added one) or the Go Live → End Live time.
+              </p>
+            </div>
             <div className="flex flex-col gap-1">
               <input
                 type="text"
