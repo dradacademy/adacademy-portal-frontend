@@ -4,14 +4,14 @@ import { Link } from "react-router-dom";
 import { MdClose } from "react-icons/md";
 import { Layers, Settings2, Building2, ClipboardList, ArrowRight } from "lucide-react";
 
-// VITE_APP_API_URL already points at the backend's JSON API root (it's used
-// elsewhere in the app as `${VITE_APP_API_URL}/exams/...`, `/admin/...`, etc.,
-// which only works if it includes the trailing "/api"). The portal redirect
-// routes are intentionally mounted OUTSIDE "/api" on the backend (see
-// backend/routes/portalRoute.js) since they're plain browser navigations,
-// not JSON endpoints — so strip a trailing "/api" here to get back to the
-// backend's bare origin before appending "/portal/<key>".
-const API_ROOT = (import.meta.env.VITE_APP_API_URL || "").replace(/\/api\/?$/, "");
+// Every portal card opens THIS site's own /login page (same address the
+// student is already on). It used to go through the backend's /portal/<key>
+// redirect, which sent students to whatever CLIENT_URL Railway had —
+// historically the old adacademy-portal-frontend.vercel.app address. A login
+// is stored per website address, so students who signed in there looked
+// "logged out" whenever they opened www.dradacademy.com or the Play Store app.
+// Keeping the login on one address fixes that. (All exam categories share the
+// same login today; the category is on the student's account.)
 
 const PORTALS = [
   {
@@ -65,9 +65,11 @@ const PortalSelectorPopup = ({ open, onClose }) => {
 
         <div className="grid sm:grid-cols-2 gap-3">
           {PORTALS.map(({ key, icon: Icon, title, description }) => (
-            <a
+            <Link
               key={key}
-              href={`${API_ROOT}/portal/${key}`}
+              to="/login"
+              state={{ portal: key }}
+              onClick={onClose}
               className="group flex items-center gap-3.5 border border-line rounded-xl p-4 hover:border-gold hover:shadow-md transition-all"
             >
               <div className="w-11 h-11 rounded-lg bg-navy/[0.08] flex items-center justify-center flex-shrink-0">
@@ -80,7 +82,7 @@ const PortalSelectorPopup = ({ open, onClose }) => {
                 <div className="text-xs text-slate font-inter">{description}</div>
               </div>
               <ArrowRight className="w-4 h-4 text-slate group-hover:text-gold group-hover:translate-x-0.5 transition-all flex-shrink-0" />
-            </a>
+            </Link>
           ))}
         </div>
 
