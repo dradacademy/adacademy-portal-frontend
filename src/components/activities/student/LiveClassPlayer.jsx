@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from "react";
 import axios from "axios";
+import { createWatchTracker } from "../../../utils/watchTracker";
 import { X, Volume2, VolumeX } from "lucide-react";
 
 const YOUTUBE_IFRAME_API_URL = "https://www.youtube.com/iframe_api";
@@ -25,11 +26,6 @@ const loadYoutubeIframeApi = () => {
   return sdkLoadPromise;
 };
 
-// How often to ping our backend with live watch progress while playing —
-// same cadence and same "actual play time, not just an open tab" principle
-// as RecordedClassPlayer, so live attendance can't be gamed by leaving the
-// page open without the stream actually running.
-const PROGRESS_PING_INTERVAL_MS = 15000;
 
 // Wraps a YouTube IFrame Player for a LIVE class (fed a video ID the
 // backend only hands over after checking category + active course
@@ -44,9 +40,8 @@ const LiveClassPlayer = ({ liveClass, onClose }) => {
 
   const iframeContainerRef = useRef(null);
   const playerRef = useRef(null);
-  const lastReportedTimeRef = useRef(0);
   const sessionStartedRef = useRef(false);
-  const pingIntervalRef = useRef(null);
+  const trackerRef = useRef(null);
   // Browsers block autoplay-with-sound (most mobile browsers included), so
   // the player starts muted below to guarantee it actually starts playing
   // — an unmuted autoplay request is silently ignored by the browser,
@@ -89,12 +84,13 @@ const LiveClassPlayer = ({ liveClass, onClose }) => {
     };
   }, [liveClass._id]);
 
-  const sendProgress = (deltaSecondsWatched, newSession) => {
-    if (deltaSecondsWatched <= 0 && !newSession) return;
+  // Real playing time only (createWatchTracker) — joining mid-stream no
+  // longer counts the whole stream so far as watched.
+  const sendProgress = (payload) => {
     axios
       .post(
         `${import.meta.env.VITE_APP_API_URL}/live-classes/${liveClass._id}/progress`,
-        { deltaSecondsWatched, newSession }
+        payload
       )
       .catch(() => {
         // Best-effort — a dropped progress ping isn't worth surfacing to
@@ -125,9 +121,10 @@ const LiveClassPlayer = ({ liveClass, onClose }) => {
         events: {
           onStateChange: (event) => {
             const YT_STATE = window.YT.PlayerState;
+            trackerRef.current?.onStateChange(event.data);
             if (event.data === YT_STATE.PLAYING && !sessionStartedRef.current) {
               sessionStartedRef.current = true;
-              sendProgress(0, true);
+              sendProgress({ v: 2, newSession: true });
               try {
                 event.target.unMute();
                 setIsMuted(event.target.isMuted());
@@ -141,31 +138,26 @@ const LiveClassPlayer = ({ liveClass, onClose }) => {
       });
     };
 
+    trackerRef.current = createWatchTracker({
+      getPlayer: () => playerRef.current,
+      trackSegments: false,
+      send: sendProgress,
+    });
+    trackerRef.current.start();
+
     attach();
 
-    pingIntervalRef.current = setInterval(() => {
-      const player = playerRef.current;
-      if (!player || typeof player.getCurrentTime !== "function") return;
-      // getCurrentTime() on a live broadcast only advances while it's
-      // actually playing — that's what makes this a real watch-time signal
-      // rather than "the page was open."
-      const current = Math.floor(player.getCurrentTime() || 0);
-      const delta = Math.max(0, current - lastReportedTimeRef.current);
-      if (delta > 0) {
-        lastReportedTimeRef.current = current;
-        sendProgress(delta, false);
-      }
-    }, PROGRESS_PING_INTERVAL_MS);
+    const onHide = () => {
+      if (document.visibilityState === "hidden") trackerRef.current?.flush();
+    };
+    document.addEventListener("visibilitychange", onHide);
 
     return () => {
       cancelled = true;
-      clearInterval(pingIntervalRef.current);
+      document.removeEventListener("visibilitychange", onHide);
+      trackerRef.current?.stop();
+      trackerRef.current = null;
       const player = playerRef.current;
-      if (player && typeof player.getCurrentTime === "function") {
-        const current = Math.floor(player.getCurrentTime() || 0);
-        const delta = Math.max(0, current - lastReportedTimeRef.current);
-        if (delta > 0) sendProgress(delta, false);
-      }
       if (player && typeof player.destroy === "function") player.destroy();
       playerRef.current = null;
     };

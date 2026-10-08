@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from "react";
 import axios from "axios";
+import { createWatchTracker } from "../../../utils/watchTracker";
 import { X } from "lucide-react";
 
 const YOUTUBE_IFRAME_API_URL = "https://www.youtube.com/iframe_api";
@@ -27,10 +28,6 @@ const loadYoutubeIframeApi = () => {
   return sdkLoadPromise;
 };
 
-// How often to ping our backend with watch progress while playing. Kept
-// fairly frequent (15s) so "Continue Watching" resumes close to where the
-// student actually left off, without pinging on every single frame.
-const PROGRESS_PING_INTERVAL_MS = 15000;
 
 // Wraps a YouTube IFrame Player (fed a video ID the backend only hands over
 // after checking category + active course enrollment — see
@@ -52,9 +49,8 @@ const RecordedClassPlayer = ({ video, onClose }) => {
 
   const iframeContainerRef = useRef(null);
   const playerRef = useRef(null);
-  const lastReportedTimeRef = useRef(0);
   const sessionStartedRef = useRef(false);
-  const pingIntervalRef = useRef(null);
+  const trackerRef = useRef(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -89,14 +85,11 @@ const RecordedClassPlayer = ({ video, onClose }) => {
     };
   }, [video._id, video.lastPositionSeconds]);
 
-  const sendProgress = (positionSeconds, deltaSecondsWatched, newSession) => {
-    if (deltaSecondsWatched <= 0 && !newSession && positionSeconds == null) return;
+  // Watch time is measured by createWatchTracker (real playing time + the
+  // parts of the video actually played — seeks/resume jumps don't count).
+  const sendProgress = (payload) => {
     axios
-      .post(`${import.meta.env.VITE_APP_API_URL}/videos/${video._id}/progress`, {
-        positionSeconds,
-        deltaSecondsWatched,
-        newSession,
-      })
+      .post(`${import.meta.env.VITE_APP_API_URL}/videos/${video._id}/progress`, payload)
       .catch(() => {
         // Best-effort — a dropped progress ping isn't worth surfacing to
         // the student mid-playback.
@@ -121,49 +114,40 @@ const RecordedClassPlayer = ({ video, onClose }) => {
         },
         events: {
           onStateChange: (event) => {
-            const player = playerRef.current;
-            if (!player) return;
             const YT_STATE = window.YT.PlayerState;
-
             if (event.data === YT_STATE.PLAYING && !sessionStartedRef.current) {
               sessionStartedRef.current = true;
-              sendProgress(null, 0, true);
+              sendProgress({ v: 2, newSession: true });
             }
-            if (event.data === YT_STATE.PAUSED || event.data === YT_STATE.ENDED) {
-              const current = Math.floor(player.getCurrentTime() || 0);
-              const delta = Math.max(0, current - lastReportedTimeRef.current);
-              lastReportedTimeRef.current = current;
-              sendProgress(current, delta, false);
-            }
+            trackerRef.current?.onStateChange(event.data);
           },
         },
       });
     };
 
+    trackerRef.current = createWatchTracker({
+      getPlayer: () => playerRef.current,
+      trackSegments: true,
+      send: sendProgress,
+    });
+    trackerRef.current.start();
+
     attach();
 
-    pingIntervalRef.current = setInterval(() => {
-      const player = playerRef.current;
-      if (!player || typeof player.getCurrentTime !== "function") return;
-      const current = Math.floor(player.getCurrentTime() || 0);
-      const delta = Math.max(0, current - lastReportedTimeRef.current);
-      if (delta > 0) {
-        lastReportedTimeRef.current = current;
-        sendProgress(current, delta, false);
-      }
-    }, PROGRESS_PING_INTERVAL_MS);
+    // Closing the tab/app or switching away: send what's been watched so far.
+    const onHide = () => {
+      if (document.visibilityState === "hidden") trackerRef.current?.flush();
+    };
+    document.addEventListener("visibilitychange", onHide);
 
     return () => {
       cancelled = true;
-      clearInterval(pingIntervalRef.current);
+      document.removeEventListener("visibilitychange", onHide);
+      // Final flush so a student who closes the player mid-video keeps the
+      // last few seconds of watch credit.
+      trackerRef.current?.stop();
+      trackerRef.current = null;
       const player = playerRef.current;
-      if (player && typeof player.getCurrentTime === "function") {
-        // Final progress flush on unmount so a student who navigates away
-        // mid-video doesn't lose the last few seconds of watch credit.
-        const current = Math.floor(player.getCurrentTime() || 0);
-        const delta = Math.max(0, current - lastReportedTimeRef.current);
-        if (delta > 0) sendProgress(current, delta, false);
-      }
       if (player && typeof player.destroy === "function") player.destroy();
       playerRef.current = null;
     };
