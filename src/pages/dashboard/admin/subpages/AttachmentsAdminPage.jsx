@@ -14,7 +14,9 @@ import {
   ArrowDown,
   ArrowUp,
   ArrowUpDown,
+  Eye,
 } from "lucide-react";
+import AttachmentViewer from "../../../../components/activities/student/AttachmentViewer";
 import {
   EXAM_CATEGORY_OPTIONS,
   getCategoryLabel,
@@ -91,6 +93,7 @@ const AttachmentsAdminPage = () => {
   const [file, setFile] = useState(null);
   const [saving, setSaving] = useState(false);
   const [sort, setSort] = useState({ key: null, dir: "asc" });
+  const [viewing, setViewing] = useState(null);
 
   const handleSort = (key) => {
     setSort((prev) =>
@@ -345,6 +348,13 @@ const AttachmentsAdminPage = () => {
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-2">
                       <button
+                        onClick={() => setViewing(att)}
+                        className="p-1.5 rounded bg-emerald-50 text-emerald-600 hover:bg-emerald-100"
+                        title="View"
+                      >
+                        <Eye className="h-4 w-4" />
+                      </button>
+                      <button
                         onClick={() => handleOpenEdit(att)}
                         className="p-1.5 rounded bg-indigo-50 text-indigo-600 hover:bg-indigo-100"
                         title="Edit"
@@ -385,6 +395,14 @@ const AttachmentsAdminPage = () => {
         a note instead of the content for those file types until an in-app
         converter is added.
       </p>
+
+      {viewing && (
+        <AttachmentViewer
+          adminMode
+          attachment={{ ...viewing, isPreviewable: isPreviewable(viewing.contentType) }}
+          onClose={() => setViewing(null)}
+        />
+      )}
 
       <Dialog open={openFormPopup} onClose={saving ? undefined : handleClosePopup}>
         <div className="flex flex-col gap-5 sm:min-w-[500px] p-5">

@@ -9,6 +9,7 @@ import {
   ZoomIn,
   ZoomOut,
   RotateCw,
+  Download,
 } from "lucide-react";
 
 // Renders PDFs by drawing each page onto a <canvas> with PDF.js, loaded at
@@ -65,7 +66,35 @@ const FIT_PADDING_PX = 24;
 // attachmentController.js's PREVIEWABLE_CONTENT_TYPE comment for why), so
 // those show a plain, honest "no in-app preview available yet" notice
 // instead of silently failing.
-const AttachmentViewer = ({ attachment, onClose }) => {
+// `adminMode` (Attachments admin page only): the backend lets an admin open
+// any attachment without the student enrollment check and without counting
+// a student view, and PPT/DOC files get a "Download to open" button since
+// they have no in-app preview. Students never get adminMode.
+const AttachmentViewer = ({ attachment, onClose, adminMode = false }) => {
+  const [downloading, setDownloading] = useState(false);
+
+  const handleAdminDownload = async () => {
+    setDownloading(true);
+    try {
+      const response = await axios.get(
+        `${import.meta.env.VITE_APP_API_URL}/attachments/${attachment._id}/view?download=1`,
+        { responseType: "blob" }
+      );
+      const url = URL.createObjectURL(response.data);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = attachment.fileName || attachment.title || "attachment";
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 10000);
+    } catch (err) {
+      setError("Couldn't download this file.");
+    } finally {
+      setDownloading(false);
+    }
+  };
+
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(true);
   const [numPages, setNumPages] = useState(0);
@@ -118,8 +147,10 @@ const AttachmentViewer = ({ attachment, onClose }) => {
       } catch (err) {
         if (!cancelled) {
           setError(
-            err?.response?.data?.message ||
-              "Couldn't load this material. Your enrollment may have expired."
+            adminMode
+              ? "Couldn't load this file. It may be missing from storage — try re-uploading it via Edit."
+              : err?.response?.data?.message ||
+                  "Couldn't load this material. Your enrollment may have expired."
           );
         }
       } finally {
@@ -318,11 +349,30 @@ const AttachmentViewer = ({ attachment, onClose }) => {
               <p className="text-gray-600 font-medium">
                 In-app preview isn't available yet for this file type.
               </p>
-              <p className="text-sm text-gray-400 max-w-md">
-                This material was uploaded as a PowerPoint or Word document.
-                Ask your academy for another way to access it, or check back
-                after a PDF version is uploaded.
-              </p>
+              {adminMode ? (
+                <>
+                  <p className="text-sm text-gray-400 max-w-md">
+                    This is a PowerPoint/Word file. Download it to open it on
+                    your computer. Students see a "no preview" note for this
+                    file — upload a PDF version if they should read it in-app.
+                  </p>
+                  <button
+                    onClick={handleAdminDownload}
+                    disabled={downloading}
+                    className="flex items-center gap-2 bg-indigo-500 text-white text-sm font-medium py-2 px-4 rounded-xl hover:opacity-85 disabled:opacity-50"
+                  >
+                    <Download className="h-4 w-4" />
+                    {downloading ? "Downloading…" : "Download to open"}
+                  </button>
+                  {error && <p className="text-sm text-rose-600">{error}</p>}
+                </>
+              ) : (
+                <p className="text-sm text-gray-400 max-w-md">
+                  This material was uploaded as a PowerPoint or Word document.
+                  Ask your academy for another way to access it, or check back
+                  after a PDF version is uploaded.
+                </p>
+              )}
             </div>
           ) : loading ? (
             <div className="h-full w-full flex items-center justify-center text-gray-400">

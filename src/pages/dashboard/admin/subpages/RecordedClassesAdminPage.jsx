@@ -95,6 +95,36 @@ const RecordedClassesAdminPage = () => {
   const [loading, setLoading] = useState(true);
   const [activeCategory, setActiveCategory] = useState("all");
   const [preview, setPreview] = useState(null);
+  const [backfilling, setBackfilling] = useState(false);
+
+  // One click: add every already-ended live class that isn't in Recorded
+  // Classes yet (new ones are added automatically by End Live). Safe to
+  // click again — anything already here is skipped.
+  const handleBackfillFromLive = async () => {
+    const confirmed = window.confirm(
+      "Add all past (already ended) live classes that aren't in Recorded Classes yet?\n\nAnything already here (same video) is skipped. Older ones keep their original date, so their 7-day student visibility may already be over — use Edit to change \"Visible for\" if students should see them."
+    );
+    if (!confirmed) return;
+    setBackfilling(true);
+    try {
+      const { data } = await axios.post(
+        `${import.meta.env.VITE_APP_API_URL}/live-classes/backfill-recordings`
+      );
+      if (data.created > 0) {
+        toast.success(
+          `Added ${data.created} past live class(es) to Recorded Classes. ${data.skipped} were already here.`
+        );
+      } else {
+        toast.success(`Nothing to add — all ${data.totalEnded} past live classes are already here.`);
+      }
+      if (data.failed > 0) toast.error(`${data.failed} couldn't be added — add them with Add Recording.`);
+      fetchRecordings();
+    } catch (error) {
+      toast.error(error?.response?.data?.message || "Failed to add past live classes.");
+    } finally {
+      setBackfilling(false);
+    }
+  };
 
   const [openFormPopup, setOpenFormPopup] = useState(false);
   const [editingId, setEditingId] = useState(null);
@@ -273,12 +303,21 @@ const RecordedClassesAdminPage = () => {
             enrollment is active.
           </p>
         </div>
-        <button
-          onClick={handleOpenAdd}
-          className="flex items-center gap-2 text-nowrap bg-indigo-500 text-stone-50 font-medium py-2 px-5 rounded-2xl font-poppins cursor-pointer hover:opacity-85 duration-300"
-        >
-          <Youtube className="h-4 w-4" /> Add Recording
-        </button>
+        <div className="flex flex-wrap items-center justify-end gap-2">
+          <button
+            onClick={handleBackfillFromLive}
+            disabled={backfilling}
+            className="flex items-center gap-2 text-nowrap border border-indigo-400 text-indigo-500 font-medium py-2 px-4 rounded-2xl font-poppins cursor-pointer hover:bg-indigo-50 duration-300 disabled:opacity-50"
+          >
+            {backfilling ? "Adding…" : "Add Past Live Classes"}
+          </button>
+          <button
+            onClick={handleOpenAdd}
+            className="flex items-center gap-2 text-nowrap bg-indigo-500 text-stone-50 font-medium py-2 px-5 rounded-2xl font-poppins cursor-pointer hover:opacity-85 duration-300"
+          >
+            <Youtube className="h-4 w-4" /> Add Recording
+          </button>
+        </div>
       </div>
 
       {/* Category tabs */}
