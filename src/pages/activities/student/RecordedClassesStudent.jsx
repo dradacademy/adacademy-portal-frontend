@@ -4,7 +4,31 @@ import Navbar from "../../../components/common/Navbar";
 import { AuthContext } from "../../../context/AuthContext";
 import RecordedClassPlayer from "../../../components/activities/student/RecordedClassPlayer";
 import LiveClassPlayer from "../../../components/activities/student/LiveClassPlayer";
-import { Video, PlayCircle, Lock, Megaphone } from "lucide-react";
+import { Video, PlayCircle, Lock, Megaphone, CalendarClock } from "lucide-react";
+import { daysLeft, formatIstDate } from "../../../utils/classAvailability";
+
+// "Available till 22 Oct 2026" under each class, turning into an amber
+// "Expiring soon" warning in its last 2 days so students watch in time.
+const AvailableTill = ({ until }) => {
+  if (!until) return null;
+  const left = daysLeft(until);
+  const soon = left !== null && left <= 2;
+  return (
+    <div
+      className={`flex items-center gap-1.5 text-xs font-medium ${
+        soon ? "text-amber-700" : "text-gray-500"
+      }`}
+    >
+      <CalendarClock className="h-3.5 w-3.5 shrink-0" />
+      <span>Available till {formatIstDate(until)}</span>
+      {soon && (
+        <span className="ml-auto px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 text-[11px] font-semibold">
+          {left === 0 ? "Last day" : "Expiring soon"}
+        </span>
+      )}
+    </div>
+  );
+};
 
 const formatDate = (value) => {
   if (!value) return "—";
@@ -160,6 +184,7 @@ const RecordedClassesStudent = () => {
                     <span>{formatDate(video.recordedDate)}</span>
                     <span>{formatDuration(video.durationSeconds)}</span>
                   </div>
+                  <AvailableTill until={video.availableUntil} />
 
                   {video.percentWatched > 0 && (
                     <div className="w-full h-1.5 bg-gray-200 rounded-full overflow-hidden">

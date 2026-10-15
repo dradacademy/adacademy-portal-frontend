@@ -13,8 +13,17 @@ import {
   ArrowUp,
   ArrowUpDown,
   Eye,
+  CalendarPlus,
 } from "lucide-react";
 import AdminVideoPreviewDialog from "../../../../components/dashboard/admin/AdminVideoPreviewDialog";
+import AvailabilityPicker from "../../../../components/dashboard/admin/AvailabilityPicker";
+import {
+  availabilityFromRecord,
+  availabilityToPayload,
+  daysLeft,
+  defaultAvailability,
+  formatIstDate,
+} from "../../../../utils/classAvailability";
 import {
   EXAM_CATEGORY_OPTIONS,
   getCategoryLabel,
@@ -45,10 +54,8 @@ const SORTERS = {
   category: (r) => (getCategoryLabel(r.category) || "").toLowerCase(),
   recordedDate: (r) => (r.recordedDate ? new Date(r.recordedDate).getTime() : null),
   duration: (r) => r.durationSeconds ?? null,
-  visibleFor: (r) =>
-    r.visibilityWindowDays === null || r.visibilityWindowDays === undefined
-      ? Infinity
-      : r.visibilityWindowDays,
+  availableUntil: (r) =>
+    r.effectiveAvailableUntil ? new Date(r.effectiveAvailableUntil).getTime() : Infinity,
   status: (r) => (r.active ? 1 : 0),
 };
 
@@ -68,18 +75,50 @@ const EMPTY_FORM = {
   recordedDate: new Date().toISOString().slice(0, 10),
   youtubeUrl: "",
   durationMinutes: "",
-  visibilityWindowDays: "7",
-  neverExpires: false,
+  availability: defaultAvailability(),
+  // Only send availability on Edit when the admin actually changed it, so
+  // fixing a title on an already-expired class doesn't trip the "date
+  // can't be in the past" check.
+  availabilityTouched: false,
 };
 
-// How the "Visible for" setting reads on the recordings table — a per-video
-// window (default 7 days from the recorded date, editable per class) after
-// which it quietly stops showing up for students, independent of YouTube.
-const formatVisibilityWindow = (rec) => {
-  if (rec.visibilityWindowDays === null || rec.visibilityWindowDays === undefined) {
-    return "Never expires";
+// "Available until" cell: the last day students can watch (IST), with a
+// status label — Never expires / Expired / Expires today / Expires in N
+// days / Active — and a quick "+7 days" extend button.
+const AvailabilityCell = ({ rec, onExtend, extending }) => {
+  if (rec.availabilityMode === "never" || !rec.effectiveAvailableUntil) {
+    return (
+      <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-indigo-50 text-indigo-600">
+        Never expires
+      </span>
+    );
   }
-  return `${rec.visibilityWindowDays} day${rec.visibilityWindowDays === 1 ? "" : "s"}`;
+  const left = daysLeft(rec.effectiveAvailableUntil);
+  let badge;
+  if (rec.isExpired) badge = { text: "Expired", cls: "bg-rose-100 text-rose-700" };
+  else if (left === 0) badge = { text: "Expires today", cls: "bg-amber-100 text-amber-700" };
+  else if (left <= 2) badge = { text: `Expires in ${left} day${left === 1 ? "" : "s"}`, cls: "bg-amber-100 text-amber-700" };
+  else badge = { text: "Available", cls: "bg-emerald-100 text-emerald-700" };
+  return (
+    <div className="flex flex-col items-start gap-1">
+      <span className="text-gray-700">{formatIstDate(rec.effectiveAvailableUntil)}</span>
+      <div className="flex items-center gap-1.5">
+        <span className={`px-2 py-0.5 rounded-full text-[11px] font-medium ${badge.cls}`}>
+          {badge.text}
+        </span>
+        <button
+          type="button"
+          onClick={() => onExtend(rec)}
+          disabled={extending}
+          title="Extend by 7 days (from today if already expired)"
+          className="flex items-center gap-0.5 text-[11px] font-medium text-indigo-600 hover:underline disabled:opacity-50"
+        >
+          <CalendarPlus className="h-3 w-3" />
+          +7 days
+        </button>
+      </div>
+    </div>
+  );
 };
 
 // Admin management for the in-app recorded-class list. The admin uploads
@@ -102,7 +141,7 @@ const RecordedClassesAdminPage = () => {
   // click again — anything already here is skipped.
   const handleBackfillFromLive = async () => {
     const confirmed = window.confirm(
-      "Add all past (already ended) live classes that aren't in Recorded Classes yet?\n\nAnything already here (same video) is skipped. Older ones keep their original date, so their 7-day student visibility may already be over — use Edit to change \"Visible for\" if students should see them."
+      "Add all past (already ended) live classes that aren't in Recorded Classes yet?\n\nAnything already here (same video) is skipped. Older ones keep their original class date, so their availability may already be over — use \"+7 days\" or Edit to show them to students again."
     );
     if (!confirmed) return;
     setBackfilling(true);
@@ -131,6 +170,62 @@ const RecordedClassesAdminPage = () => {
   const [form, setForm] = useState(EMPTY_FORM);
   const [saving, setSaving] = useState(false);
   const [sort, setSort] = useState({ key: null, dir: "asc" });
+
+  // Row checkboxes + bulk availability.
+  const [selectedIds, setSelectedIds] = useState([]);
+  const [bulkOpen, setBulkOpen] = useState(false);
+  const [bulkAvailability, setBulkAvailability] = useState(defaultAvailability());
+  const [bulkSaving, setBulkSaving] = useState(false);
+
+  const toggleSelected = (id) =>
+    setSelectedIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
+
+  const sendBulk = async (ids, body, successText) => {
+    const { data } = await axios.patch(
+      `${import.meta.env.VITE_APP_API_URL}/recorded-classes/bulk-availability`,
+      { ids, ...body }
+    );
+    toast.success(successText(data));
+    if (data?.skippedNeverExpires) {
+      toast(`${data.skippedNeverExpires} already never expire — left as they are.`);
+    }
+    fetchRecordings();
+    return data;
+  };
+
+  const handleExtend = async (ids) => {
+    setBulkSaving(true);
+    try {
+      await sendBulk(ids, { extendDays: 7 }, (d) =>
+        d.updated === 1 ? "Extended by 7 days." : `Extended ${d.updated} recordings by 7 days.`
+      );
+      setSelectedIds([]);
+    } catch (error) {
+      toast.error(error?.response?.data?.message || "Failed to extend.");
+    } finally {
+      setBulkSaving(false);
+    }
+  };
+
+  const handleApplyBulk = async () => {
+    const payload = availabilityToPayload(bulkAvailability);
+    if (payload.error) {
+      toast.error(payload.error);
+      return;
+    }
+    setBulkSaving(true);
+    try {
+      await sendBulk(selectedIds, payload, () =>
+        `Updated availability for ${selectedIds.length} recording${selectedIds.length === 1 ? "" : "s"}.`
+      );
+      setBulkOpen(false);
+      setSelectedIds([]);
+    } catch (error) {
+      toast.error(error?.response?.data?.message || "Failed to update availability.");
+    } finally {
+      setBulkSaving(false);
+    }
+  };
 
   const handleSort = (key) => {
     setSort((prev) =>
@@ -171,6 +266,7 @@ const RecordedClassesAdminPage = () => {
   };
 
   useEffect(() => {
+    setSelectedIds([]);
     fetchRecordings();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeCategory]);
@@ -200,12 +296,8 @@ const RecordedClassesAdminPage = () => {
       durationMinutes: rec.durationSeconds
         ? String(Math.round(rec.durationSeconds / 60))
         : "",
-      neverExpires:
-        rec.visibilityWindowDays === null || rec.visibilityWindowDays === undefined,
-      visibilityWindowDays:
-        rec.visibilityWindowDays === null || rec.visibilityWindowDays === undefined
-          ? "7"
-          : String(rec.visibilityWindowDays),
+      availability: availabilityFromRecord(rec),
+      availabilityTouched: false,
     });
     setOpenFormPopup(true);
   };
@@ -213,6 +305,15 @@ const RecordedClassesAdminPage = () => {
   const handleSave = async () => {
     if (!form.title || !form.category || !form.recordedDate || !form.youtubeUrl) {
       toast.error("Please fill in the title, category, recorded date, and YouTube link.");
+      return;
+    }
+
+    const sendAvailability = !editingId || form.availabilityTouched;
+    const availabilityPayload = sendAvailability
+      ? availabilityToPayload(form.availability)
+      : {};
+    if (availabilityPayload.error) {
+      toast.error(availabilityPayload.error);
       return;
     }
 
@@ -227,9 +328,7 @@ const RecordedClassesAdminPage = () => {
         durationSeconds: form.durationMinutes
           ? Number(form.durationMinutes) * 60
           : null,
-        visibilityWindowDays: form.neverExpires
-          ? null
-          : Math.max(0, Number(form.visibilityWindowDays) || 7),
+        ...availabilityPayload,
       };
 
       if (editingId) {
@@ -347,16 +446,60 @@ const RecordedClassesAdminPage = () => {
         ))}
       </div>
 
+      {/* Bulk actions for checked rows */}
+      {selectedIds.length > 0 && (
+        <div className="flex flex-wrap items-center gap-3 bg-indigo-50 border border-indigo-200 rounded-2xl px-4 py-3">
+          <span className="text-sm font-medium text-indigo-800">
+            {selectedIds.length} selected
+          </span>
+          <button
+            onClick={() => {
+              setBulkAvailability(defaultAvailability());
+              setBulkOpen(true);
+            }}
+            className="bg-indigo-500 text-white text-sm font-medium py-1.5 px-4 rounded-xl hover:opacity-85"
+          >
+            Set availability…
+          </button>
+          <button
+            onClick={() => handleExtend(selectedIds)}
+            disabled={bulkSaving}
+            className="border border-indigo-400 text-indigo-600 text-sm font-medium py-1.5 px-4 rounded-xl hover:bg-indigo-100 disabled:opacity-50"
+          >
+            Extend +7 days
+          </button>
+          <button
+            onClick={() => setSelectedIds([])}
+            className="text-sm text-stone-500 hover:underline ml-auto"
+          >
+            Clear selection
+          </button>
+        </div>
+      )}
+
       {/* Recordings list */}
       <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-x-auto">
-        <table className="w-full text-sm min-w-[900px]">
+        <table className="w-full text-sm min-w-[980px]">
           <thead>
             <tr className="bg-gray-50 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">
+              <th className="pl-4 py-3 w-8">
+                <input
+                  type="checkbox"
+                  aria-label="Select all"
+                  checked={
+                    sortedRecordings.length > 0 &&
+                    selectedIds.length === sortedRecordings.length
+                  }
+                  onChange={(e) =>
+                    setSelectedIds(e.target.checked ? sortedRecordings.map((r) => r._id) : [])
+                  }
+                />
+              </th>
               <SortableTh label="Title" sortKey="title" sort={sort} onSort={handleSort} />
               <SortableTh label="Category" sortKey="category" sort={sort} onSort={handleSort} />
               <SortableTh label="Recorded Date" sortKey="recordedDate" sort={sort} onSort={handleSort} />
               <SortableTh label="Duration" sortKey="duration" sort={sort} onSort={handleSort} />
-              <SortableTh label="Visible For" sortKey="visibleFor" sort={sort} onSort={handleSort} />
+              <SortableTh label="Available Until" sortKey="availableUntil" sort={sort} onSort={handleSort} />
               <SortableTh label="Status" sortKey="status" sort={sort} onSort={handleSort} />
               <th className="px-4 py-3">Actions</th>
             </tr>
@@ -364,19 +507,27 @@ const RecordedClassesAdminPage = () => {
           <tbody>
             {loading ? (
               <tr>
-                <td colSpan={7} className="text-center text-gray-400 py-10">
+                <td colSpan={8} className="text-center text-gray-400 py-10">
                   Loading…
                 </td>
               </tr>
             ) : sortedRecordings.length === 0 ? (
               <tr>
-                <td colSpan={7} className="text-center text-gray-400 py-10">
+                <td colSpan={8} className="text-center text-gray-400 py-10">
                   No recordings added yet.
                 </td>
               </tr>
             ) : (
               sortedRecordings.map((rec) => (
                 <tr key={rec._id} className="border-t border-gray-50 hover:bg-gray-50/60">
+                  <td className="pl-4 py-3">
+                    <input
+                      type="checkbox"
+                      aria-label={`Select ${rec.title}`}
+                      checked={selectedIds.includes(rec._id)}
+                      onChange={() => toggleSelected(rec._id)}
+                    />
+                  </td>
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-2">
                       <Video className="h-4 w-4 text-indigo-400 shrink-0" />
@@ -411,7 +562,11 @@ const RecordedClassesAdminPage = () => {
                       : "—"}
                   </td>
                   <td className="px-4 py-3 text-gray-600">
-                    {formatVisibilityWindow(rec)}
+                    <AvailabilityCell
+                      rec={rec}
+                      onExtend={(r) => handleExtend([r._id])}
+                      extending={bulkSaving}
+                    />
                   </td>
                   <td className="px-4 py-3">
                     <span
@@ -584,43 +739,14 @@ const RecordedClassesAdminPage = () => {
                 disabled={saving}
               />
             </div>
-            <div className="flex flex-col gap-2 border border-stone-200 rounded-2xl p-3 bg-stone-50">
-              <label className="text-sm text-stone-500 font-medium">
-                Visible to students for
-              </label>
-              <div className="flex items-center gap-2">
-                <input
-                  type="number"
-                  min="0"
-                  className="border border-stone-300 py-2 px-4 focus:outline-stone-300 rounded-xl bg-white w-28 disabled:opacity-50 disabled:bg-stone-100"
-                  value={form.visibilityWindowDays}
-                  onChange={(e) =>
-                    setForm({ ...form, visibilityWindowDays: e.target.value })
-                  }
-                  disabled={saving || form.neverExpires}
-                />
-                <span className="text-sm text-stone-500">
-                  day{form.visibilityWindowDays === "1" ? "" : "s"} from the
-                  recorded date
-                </span>
-              </div>
-              <label className="flex items-center gap-2 text-sm text-stone-600 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={form.neverExpires}
-                  onChange={(e) =>
-                    setForm({ ...form, neverExpires: e.target.checked })
-                  }
-                  disabled={saving}
-                />
-                Never expire (always visible to students while Active)
-              </label>
-              <p className="text-xs text-gray-400">
-                After this window, the class drops off students' "Recorded
-                Classes" list on its own — nothing changes on YouTube. You
-                can still see, edit, or delete it here at any time.
-              </p>
-            </div>
+            <AvailabilityPicker
+              value={form.availability}
+              onChange={(availability) =>
+                setForm({ ...form, availability, availabilityTouched: true })
+              }
+              classDate={form.recordedDate}
+              disabled={saving}
+            />
           </div>
           <div className="grid grid-cols-2 gap-1">
             <button
@@ -636,6 +762,57 @@ const RecordedClassesAdminPage = () => {
               className="bg-indigo-400 text-stone-50 font-medium py-2 px-4 rounded-xl font-poppins cursor-pointer hover:opacity-85 duration-300 disabled:opacity-50"
             >
               {saving ? "Saving…" : editingId ? "Save Changes" : "Add Recording"}
+            </button>
+          </div>
+        </div>
+      </Dialog>
+
+      {/* Bulk availability dialog */}
+      <Dialog open={bulkOpen} onClose={bulkSaving ? undefined : () => setBulkOpen(false)}>
+        <div className="flex flex-col gap-5 sm:min-w-[460px] p-5">
+          <div className="flex items-start justify-between gap-6 w-full">
+            <div className="flex flex-col gap-1">
+              <h1 className="text-2xl font-bold text-stone-700 font-poppins">
+                Set availability
+              </h1>
+              <p className="text-sm text-stone-500 font-work-sans">
+                For {selectedIds.length} selected recording
+                {selectedIds.length === 1 ? "" : "s"}. "Number of days" counts
+                from each class's own date.
+              </p>
+            </div>
+            {!bulkSaving && (
+              <MdClose
+                onClick={() => setBulkOpen(false)}
+                className="text-stone-500 font-medium text-4xl cursor-pointer hover:opacity-80 duration-300"
+              />
+            )}
+          </div>
+          <AvailabilityPicker
+            value={bulkAvailability}
+            onChange={setBulkAvailability}
+            classDate={
+              selectedIds.length === 1
+                ? recordings.find((r) => r._id === selectedIds[0])?.recordedDate?.slice(0, 10)
+                : undefined
+            }
+            showDaysPreview={selectedIds.length === 1}
+            disabled={bulkSaving}
+          />
+          <div className="grid grid-cols-2 gap-1">
+            <button
+              onClick={() => setBulkOpen(false)}
+              disabled={bulkSaving}
+              className="border border-indigo-400 text-indigo-400 font-medium py-2 px-4 rounded-xl font-poppins cursor-pointer hover:opacity-85 duration-300 disabled:opacity-50"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={handleApplyBulk}
+              disabled={bulkSaving}
+              className="bg-indigo-400 text-stone-50 font-medium py-2 px-4 rounded-xl font-poppins cursor-pointer hover:opacity-85 duration-300 disabled:opacity-50"
+            >
+              {bulkSaving ? "Saving…" : "Apply"}
             </button>
           </div>
         </div>

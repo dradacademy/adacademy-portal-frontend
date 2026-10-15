@@ -15,6 +15,15 @@ import {
   Eye,
 } from "lucide-react";
 import AdminVideoPreviewDialog from "../../../../components/dashboard/admin/AdminVideoPreviewDialog";
+import AvailabilityPicker from "../../../../components/dashboard/admin/AvailabilityPicker";
+import {
+  availabilityFromRecord,
+  availabilityToPayload,
+  defaultAvailability,
+  formatIstDate,
+  toIstYmd,
+  todayIstYmd,
+} from "../../../../utils/classAvailability";
 import {
   EXAM_CATEGORY_OPTIONS,
   getCategoryLabel,
@@ -46,6 +55,8 @@ const SORTERS = {
   startedAt: (r) => (r.startedAt ? new Date(r.startedAt).getTime() : null),
   endedAt: (r) => (r.endedAt ? new Date(r.endedAt).getTime() : null),
   length: (r) => r.lengthSeconds ?? null,
+  replayUntil: (r) =>
+    r.effectiveAvailableUntil ? new Date(r.effectiveAvailableUntil).getTime() : Infinity,
   status: (r) => (r.active ? 1 : 0),
 };
 
@@ -53,6 +64,9 @@ const EMPTY_FORM = {
   title: "",
   category: EXAM_CATEGORY_OPTIONS[0].value,
   youtubeUrl: "",
+  // How long the replay stays watchable after End Live (copied onto the
+  // recording that End Live adds to Recorded Classes).
+  availability: defaultAvailability(),
 };
 
 const EMPTY_EDIT_FORM = {
@@ -60,6 +74,9 @@ const EMPTY_EDIT_FORM = {
   category: EXAM_CATEGORY_OPTIONS[0].value,
   youtubeUrl: "",
   durationMinutes: "",
+  availability: defaultAvailability(),
+  availabilityTouched: false,
+  classDate: "",
 };
 
 const formatLength = (seconds) => {
@@ -158,9 +175,19 @@ const LiveClassAdminPage = () => {
       return;
     }
 
+    const availabilityPayload = availabilityToPayload(form.availability);
+    if (availabilityPayload.error) {
+      toast.error(availabilityPayload.error);
+      return;
+    }
+
     setSaving(true);
     try {
-      await axios.post(`${import.meta.env.VITE_APP_API_URL}/live-classes`, form);
+      const { availability, ...rest } = form;
+      await axios.post(`${import.meta.env.VITE_APP_API_URL}/live-classes`, {
+        ...rest,
+        ...availabilityPayload,
+      });
       toast.success("You're live — students in this category can now join.");
       setForm(EMPTY_FORM);
       fetchHistory();
@@ -178,7 +205,11 @@ const LiveClassAdminPage = () => {
   // ends). It can be edited, retired or deleted there like any recording.
   const handleEndLive = async (liveClass) => {
     const confirmed = window.confirm(
-      `End "${liveClass.title}"?\n\nIt will also be added to Recorded Classes automatically (visible to students for 7 days — you can change that in Recorded Classes).`
+      `End "${liveClass.title}"?\n\nIt will also be added to Recorded Classes automatically, available to students ${
+        liveClass.availabilityMode === "never"
+          ? "with no end date"
+          : `until ${formatIstDate(liveClass.effectiveAvailableUntil)}`
+      } (you can change that in Recorded Classes).`
     );
     if (!confirmed) return;
 
@@ -219,6 +250,9 @@ const LiveClassAdminPage = () => {
       durationMinutes: liveClass.durationSeconds
         ? String(Math.round(liveClass.durationSeconds / 60))
         : "",
+      availability: availabilityFromRecord(liveClass),
+      availabilityTouched: false,
+      classDate: liveClass.startedAt ? toIstYmd(liveClass.startedAt) : todayIstYmd(),
     });
     setEditOpen(true);
   };
@@ -235,11 +269,20 @@ const LiveClassAdminPage = () => {
       return;
     }
 
+    const availabilityPayload = editForm.availabilityTouched
+      ? availabilityToPayload(editForm.availability)
+      : {};
+    if (availabilityPayload.error) {
+      toast.error(availabilityPayload.error);
+      return;
+    }
+
     setEditSaving(true);
     try {
+      const { availability, availabilityTouched, classDate, ...rest } = editForm;
       await axios.patch(
         `${import.meta.env.VITE_APP_API_URL}/live-classes/${editingId}`,
-        editForm
+        { ...rest, ...availabilityPayload }
       );
       toast.success("Live class updated.");
       handleCloseEdit();
@@ -409,6 +452,13 @@ const LiveClassAdminPage = () => {
             same category.
           </p>
         </div>
+        <AvailabilityPicker
+          title="Replay available to students (after End Live)"
+          value={form.availability}
+          onChange={(availability) => setForm({ ...form, availability })}
+          classDate={todayIstYmd()}
+          disabled={saving}
+        />
         <button
           onClick={handleGoLive}
           disabled={saving}
@@ -421,7 +471,7 @@ const LiveClassAdminPage = () => {
 
       {/* Recent history */}
       <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-x-auto">
-        <table className="w-full text-sm min-w-[700px]">
+        <table className="w-full text-sm min-w-[820px]">
           <thead>
             <tr className="bg-gray-50 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">
               <SortableTh label="Title" sortKey="title" sort={sort} onSort={handleSort} />
@@ -429,6 +479,7 @@ const LiveClassAdminPage = () => {
               <SortableTh label="Started" sortKey="startedAt" sort={sort} onSort={handleSort} />
               <SortableTh label="Ended" sortKey="endedAt" sort={sort} onSort={handleSort} />
               <SortableTh label="Length" sortKey="length" sort={sort} onSort={handleSort} />
+              <SortableTh label="Replay Until" sortKey="replayUntil" sort={sort} onSort={handleSort} />
               <SortableTh label="Status" sortKey="status" sort={sort} onSort={handleSort} />
               <th className="px-4 py-3"></th>
             </tr>
@@ -436,13 +487,13 @@ const LiveClassAdminPage = () => {
           <tbody>
             {loading ? (
               <tr>
-                <td colSpan={7} className="text-center text-gray-400 py-10">
+                <td colSpan={8} className="text-center text-gray-400 py-10">
                   Loading…
                 </td>
               </tr>
             ) : sortedHistory.length === 0 ? (
               <tr>
-                <td colSpan={7} className="text-center text-gray-400 py-10">
+                <td colSpan={8} className="text-center text-gray-400 py-10">
                   No live classes started yet.
                 </td>
               </tr>
@@ -465,6 +516,16 @@ const LiveClassAdminPage = () => {
                       >
                         {LENGTH_SOURCE_LABEL[lc.lengthSource]}
                       </p>
+                    )}
+                  </td>
+                  <td className="px-4 py-3 text-gray-600">
+                    {lc.availabilityMode === "never" || !lc.effectiveAvailableUntil ? (
+                      "Never expires"
+                    ) : (
+                      <span className={lc.isExpired ? "text-rose-600" : ""}>
+                        {formatIstDate(lc.effectiveAvailableUntil)}
+                        {lc.isExpired && <span className="block text-[11px]">expired</span>}
+                      </span>
                     )}
                   </td>
                   <td className="px-4 py-3">
@@ -611,6 +672,15 @@ const LiveClassAdminPage = () => {
                 different YouTube video/stream for this entry.
               </p>
             </div>
+            <AvailabilityPicker
+              title="Replay available to students"
+              value={editForm.availability}
+              onChange={(availability) =>
+                setEditForm({ ...editForm, availability, availabilityTouched: true })
+              }
+              classDate={editForm.classDate}
+              disabled={editSaving}
+            />
           </div>
           <div className="grid grid-cols-2 gap-1">
             <button
