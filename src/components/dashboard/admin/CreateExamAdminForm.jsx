@@ -3,6 +3,14 @@ import Select from "react-select";
 import { MdDelete } from "react-icons/md";
 import { Box, IconButton, Radio, Checkbox } from "@mui/material";
 import { MathText } from "../../../utils/mathText";
+
+// True when this text contains anything students will see rendered as math
+// (powers ^, subscripts _, LaTeX \commands, or symbols like × ² ≤) — the same
+// characters the student exam page's MathText renderer reacts to. Used to
+// show a "how students will see it" preview under the question and each
+// option, only when it would actually look different from what was typed.
+const MATH_PREVIEW_RE = /[\\^_⁰¹²³⁴⁵⁶⁷⁸⁹₀₁₂₃₄₅₆₇₈₉×÷±≤≥≠∂]/;
+const needsMathPreview = (text) => !!text && MATH_PREVIEW_RE.test(text);
 import "katex/dist/katex.min.css";
 import AnswerKeyImagesEditor from "./AnswerKeyImagesEditor";
 import { describeNumericAcceptance } from "../../../utils/examMarks";
@@ -435,9 +443,7 @@ const CreateExamAdminForm = ({
             onChange={(e) => handleQuestionChange(qIndex, e)}
             required
           />
-          {question.questionText &&
-            (question.questionText.includes("^") ||
-              question.questionText.includes("\\")) && (
+          {needsMathPreview(question.questionText) && (
               <div className="text-sm text-stone-500 bg-white border border-dashed border-stone-300 rounded-lg px-4 py-2">
                 <span className="text-xs text-stone-400 mr-2">Preview:</span>
                 <MathText text={question.questionText} />
@@ -609,6 +615,12 @@ const CreateExamAdminForm = ({
                         }
                         required
                       />
+                      {needsMathPreview(optionText) && (
+                        <div className="text-sm text-stone-600 bg-white border border-dashed border-stone-300 rounded-lg px-3 py-1.5">
+                          <span className="text-xs text-stone-400 mr-2">Preview:</span>
+                          <MathText text={optionText} />
+                        </div>
+                      )}
                       <div className="flex items-center gap-2">
                         <div
                           tabIndex={0}

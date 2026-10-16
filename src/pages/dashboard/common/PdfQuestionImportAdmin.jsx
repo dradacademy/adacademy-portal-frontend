@@ -25,12 +25,36 @@ import {
 // LaTeX (only the LaTeX-looking substrings render as math — the rest stays
 // plain text, since PDF-extracted text mixes prose and formulas with no
 // delimiters between them).
+// Same characters the student exam page renders as math: powers ^,
+// subscripts _, LaTeX \commands, and symbols like × ² ≤.
+const MATH_PREVIEW_RE = /[\\^_⁰¹²³⁴⁵⁶⁷⁸⁹₀₁₂₃₄₅₆₇₈₉×÷±≤≥≠∂]/;
+const needsMathPreview = (text) => !!text && MATH_PREVIEW_RE.test(text);
+
 const MathPreview = ({ text }) => {
-  if (!text || (!text.includes("^") && !text.includes("\\"))) return null;
+  if (!needsMathPreview(text)) return null;
 
   return (
     <div className="mt-1 text-xs text-gray-500 bg-gray-50 border border-gray-100 rounded-lg px-2 py-1.5">
       <MathText text={text} />
+    </div>
+  );
+};
+
+// Each option exactly as students will see it (A, B, C, D…), shown under
+// the comma-separated options box only when an option contains math.
+const OptionsPreview = ({ options }) => {
+  const texts = Array.isArray(options)
+    ? options.map((o) => (typeof o === "object" && o !== null ? o.text : o) || "")
+    : [];
+  if (!texts.some(needsMathPreview)) return null;
+  return (
+    <div className="mt-1 text-xs text-gray-600 bg-gray-50 border border-gray-100 rounded-lg px-2 py-1.5 grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-1">
+      {texts.map((t, i) => (
+        <div key={i} className="flex gap-1.5">
+          <span className="font-semibold text-gray-400">{String.fromCharCode(65 + i)}.</span>
+          <MathText text={t} />
+        </div>
+      ))}
     </div>
   );
 };
@@ -779,6 +803,9 @@ const PdfQuestionImportAdmin = ({ onImportQuestions }) => {
                         className="w-full text-sm border border-gray-200 rounded-lg px-2 py-1.5"
                         placeholder="Options, comma separated"
                       />
+                    )}
+                    {(q.questionType === "MCQ" || q.questionType === "MSQ") && (
+                      <OptionsPreview options={q.options} />
                     )}
 
                     <input
