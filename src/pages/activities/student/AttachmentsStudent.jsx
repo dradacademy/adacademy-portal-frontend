@@ -1,9 +1,10 @@
 import React, { useContext, useEffect, useState } from "react";
 import axios from "axios";
+import ContentCover from "../../../components/common/ContentCover";
 import Navbar from "../../../components/common/Navbar";
 import { AuthContext } from "../../../context/AuthContext";
 import AttachmentViewer from "../../../components/activities/student/AttachmentViewer";
-import { Paperclip, FileText, Presentation, Lock, Eye, CheckCircle2 } from "lucide-react";
+import { Paperclip, Lock, Eye, CheckCircle2 } from "lucide-react";
 
 const formatDate = (value) => {
   if (!value) return "—";
@@ -79,25 +80,32 @@ const AttachmentsStudent = () => {
                 key={att._id}
                 className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden flex flex-col"
               >
-                <div className="aspect-video bg-gradient-to-br from-indigo-100 to-indigo-50 flex items-center justify-center">
-                  {att.isPreviewable ? (
-                    <FileText className="h-10 w-10 text-indigo-300" />
-                  ) : (
-                    <Presentation className="h-10 w-10 text-amber-300" />
-                  )}
-                </div>
+                <ContentCover
+                  title={att.title}
+                  subject={att.subject?.name}
+                  kind={
+                    att.isPreviewable
+                      ? "pdf"
+                      : /presentation|powerpoint/i.test(att.contentType || "")
+                      ? "slides"
+                      : "doc"
+                  }
+                  badge={
+                    att.viewed ? (
+                      <span className="flex items-center gap-1 bg-white/90 text-emerald-700 text-xs font-semibold px-2 py-1 rounded-lg shadow-sm">
+                        <CheckCircle2 className="h-3.5 w-3.5" /> Viewed
+                      </span>
+                    ) : null
+                  }
+                />
                 <div className="p-4 flex flex-col gap-2 flex-1">
-                  <h3 className="font-semibold text-gray-800">{att.title}</h3>
+                  {/* The cover already shows the name; kept for screen readers. */}
+                  <h3 className="sr-only">{att.title}</h3>
                   {att.description && (
                     <p className="text-xs text-gray-500 line-clamp-2">{att.description}</p>
                   )}
                   <div className="flex items-center justify-between text-xs text-gray-400">
                     <span>{formatDate(att.createdAt)}</span>
-                    {att.viewed && (
-                      <span className="flex items-center gap-1 text-emerald-500 font-medium">
-                        <CheckCircle2 className="h-3.5 w-3.5" /> Viewed
-                      </span>
-                    )}
                   </div>
 
                   <div className="mt-auto pt-2">

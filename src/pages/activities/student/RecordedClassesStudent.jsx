@@ -21,6 +21,7 @@ import {
   subjectKey,
 } from "../../../utils/recordedClassGroups";
 import { daysLeft, formatIstDate } from "../../../utils/classAvailability";
+import ContentCover from "../../../components/common/ContentCover";
 
 // "Available till 22 Oct 2026" under each class, turning into an amber
 // "Expiring soon" warning in its last 2 days so students watch in time.
@@ -75,20 +76,26 @@ const savePref = (key, value) => {
 
 const VideoCard = ({ video, onPlay }) => (
   <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden flex flex-col">
-    <div className="relative aspect-video bg-gradient-to-br from-indigo-100 to-indigo-50 flex items-center justify-center">
-      <Video className="h-10 w-10 text-indigo-300" />
-      <span className="absolute top-2 left-2 flex items-center gap-1 bg-white/90 text-indigo-700 text-xs font-semibold px-2 py-1 rounded-lg shadow-sm">
-        <Calendar className="h-3.5 w-3.5" />
-        {formatDate(video.recordedDate)}
-      </span>
-    </div>
+    <ContentCover
+      title={video.title}
+      subject={video.subject?.name}
+      topic={video.subtopic?.name}
+      kind="video"
+      badge={
+        <span className="flex items-center gap-1 bg-white/90 text-gray-800 text-xs font-semibold px-2 py-1 rounded-lg shadow-sm">
+          <Calendar className="h-3.5 w-3.5" />
+          {formatDate(video.recordedDate)}
+        </span>
+      }
+    />
     <div className="p-4 flex flex-col gap-2 flex-1">
-      <h3 className="font-semibold text-gray-800">{video.title}</h3>
+      {/* The cover already shows the name; kept for screen readers. */}
+      <h3 className="sr-only">{video.title}</h3>
       {video.description && (
         <p className="text-xs text-gray-500 line-clamp-2">{video.description}</p>
       )}
       <div className="flex items-center justify-between text-xs text-gray-400">
-        <span>{video.subtopic?.name || video.subject?.name || ""}</span>
+        <span>{video.percentWatched > 0 ? `${Math.round(video.percentWatched)}% watched` : ""}</span>
         <span>{formatDuration(video.durationSeconds)}</span>
       </div>
       <AvailableTill until={video.availableUntil} />
