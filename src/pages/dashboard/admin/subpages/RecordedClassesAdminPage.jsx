@@ -14,7 +14,18 @@ import {
   ArrowUpDown,
   Eye,
   CalendarPlus,
+  FolderTree,
+  Sparkles,
 } from "lucide-react";
+import {
+  NO_SUBJECT,
+  NO_SUBTOPIC,
+  listSubjects,
+  listSubtopics,
+  subjectKey,
+  subtopicKey,
+  suggestGroupings,
+} from "../../../../utils/recordedClassGroups";
 import AdminVideoPreviewDialog from "../../../../components/dashboard/admin/AdminVideoPreviewDialog";
 import AvailabilityPicker from "../../../../components/dashboard/admin/AvailabilityPicker";
 import {
@@ -57,6 +68,68 @@ const SORTERS = {
   availableUntil: (r) =>
     r.effectiveAvailableUntil ? new Date(r.effectiveAvailableUntil).getTime() : Infinity,
   status: (r) => (r.active ? 1 : 0),
+  // Subject A→Z, then subtopic, then class date — the student's browsing order.
+  // "0"/"1" prefixes put missing subject/subtopic last (localeCompare
+  // ignores the order of symbols like "~").
+  group: (r) =>
+    `${r.subject ? `0${r.subject.name.toLowerCase()}` : "1"}|${
+      r.subtopic ? `0${r.subtopic.name.toLowerCase()}` : "1"
+    }|${r.recordedDate ? String(new Date(r.recordedDate).getTime()).padStart(15, "0") : ""}`,
+};
+
+const ALL = "__all__";
+
+const selectCls =
+  "border border-stone-300 py-[10px] px-4 focus:outline-stone-300 rounded-2xl bg-white text-sm disabled:opacity-60";
+
+// Subject + Subtopic pickers (native selects, same subjects/subtopics as
+// the Subjects page). `subjects` must already be limited to the right exam
+// category; `showCategory` adds the category to each name when several
+// categories are mixed (bulk grouping).
+const SubjectSubtopicFields = ({ subjects, value, onChange, disabled, showCategory, allowNone = true }) => {
+  const subject = subjects.find((s) => String(s._id) === String(value.subject));
+  return (
+    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+      <div className="flex flex-col gap-1">
+        <label className="text-sm text-stone-500 font-medium">Subject</label>
+        <select
+          className={selectCls}
+          value={value.subject || ""}
+          onChange={(e) => onChange({ subject: e.target.value, subtopic: "" })}
+          disabled={disabled}
+        >
+          {allowNone && <option value="">— Not grouped —</option>}
+          {subjects.map((s) => (
+            <option key={s._id} value={s._id}>
+              {s.name}
+              {showCategory ? ` (${getCategoryLabel(s.category)})` : ""}
+            </option>
+          ))}
+        </select>
+      </div>
+      <div className="flex flex-col gap-1">
+        <label className="text-sm text-stone-500 font-medium">Subtopic</label>
+        <select
+          className={selectCls}
+          value={value.subtopic || ""}
+          onChange={(e) => onChange({ ...value, subtopic: e.target.value })}
+          disabled={disabled || !subject}
+        >
+          <option value="">{subject ? "— General (no subtopic) —" : "Pick a subject first"}</option>
+          {(subject?.subtopics || []).map((t) => (
+            <option key={t._id} value={t._id}>
+              {t.name}
+            </option>
+          ))}
+        </select>
+      </div>
+      {subjects.length === 0 && (
+        <p className="sm:col-span-2 text-xs text-amber-600">
+          No subjects in this exam category yet — add them (with subtopics) on the Subjects page.
+        </p>
+      )}
+    </div>
+  );
 };
 
 const formatDateTime = (value) => {
@@ -75,6 +148,8 @@ const EMPTY_FORM = {
   recordedDate: new Date().toISOString().slice(0, 10),
   youtubeUrl: "",
   durationMinutes: "",
+  subject: "",
+  subtopic: "",
   availability: defaultAvailability(),
   // Only send availability on Edit when the admin actually changed it, so
   // fixing a title on an already-expired class doesn't trip the "date
@@ -135,6 +210,29 @@ const RecordedClassesAdminPage = () => {
   const [activeCategory, setActiveCategory] = useState("all");
   const [preview, setPreview] = useState(null);
   const [backfilling, setBackfilling] = useState(false);
+
+  // Subject → Subtopic grouping.
+  const [allSubjects, setAllSubjects] = useState([]);
+  const [subjectFilter, setSubjectFilter] = useState(ALL);
+  const [subtopicFilter, setSubtopicFilter] = useState(ALL);
+  const [groupOpen, setGroupOpen] = useState(false);
+  const [groupValue, setGroupValue] = useState({ subject: "", subtopic: "" });
+  const [groupSaving, setGroupSaving] = useState(false);
+  const [suggestOpen, setSuggestOpen] = useState(false);
+  const [suggestions, setSuggestions] = useState([]);
+  const [suggestPicked, setSuggestPicked] = useState([]);
+
+  useEffect(() => {
+    axios
+      .get(`${import.meta.env.VITE_APP_API_URL}/subjects/get`)
+      .then((res) => setAllSubjects(Array.isArray(res.data) ? res.data : []))
+      .catch(() => toast.error("Couldn't load subjects."));
+  }, []);
+
+  const subjectsForCategory = (category) =>
+    allSubjects
+      .filter((s) => s.category === category)
+      .sort((a, b) => a.name.localeCompare(b.name));
 
   // One click: add every already-ended live class that isn't in Recorded
   // Classes yet (new ones are added automatically by End Live). Safe to
@@ -250,6 +348,112 @@ const RecordedClassesAdminPage = () => {
     });
   }, [recordings, sort]);
 
+  // Filter dropdowns list only subjects/subtopics that have recordings in
+  // the current category tab.
+  const subjectOptions = useMemo(() => listSubjects(recordings), [recordings]);
+  const activeSubject = subjectOptions.some((s) => s.key === subjectFilter) ? subjectFilter : ALL;
+  const subtopicOptions = useMemo(
+    () =>
+      activeSubject === ALL || activeSubject === NO_SUBJECT
+        ? []
+        : listSubtopics(recordings.filter((r) => subjectKey(r) === activeSubject)),
+    [recordings, activeSubject]
+  );
+  const activeSubtopic = subtopicOptions.some((t) => t.key === subtopicFilter) ? subtopicFilter : ALL;
+
+  const visibleRecordings = useMemo(
+    () =>
+      sortedRecordings.filter(
+        (r) =>
+          (activeSubject === ALL || subjectKey(r) === activeSubject) &&
+          (activeSubtopic === ALL || subtopicKey(r) === activeSubtopic)
+      ),
+    [sortedRecordings, activeSubject, activeSubtopic]
+  );
+
+  const ungroupedCount = recordings.filter((r) => !r.subject).length;
+  const noSubtopicCount = recordings.filter((r) => r.subject && !r.subtopic).length;
+
+  // Categories of the checked rows — the bulk Group dialog offers subjects
+  // from these categories only.
+  const selectedCategories = [
+    ...new Set(recordings.filter((r) => selectedIds.includes(r._id)).map((r) => r.category)),
+  ];
+
+  const handleBulkGroup = async () => {
+    setGroupSaving(true);
+    try {
+      const { data } = await axios.patch(
+        `${import.meta.env.VITE_APP_API_URL}/recorded-classes/bulk-group`,
+        { ids: selectedIds, subject: groupValue.subject || null, subtopic: groupValue.subtopic || null }
+      );
+      toast.success(
+        groupValue.subject
+          ? `Grouped ${data.updated} recording${data.updated === 1 ? "" : "s"}.`
+          : `Removed grouping from ${data.updated} recording${data.updated === 1 ? "" : "s"}.`
+      );
+      if (data.skippedOtherCategory) {
+        toast(`${data.skippedOtherCategory} skipped — they're in a different exam category than that subject.`);
+      }
+      setGroupOpen(false);
+      setSelectedIds([]);
+      fetchRecordings();
+    } catch (error) {
+      toast.error(error?.response?.data?.message || "Failed to group recordings.");
+    } finally {
+      setGroupSaving(false);
+    }
+  };
+
+  const openSuggestions = () => {
+    const found = suggestGroupings(recordings, allSubjects);
+    if (found.length === 0) {
+      toast("No subject or subtopic names found in the titles of ungrouped recordings. Use the checkboxes and \"Group into subject…\" instead.");
+      return;
+    }
+    setSuggestions(found);
+    setSuggestPicked(found.map((f) => f.rec._id));
+    setSuggestOpen(true);
+  };
+
+  const applySuggestions = async () => {
+    const picked = suggestions.filter((f) => suggestPicked.includes(f.rec._id));
+    if (picked.length === 0) {
+      setSuggestOpen(false);
+      return;
+    }
+    // One bulk call per (subject, subtopic) pair.
+    const batches = new Map();
+    picked.forEach((f) => {
+      const key = `${f.subject._id}|${f.subtopic?._id || ""}`;
+      const batch = batches.get(key) || { subject: f.subject._id, subtopic: f.subtopic?._id || null, ids: [] };
+      batch.ids.push(f.rec._id);
+      batches.set(key, batch);
+    });
+    setGroupSaving(true);
+    let done = 0;
+    try {
+      for (const batch of batches.values()) {
+        const { data } = await axios.patch(
+          `${import.meta.env.VITE_APP_API_URL}/recorded-classes/bulk-group`,
+          batch
+        );
+        done += data.updated || 0;
+      }
+      toast.success(`Grouped ${done} recording${done === 1 ? "" : "s"}.`);
+      setSuggestOpen(false);
+    } catch (error) {
+      toast.error(
+        `${done ? `Grouped ${done}, then stopped: ` : ""}${
+          error?.response?.data?.message || "Failed to apply suggestions."
+        }`
+      );
+    } finally {
+      setGroupSaving(false);
+      fetchRecordings();
+    }
+  };
+
   const fetchRecordings = async () => {
     try {
       setLoading(true);
@@ -267,9 +471,16 @@ const RecordedClassesAdminPage = () => {
 
   useEffect(() => {
     setSelectedIds([]);
+    setSubjectFilter(ALL);
+    setSubtopicFilter(ALL);
     fetchRecordings();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeCategory]);
+
+  // Changing the subject/subtopic filter clears ticks on rows now hidden.
+  useEffect(() => {
+    setSelectedIds([]);
+  }, [activeSubject, activeSubtopic]);
 
   const handleClosePopup = () => {
     setOpenFormPopup(false);
@@ -296,6 +507,8 @@ const RecordedClassesAdminPage = () => {
       durationMinutes: rec.durationSeconds
         ? String(Math.round(rec.durationSeconds / 60))
         : "",
+      subject: rec.subject?._id || "",
+      subtopic: rec.subtopic?._id || "",
       availability: availabilityFromRecord(rec),
       availabilityTouched: false,
     });
@@ -328,6 +541,8 @@ const RecordedClassesAdminPage = () => {
         durationSeconds: form.durationMinutes
           ? Number(form.durationMinutes) * 60
           : null,
+        subject: form.subject || null,
+        subtopic: form.subtopic || null,
         ...availabilityPayload,
       };
 
@@ -446,6 +661,95 @@ const RecordedClassesAdminPage = () => {
         ))}
       </div>
 
+      {/* Subject → Subtopic filters */}
+      <div className="flex flex-wrap items-end gap-3">
+        <label className="flex flex-col gap-1 text-xs font-medium text-stone-500">
+          Subject
+          <select
+            className="border border-stone-300 py-2 px-3 rounded-xl bg-white text-sm text-stone-700 min-w-[200px]"
+            value={activeSubject}
+            onChange={(e) => {
+              setSubjectFilter(e.target.value);
+              setSubtopicFilter(ALL);
+            }}
+          >
+            <option value={ALL}>All subjects ({recordings.length})</option>
+            {subjectOptions.map((s) => (
+              <option key={s.key} value={s.key}>
+                {s.key === NO_SUBJECT ? "Not grouped yet" : s.name} ({s.count})
+              </option>
+            ))}
+          </select>
+        </label>
+        {subtopicOptions.length > 0 && (
+          <label className="flex flex-col gap-1 text-xs font-medium text-stone-500">
+            Subtopic
+            <select
+              className="border border-stone-300 py-2 px-3 rounded-xl bg-white text-sm text-stone-700 min-w-[200px]"
+              value={activeSubtopic}
+              onChange={(e) => setSubtopicFilter(e.target.value)}
+            >
+              <option value={ALL}>All subtopics</option>
+              {subtopicOptions.map((t) => (
+                <option key={t.key} value={t.key}>
+                  {t.key === NO_SUBTOPIC ? "No subtopic yet" : t.name} ({t.count})
+                </option>
+              ))}
+            </select>
+          </label>
+        )}
+        <button
+          type="button"
+          onClick={() => setSort({ key: "group", dir: "asc" })}
+          className="text-sm text-indigo-600 font-medium hover:underline pb-2"
+          title="Sort by subject, then subtopic, then class date"
+        >
+          Order by subject → subtopic → date
+        </button>
+      </div>
+
+      {(ungroupedCount > 0 || noSubtopicCount > 0) && (
+        <div className="flex flex-wrap items-center gap-3 bg-amber-50 border border-amber-200 rounded-2xl px-4 py-3 text-sm">
+          <FolderTree className="h-4 w-4 text-amber-600 shrink-0" />
+          <span className="text-amber-800">
+            {ungroupedCount > 0 && (
+              <>
+                <b>{ungroupedCount}</b> recording{ungroupedCount === 1 ? " has" : "s have"} no subject
+              </>
+            )}
+            {ungroupedCount > 0 && noSubtopicCount > 0 && " · "}
+            {noSubtopicCount > 0 && (
+              <>
+                <b>{noSubtopicCount}</b> {noSubtopicCount === 1 ? "has" : "have"} a subject but no subtopic
+              </>
+            )}
+            . Students see these under "Other classes" / "General".
+          </span>
+          <div className="flex flex-wrap gap-2 ml-auto">
+            {ungroupedCount > 0 && (
+              <button
+                type="button"
+                onClick={() => {
+                  setSubjectFilter(NO_SUBJECT);
+                  setSubtopicFilter(ALL);
+                }}
+                className="border border-amber-400 text-amber-700 font-medium py-1.5 px-3 rounded-xl hover:bg-amber-100"
+              >
+                Show ungrouped
+              </button>
+            )}
+            <button
+              type="button"
+              onClick={openSuggestions}
+              className="flex items-center gap-1.5 bg-amber-500 text-white font-medium py-1.5 px-3 rounded-xl hover:opacity-90"
+            >
+              <Sparkles className="h-4 w-4" />
+              Suggest from titles
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Bulk actions for checked rows */}
       {selectedIds.length > 0 && (
         <div className="flex flex-wrap items-center gap-3 bg-indigo-50 border border-indigo-200 rounded-2xl px-4 py-3">
@@ -460,6 +764,16 @@ const RecordedClassesAdminPage = () => {
             className="bg-indigo-500 text-white text-sm font-medium py-1.5 px-4 rounded-xl hover:opacity-85"
           >
             Set availability…
+          </button>
+          <button
+            onClick={() => {
+              setGroupValue({ subject: "", subtopic: "" });
+              setGroupOpen(true);
+            }}
+            className="flex items-center gap-1.5 bg-indigo-500 text-white text-sm font-medium py-1.5 px-4 rounded-xl hover:opacity-85"
+          >
+            <FolderTree className="h-4 w-4" />
+            Group into subject…
           </button>
           <button
             onClick={() => handleExtend(selectedIds)}
@@ -479,7 +793,7 @@ const RecordedClassesAdminPage = () => {
 
       {/* Recordings list */}
       <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-x-auto">
-        <table className="w-full text-sm min-w-[980px]">
+        <table className="w-full text-sm min-w-[1120px]">
           <thead>
             <tr className="bg-gray-50 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">
               <th className="pl-4 py-3 w-8">
@@ -487,16 +801,17 @@ const RecordedClassesAdminPage = () => {
                   type="checkbox"
                   aria-label="Select all"
                   checked={
-                    sortedRecordings.length > 0 &&
-                    selectedIds.length === sortedRecordings.length
+                    visibleRecordings.length > 0 &&
+                    selectedIds.length === visibleRecordings.length
                   }
                   onChange={(e) =>
-                    setSelectedIds(e.target.checked ? sortedRecordings.map((r) => r._id) : [])
+                    setSelectedIds(e.target.checked ? visibleRecordings.map((r) => r._id) : [])
                   }
                 />
               </th>
               <SortableTh label="Title" sortKey="title" sort={sort} onSort={handleSort} />
               <SortableTh label="Category" sortKey="category" sort={sort} onSort={handleSort} />
+              <SortableTh label="Subject / Subtopic" sortKey="group" sort={sort} onSort={handleSort} />
               <SortableTh label="Recorded Date" sortKey="recordedDate" sort={sort} onSort={handleSort} />
               <SortableTh label="Duration" sortKey="duration" sort={sort} onSort={handleSort} />
               <SortableTh label="Available Until" sortKey="availableUntil" sort={sort} onSort={handleSort} />
@@ -507,18 +822,20 @@ const RecordedClassesAdminPage = () => {
           <tbody>
             {loading ? (
               <tr>
-                <td colSpan={8} className="text-center text-gray-400 py-10">
+                <td colSpan={9} className="text-center text-gray-400 py-10">
                   Loading…
                 </td>
               </tr>
-            ) : sortedRecordings.length === 0 ? (
+            ) : visibleRecordings.length === 0 ? (
               <tr>
-                <td colSpan={8} className="text-center text-gray-400 py-10">
-                  No recordings added yet.
+                <td colSpan={9} className="text-center text-gray-400 py-10">
+                  {recordings.length === 0
+                    ? "No recordings added yet."
+                    : "No recordings match this subject / subtopic."}
                 </td>
               </tr>
             ) : (
-              sortedRecordings.map((rec) => (
+              visibleRecordings.map((rec) => (
                 <tr key={rec._id} className="border-t border-gray-50 hover:bg-gray-50/60">
                   <td className="pl-4 py-3">
                     <input
@@ -550,6 +867,20 @@ const RecordedClassesAdminPage = () => {
                   </td>
                   <td className="px-4 py-3 text-gray-600">
                     {getCategoryLabel(rec.category)}
+                  </td>
+                  <td className="px-4 py-3">
+                    {rec.subject ? (
+                      <div className="flex flex-col">
+                        <span className="text-gray-700 font-medium">{rec.subject.name}</span>
+                        <span className={`text-xs ${rec.subtopic ? "text-gray-500" : "text-amber-600"}`}>
+                          {rec.subtopic ? rec.subtopic.name : "No subtopic"}
+                        </span>
+                      </div>
+                    ) : (
+                      <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-amber-50 text-amber-700">
+                        Not grouped
+                      </span>
+                    )}
                   </td>
                   <td className="px-4 py-3 text-gray-600">
                     {formatDateTime(rec.recordedDate)}
@@ -676,7 +1007,12 @@ const RecordedClassesAdminPage = () => {
               options={EXAM_CATEGORY_OPTIONS}
               value={EXAM_CATEGORY_OPTIONS.find((opt) => opt.value === form.category)}
               onChange={(selectedOption) =>
-                setForm({ ...form, category: selectedOption.value })
+                setForm({
+                  ...form,
+                  category: selectedOption.value,
+                  // Subjects belong to one category — reset on change.
+                  ...(selectedOption.value !== form.category ? { subject: "", subtopic: "" } : {}),
+                })
               }
               isDisabled={saving}
               isSearchable={false}
@@ -693,6 +1029,12 @@ const RecordedClassesAdminPage = () => {
               }}
               menuPortalTarget={document.body}
               menuPosition="absolute"
+            />
+            <SubjectSubtopicFields
+              subjects={subjectsForCategory(form.category)}
+              value={{ subject: form.subject, subtopic: form.subtopic }}
+              onChange={(v) => setForm({ ...form, ...v })}
+              disabled={saving}
             />
             <div className="flex flex-col gap-1">
               <label className="text-sm text-stone-500 font-medium">
@@ -814,6 +1156,133 @@ const RecordedClassesAdminPage = () => {
             >
               {bulkSaving ? "Saving…" : "Apply"}
             </button>
+          </div>
+        </div>
+      </Dialog>
+
+      {/* Bulk group dialog */}
+      <Dialog open={groupOpen} onClose={groupSaving ? undefined : () => setGroupOpen(false)}>
+        <div className="flex flex-col gap-5 sm:min-w-[520px] p-5">
+          <div className="flex items-start justify-between gap-6 w-full">
+            <div className="flex flex-col gap-1">
+              <h1 className="text-2xl font-bold text-stone-700 font-poppins">Group into subject</h1>
+              <p className="text-sm text-stone-500 font-work-sans">
+                For {selectedIds.length} selected recording{selectedIds.length === 1 ? "" : "s"}.
+                Students will find them under this subject and subtopic, listed by class date.
+                Choose "Not grouped" to remove grouping.
+              </p>
+            </div>
+            {!groupSaving && (
+              <MdClose
+                onClick={() => setGroupOpen(false)}
+                className="text-stone-500 font-medium text-4xl cursor-pointer hover:opacity-80 duration-300"
+              />
+            )}
+          </div>
+          <SubjectSubtopicFields
+            subjects={allSubjects
+              .filter((s) => selectedCategories.includes(s.category))
+              .sort((a, b) => a.name.localeCompare(b.name))}
+            value={groupValue}
+            onChange={setGroupValue}
+            disabled={groupSaving}
+            showCategory={selectedCategories.length > 1}
+          />
+          {selectedCategories.length > 1 && (
+            <p className="text-xs text-amber-600 -mt-2">
+              Your selection mixes exam categories. Only recordings in the chosen
+              subject's category will be grouped; the rest are skipped.
+            </p>
+          )}
+          <div className="grid grid-cols-2 gap-1">
+            <button
+              onClick={() => setGroupOpen(false)}
+              disabled={groupSaving}
+              className="border border-indigo-400 text-indigo-400 font-medium py-2 px-4 rounded-xl font-poppins cursor-pointer hover:opacity-85 duration-300 disabled:opacity-50"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={handleBulkGroup}
+              disabled={groupSaving}
+              className="bg-indigo-400 text-stone-50 font-medium py-2 px-4 rounded-xl font-poppins cursor-pointer hover:opacity-85 duration-300 disabled:opacity-50"
+            >
+              {groupSaving ? "Saving…" : "Apply"}
+            </button>
+          </div>
+        </div>
+      </Dialog>
+
+      {/* Suggestions from titles */}
+      <Dialog
+        open={suggestOpen}
+        onClose={groupSaving ? undefined : () => setSuggestOpen(false)}
+        maxWidth="md"
+        fullWidth
+      >
+        <div className="flex flex-col gap-4 p-5">
+          <div className="flex items-start justify-between gap-6 w-full">
+            <div className="flex flex-col gap-1">
+              <h1 className="text-2xl font-bold text-stone-700 font-poppins">Suggested groups</h1>
+              <p className="text-sm text-stone-500 font-work-sans">
+                Found by matching your subject and subtopic names inside each
+                recording's title. Untick anything that looks wrong, then Apply.
+                Recordings not listed here can be grouped with the checkboxes.
+              </p>
+            </div>
+            {!groupSaving && (
+              <MdClose
+                onClick={() => setSuggestOpen(false)}
+                className="text-stone-500 font-medium text-4xl cursor-pointer hover:opacity-80 duration-300"
+              />
+            )}
+          </div>
+          <div className="max-h-[55vh] overflow-y-auto border border-stone-200 rounded-xl divide-y divide-stone-100">
+            {suggestions.map((f) => (
+              <label key={f.rec._id} className="flex items-start gap-3 px-3 py-2.5 hover:bg-stone-50 cursor-pointer">
+                <input
+                  type="checkbox"
+                  className="mt-1"
+                  checked={suggestPicked.includes(f.rec._id)}
+                  onChange={() =>
+                    setSuggestPicked((prev) =>
+                      prev.includes(f.rec._id) ? prev.filter((x) => x !== f.rec._id) : [...prev, f.rec._id]
+                    )
+                  }
+                />
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm text-stone-800 font-medium truncate">{f.rec.title}</p>
+                  <p className="text-xs text-stone-500">
+                    {formatDateTime(f.rec.recordedDate)} · {getCategoryLabel(f.rec.category)}
+                  </p>
+                </div>
+                <div className="text-right text-sm shrink-0">
+                  <p className="text-indigo-700 font-medium">{f.subject.name}</p>
+                  <p className="text-xs text-stone-500">{f.subtopic ? f.subtopic.name : "No subtopic"}</p>
+                </div>
+              </label>
+            ))}
+          </div>
+          <div className="flex items-center justify-between gap-3">
+            <span className="text-sm text-stone-500">
+              {suggestPicked.length} of {suggestions.length} selected
+            </span>
+            <div className="flex gap-2">
+              <button
+                onClick={() => setSuggestOpen(false)}
+                disabled={groupSaving}
+                className="border border-indigo-400 text-indigo-400 font-medium py-2 px-4 rounded-xl font-poppins hover:opacity-85 disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={applySuggestions}
+                disabled={groupSaving || suggestPicked.length === 0}
+                className="bg-indigo-400 text-stone-50 font-medium py-2 px-4 rounded-xl font-poppins hover:opacity-85 disabled:opacity-50"
+              >
+                {groupSaving ? "Applying…" : `Apply ${suggestPicked.length}`}
+              </button>
+            </div>
           </div>
         </div>
       </Dialog>
