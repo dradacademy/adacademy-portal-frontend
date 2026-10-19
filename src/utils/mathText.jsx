@@ -138,8 +138,12 @@ export const MathText = ({ text, className }) => {
   if (!text) return null;
   const segments = splitMathSegments(text);
 
+  // Keep the question's own line breaks (statements (i)-(iv), English then
+  // Tamil, match-the-following lists) instead of collapsing them into one
+  // paragraph. Only applies when the text actually contains a newline.
+  const lineBreakClass = /\n/.test(text) ? "whitespace-pre-line" : "";
   return (
-    <span className={className}>
+    <span className={[className, lineBreakClass].filter(Boolean).join(" ") || undefined}>
       {segments.map((seg, i) => {
         if (typeof seg === "string") {
           return <React.Fragment key={i}>{seg}</React.Fragment>;

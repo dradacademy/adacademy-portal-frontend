@@ -1627,9 +1627,29 @@ const CreateExamAdminPage = () => {
       }
     } catch (error) {
       console.error("Error creating/updating exam:", error);
-      toast.error(
-        error?.response?.data?.message || "Failed to create the Exam.",
-      );
+      // Always tell the admin WHY saving failed instead of a bare
+      // "Failed to create the Exam." — the server's own message when it
+      // sent one, otherwise a plain-language reason from the HTTP status.
+      const status = error?.response?.status;
+      const resData = error?.response?.data;
+      const serverMsg =
+        resData && typeof resData === "object"
+          ? [resData.message, resData.error !== resData.message ? resData.error : null]
+              .filter((m) => typeof m === "string" && m.trim())
+              .join(" — ")
+          : "";
+      let reason;
+      if (serverMsg) reason = serverMsg;
+      else if (status === 413)
+        reason = "The exam is too large for the server to accept in one save (too many questions/too much text). Please ask the administrator to raise the server upload limit.";
+      else if (status === 401 || status === 403)
+        reason = "Your login session has expired. Please log in again in a new tab, then click Save here again.";
+      else if (!error?.response)
+        reason = "Could not reach the server (internet problem or the server is restarting). Please check your connection and try again.";
+      else reason = `Server error (code ${status}). Please try again.`;
+      toast.error(`${examId ? "Failed to update the Exam" : "Failed to create the Exam"}: ${reason}`, {
+        duration: 12000,
+      });
     }
   };
 
