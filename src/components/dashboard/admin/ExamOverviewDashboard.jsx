@@ -198,7 +198,7 @@ const ExamOverviewDashboardBody = ({
                   Total Submissions
                 </p>
                 <p className="text-2xl font-bold text-gray-900">
-                  {statistics.totalStudents}
+                  {statistics.totalAttempts ?? statistics.totalStudents}
                 </p>
               </div>
               <div className="bg-blue-100 p-4 rounded-xl">
@@ -207,7 +207,11 @@ const ExamOverviewDashboardBody = ({
             </div>
             <div className="mt-4 flex items-center text-xs text-blue-600">
               <FaChartLine className="mr-1" />
-              <span>Across all exams</span>
+              <span>
+                {statistics.totalAttempts != null
+                  ? `All attempts · ${statistics.totalStudents} latest (1 per student per exam)`
+                  : "Across all exams"}
+              </span>
             </div>
           </div>
 
@@ -381,7 +385,7 @@ const ExamOverviewDashboardBody = ({
                     <div className="bg-indigo-50 rounded-xl p-3">
                       <p className="text-xs text-gray-600 mb-1">Avg Score</p>
                       <p className="text-lg font-bold text-gray-900">
-                        {exam.avgScore.toFixed(1)}%
+                        {(exam.avgPercentage ?? exam.avgScore).toFixed(1)}%
                       </p>
                     </div>
                   </div>
@@ -441,7 +445,7 @@ const ExamOverviewDashboardBody = ({
                     </div>
                     <div className="overflow-hidden h-2 text-xs flex rounded-full bg-indigo-100">
                       <div
-                        style={{ width: `${exam.avgScore}%` }}
+                        style={{ width: `${Math.min(100, exam.avgPercentage ?? exam.avgScore)}%` }}
                         className="shadow-none flex flex-col text-center whitespace-nowrap text-white justify-center bg-gradient-to-r from-blue-500 to-indigo-600 transition-all duration-500"
                       ></div>
                     </div>
