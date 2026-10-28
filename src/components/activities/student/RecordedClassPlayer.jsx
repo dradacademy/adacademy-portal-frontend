@@ -53,7 +53,12 @@ const RecordedClassPlayer = ({ video, onClose }) => {
   // Phones that can't put a <div> in real fullscreen (iPhone) get a
   // "fill the screen" mode instead.
   const [pseudoFullscreen, setPseudoFullscreen] = useState(false);
+  // Phone turned sideways while the player is open → the video fills the
+  // screen by itself (no button needed); turning back upright undoes it.
+  const [autoFill, setAutoFill] = useState(false);
+  const [rotateHint, setRotateHint] = useState(false);
   const wrapperRef = useRef(null);
+  const filled = isFullscreen || pseudoFullscreen || autoFill;
 
   const iframeContainerRef = useRef(null);
   const playerRef = useRef(null);
@@ -181,10 +186,30 @@ const RecordedClassPlayer = ({ video, onClose }) => {
   //   - the "More videos" / end-screen suggestions while paused or ended
   //     (replaced by our own Play / Watch again buttons).
   // Play/pause, the progress bar, volume, captions and speed still work.
+  // ---- Mobile full screen + auto-rotate (2026-10-28) --------------------
+  //  - Full-screen button: real full screen of our box (covers included)
+  //    and, on Android, the screen turns to landscape by itself. Leaving
+  //    full screen (button or phone Back) lets the phone rotate freely again.
+  //  - Phone turned sideways while watching: the video fills the screen
+  //    automatically; turning it upright again goes back to normal. Works
+  //    on iPhone too (where websites can't use real full screen).
+  //  - Picture quality: YouTube picks the quality from the player's size,
+  //    so filling the screen lets it choose HD; students can still pick a
+  //    quality themselves in ⚙ settings.
+  const unlockOrientation = () => {
+    try {
+      window.screen?.orientation?.unlock?.();
+    } catch {
+      /* not supported — fine */
+    }
+  };
+
   useEffect(() => {
     const onChange = () => {
       const el = document.fullscreenElement || document.webkitFullscreenElement;
-      setIsFullscreen(!!el && el === wrapperRef.current);
+      const mine = !!el && el === wrapperRef.current;
+      setIsFullscreen(mine);
+      if (!el) unlockOrientation();
     };
     document.addEventListener("fullscreenchange", onChange);
     document.addEventListener("webkitfullscreenchange", onChange);
@@ -194,32 +219,82 @@ const RecordedClassPlayer = ({ video, onClose }) => {
     };
   }, []);
 
+  // Phone sideways = fill the screen. "max-height: 600px" keeps laptops
+  // and tablets (which are always "landscape") out of this.
+  useEffect(() => {
+    if (typeof window.matchMedia !== "function") return undefined;
+    const mq = window.matchMedia("(orientation: landscape) and (max-height: 600px)");
+    const apply = () => setAutoFill(mq.matches);
+    apply();
+    if (mq.addEventListener) mq.addEventListener("change", apply);
+    else if (mq.addListener) mq.addListener(apply); // old Android/iOS browsers
+    return () => {
+      if (mq.removeEventListener) mq.removeEventListener("change", apply);
+      else if (mq.removeListener) mq.removeListener(apply);
+    };
+  }, []);
+
+  // Leaving the player always gives the phone its normal rotation back.
+  useEffect(
+    () => () => {
+      const el = document.fullscreenElement || document.webkitFullscreenElement;
+      if (el && el === wrapperRef.current) {
+        try {
+          if (document.exitFullscreen) document.exitFullscreen();
+          else if (document.webkitExitFullscreen) document.webkitExitFullscreen();
+        } catch {
+          /* ignore */
+        }
+      }
+      unlockOrientation();
+    },
+    []
+  );
+
+  const showRotateHint = () => {
+    const portrait =
+      typeof window.matchMedia === "function" && window.matchMedia("(orientation: portrait)").matches;
+    if (!portrait) return;
+    setRotateHint(true);
+    setTimeout(() => setRotateHint(false), 3500);
+  };
+
   const toggleFullscreen = async () => {
     const el = wrapperRef.current;
     if (!el) return;
-    try {
-      if (isFullscreen) {
+    if (isFullscreen) {
+      try {
         if (document.exitFullscreen) await document.exitFullscreen();
         else if (document.webkitExitFullscreen) document.webkitExitFullscreen();
-        return;
+      } catch {
+        /* ignore */
       }
-      if (pseudoFullscreen) {
-        setPseudoFullscreen(false);
-        return;
-      }
+      setPseudoFullscreen(false);
+      unlockOrientation();
+      return;
+    }
+    if (pseudoFullscreen || autoFill) {
+      setPseudoFullscreen(false);
+      setAutoFill(false);
+      return;
+    }
+    try {
       if (el.requestFullscreen) await el.requestFullscreen();
       else if (el.webkitRequestFullscreen) el.webkitRequestFullscreen();
       else {
         setPseudoFullscreen(true);
+        showRotateHint();
         return;
       }
-      try {
-        await window.screen?.orientation?.lock?.("landscape");
-      } catch {
-        /* not allowed on this device — fine */
-      }
     } catch {
-      setPseudoFullscreen((v) => !v);
+      setPseudoFullscreen(true);
+      showRotateHint();
+      return;
+    }
+    try {
+      await window.screen?.orientation?.lock?.("landscape");
+    } catch {
+      showRotateHint(); // can't turn it for them — ask them to turn it
     }
   };
 
@@ -257,16 +332,19 @@ const RecordedClassPlayer = ({ video, onClose }) => {
       <div
         ref={wrapperRef}
         className={
-          isFullscreen || pseudoFullscreen
+          filled
             ? "bg-black flex items-center justify-center"
             : "bg-black rounded-2xl overflow-hidden w-full max-w-4xl relative"
         }
         style={
-          pseudoFullscreen
-            ? { position: "fixed", inset: 0, zIndex: 60, width: "100vw", height: "100vh" }
-            : isFullscreen
-              ? { width: "100%", height: "100%", position: "relative" }
-              : undefined
+          filled
+            ? {
+                position: "fixed", top: 0, right: 0, bottom: 0, left: 0, zIndex: 60,
+                backgroundColor: "#000",
+                paddingLeft: "env(safe-area-inset-left)",
+                paddingRight: "env(safe-area-inset-right)",
+              }
+            : undefined
         }
       >
         <button
@@ -285,8 +363,10 @@ const RecordedClassPlayer = ({ video, onClose }) => {
             <div
               className="relative"
               style={
-                isFullscreen || pseudoFullscreen
-                  ? { width: "100%", height: "100%", maxWidth: "177.78vh", maxHeight: "56.25vw", aspectRatio: "16 / 9" }
+                filled
+                  ? // Largest 16:9 box that fits the screen (no aspect-ratio
+                    // CSS, so it also works on old phones).
+                    { position: "relative", width: "min(100vw, 177.78vh)", height: "min(56.25vw, 100vh)" }
                   : { width: "100%", paddingTop: "56.25%" }
               }
             >
@@ -336,16 +416,28 @@ const RecordedClassPlayer = ({ video, onClose }) => {
                   swallow(e);
                   toggleFullscreen();
                 }}
-                title={isFullscreen || pseudoFullscreen ? "Exit full screen" : "Full screen"}
-                aria-label={isFullscreen || pseudoFullscreen ? "Exit full screen" : "Full screen"}
+                title={filled ? "Exit full screen" : "Full screen"}
+                aria-label={filled ? "Exit full screen" : "Full screen"}
                 className="flex items-center justify-center text-white"
                 style={{
                   position: "absolute", right: 0, bottom: 0, width: 84, height: 48, zIndex: 7,
                   backgroundColor: "#0f0f0f",
                 }}
               >
-                {isFullscreen || pseudoFullscreen ? <Minimize className="w-6 h-6" /> : <Maximize className="w-6 h-6" />}
+                {filled ? <Minimize className="w-6 h-6" /> : <Maximize className="w-6 h-6" />}
               </button>
+
+              {rotateHint && (
+                <div
+                  style={{
+                    position: "absolute", left: "50%", top: "50%", transform: "translate(-50%, -50%)",
+                    zIndex: 8, backgroundColor: "rgba(0,0,0,0.8)", color: "#fff", padding: "10px 14px",
+                    borderRadius: 12, fontSize: 14, textAlign: "center", pointerEvents: "none",
+                  }}
+                >
+                  📱↻ Turn your phone sideways for a bigger picture
+                </div>
+              )}
             </div>
             {resumeOffered && (
               <div className="absolute bottom-4 left-4 bg-black/70 text-white text-sm px-4 py-2 rounded-lg flex items-center gap-3">
