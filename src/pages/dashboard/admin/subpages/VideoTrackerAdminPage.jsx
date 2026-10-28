@@ -28,6 +28,8 @@ const ITEM_STATUS = {
   done_on_time: { label: "Done on time", bg: "#dcfce7", fg: "#166534" },
   done_late: { label: "Done late", bg: "#ffedd5", fg: "#9a3412" },
   done: { label: "Done", bg: "#dcfce7", fg: "#166534" },
+  self_reported: { label: "🟣 Says watched (YouTube)", bg: "#ede9fe", fg: "#6d28d9" },
+  admin_marked: { label: "Marked watched by you", bg: "#ccfbf1", fg: "#115e59" },
 };
 
 const fmtYmd = (ymd) => {
@@ -101,6 +103,9 @@ const VideoTrackerAdminPage = () => {
   const [batchInput, setBatchInput] = useState("");
   const [savingBatch, setSavingBatch] = useState(false);
   const [openVideo, setOpenVideo] = useState(null);
+  // Videos tab: students ticked inside the open video row, for "Mark watched".
+  const [videoPicks, setVideoPicks] = useState(new Set());
+  const [marking, setMarking] = useState(false);
 
   const [detailId, setDetailId] = useState(null);
   const [detail, setDetail] = useState(null);
@@ -134,16 +139,59 @@ const VideoTrackerAdminPage = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [category, batch, search]);
 
-  useEffect(() => {
-    if (!detailId) return;
-    setDetail(null);
-    setDetailLoading(true);
-    api
-      .get(`/video-commitments/admin/student/${detailId}`)
+  const loadDetail = (id, { quiet = false } = {}) => {
+    if (!quiet) {
+      setDetail(null);
+      setDetailLoading(true);
+    }
+    return api
+      .get(`/video-commitments/admin/student/${id}`)
       .then((res) => setDetail(res.data?.data || null))
       .catch(() => toast.error("Failed to load student details."))
       .finally(() => setDetailLoading(false));
+  };
+
+  useEffect(() => {
+    if (!detailId) return;
+    loadDetail(detailId);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [detailId]);
+
+  useEffect(() => {
+    setVideoPicks(new Set());
+  }, [openVideo]);
+
+  // Count a video as watched (e.g. the student watched it on YouTube or
+  // attended the class) — or take that mark away again.
+  const markWatched = async (body, { refreshDetail } = {}) => {
+    try {
+      setMarking(true);
+      const res = await api.post("/video-commitments/admin/mark-watched", body);
+      toast.success(res.data?.message || "Marked as watched.");
+      if (refreshDetail) await loadDetail(refreshDetail, { quiet: true });
+      setVideoPicks(new Set());
+      load();
+    } catch (error) {
+      toast.error(error?.response?.data?.message || "Failed to mark as watched.");
+    } finally {
+      setMarking(false);
+    }
+  };
+
+  const unmarkWatched = async (studentId, videoId) => {
+    if (!window.confirm("Remove the 'watched' mark? The video will be pending again for this student.")) return;
+    try {
+      setMarking(true);
+      const res = await api.post("/video-commitments/admin/unmark-watched", { studentId, videoId });
+      toast.success(res.data?.message || "Mark removed.");
+      await loadDetail(studentId, { quiet: true });
+      load();
+    } catch (error) {
+      toast.error(error?.response?.data?.message || "Failed to remove the mark.");
+    } finally {
+      setMarking(false);
+    }
+  };
 
   const summary = data?.summary;
   const weekAgo = Date.now() - 7 * 86400000;
@@ -222,12 +270,12 @@ const VideoTrackerAdminPage = () => {
     downloadCsv(
       `video-tracker-students-${new Date().toISOString().slice(0, 10)}.csv`,
       ["Student", "Register No", "Email", "Course", "Batch", "Status", "Finished", "Total videos", "Half watched", "Not started",
-        "Pending", "Date missed (now)", "No date", "Planned", "Next date", "Done on time", "Done late", "Dates missed (ever)",
+        "Pending", "Date missed (now)", "No date", "Planned", "Next date", "Done on time", "Done late", "Says watched (YouTube)", "Marked watched by admin", "Dates missed (ever)",
         "Last watched", "Last login"],
       students.map((r) => [
         r.name, r.registerNumber || "", r.email, getCategoryLabel(r.category), r.batch, VERDICTS[r.verdict]?.label,
         r.done, r.total, r.partial, r.notStarted, r.pending, r.missed, r.noDate, r.upcoming,
-        r.nextDate ? fmtDate(r.nextDate) : "", r.doneOnTime, r.doneLate, r.datesMissedEver,
+        r.nextDate ? fmtDate(r.nextDate) : "", r.doneOnTime, r.doneLate, r.selfReported || 0, r.adminMarked || 0, r.datesMissedEver,
         r.lastWatchedAt ? fmtDate(r.lastWatchedAt) : "Never", r.lastLoginAt ? fmtDate(r.lastLoginAt) : "Never",
       ])
     );
@@ -316,6 +364,14 @@ const VideoTrackerAdminPage = () => {
             <Pill bg="#dcfce7" fg="#166534">Promises kept: {summary.doneOnTime}</Pill>
             <Pill bg="#ffedd5" fg="#9a3412">Finished late: {summary.doneLate}</Pill>
             <Pill bg="#fee2e2" fg="#b91c1c">Overdue now: {summary.missedNow}</Pill>
+            {summary.selfReported > 0 && (
+              <Pill bg="#ede9fe" fg="#6d28d9">
+                🟣 Says watched on YouTube: {summary.selfReported} video(s) by {summary.studentsSelfReported} student(s)
+              </Pill>
+            )}
+            {summary.adminMarked > 0 && (
+              <Pill bg="#ccfbf1" fg="#115e59">Marked watched by you: {summary.adminMarked}</Pill>
+            )}
             {summary.studentsNotTracked > 0 && (
               <Pill bg="#f3f4f6" fg="#4b5563">
                 {summary.studentsNotTracked} student(s) not tracked (no active course / Test Series Only)
@@ -416,6 +472,8 @@ const VideoTrackerAdminPage = () => {
                           {r.upcoming > 0 && <Pill bg="#dbeafe" fg="#1e40af">{r.upcoming} planned</Pill>}
                           {r.doneOnTime > 0 && <Pill bg="#dcfce7" fg="#166534">{r.doneOnTime} kept</Pill>}
                           {r.doneLate > 0 && <Pill bg="#ffedd5" fg="#9a3412">{r.doneLate} late</Pill>}
+                          {r.selfReported > 0 && <Pill bg="#ede9fe" fg="#6d28d9">🟣 {r.selfReported} says watched</Pill>}
+                          {r.adminMarked > 0 && <Pill bg="#ccfbf1" fg="#115e59">{r.adminMarked} marked by you</Pill>}
                         </div>
                         {r.datesMissedEver > 0 && (
                           <p className="text-xs mt-1" style={{ color: "#b91c1c" }}>Broke a promise {r.datesMissedEver} time(s)</p>
@@ -449,12 +507,13 @@ const VideoTrackerAdminPage = () => {
                 <th className="px-3 py-2 text-center">Not started</th>
                 <th className="px-3 py-2 text-center">Date missed</th>
                 <th className="px-3 py-2 text-center">No date</th>
+                <th className="px-3 py-2 text-center">Says watched</th>
                 <th className="px-3 py-2"></th>
               </tr>
             </thead>
             <tbody>
               {(data?.videos || []).length === 0 && (
-                <tr><td colSpan={8} className="px-3 py-8 text-center text-gray-400">{loading ? "Loading…" : "No videos."}</td></tr>
+                <tr><td colSpan={9} className="px-3 py-8 text-center text-gray-400">{loading ? "Loading…" : "No videos."}</td></tr>
               )}
               {(data?.videos || []).map((v) => {
                 const isOpen = openVideo === v.videoId;
@@ -474,6 +533,9 @@ const VideoTrackerAdminPage = () => {
                       <td className="px-3 py-2 text-center">{v.notStarted}</td>
                       <td className="px-3 py-2 text-center" style={{ color: v.missed ? "#b91c1c" : undefined }}>{v.missed}</td>
                       <td className="px-3 py-2 text-center">{v.noDate}</td>
+                      <td className="px-3 py-2 text-center" style={{ color: v.selfReported ? "#6d28d9" : undefined }}>
+                        {v.selfReported || 0}
+                      </td>
                       <td className="px-3 py-2">
                         {v.pendingStudents.length > 0 && (
                           <button type="button" onClick={() => setOpenVideo(isOpen ? null : v.videoId)} className="flex items-center gap-1 text-xs font-medium" style={{ color: "#4f46e5" }}>
@@ -485,20 +547,49 @@ const VideoTrackerAdminPage = () => {
                     </tr>
                     {isOpen && (
                       <tr className="bg-gray-50">
-                        <td colSpan={8} className="px-3 py-3">
+                        <td colSpan={9} className="px-3 py-3">
+                          <div className="flex flex-wrap items-center gap-2 mb-2 text-sm">
+                            <button type="button" className="px-2 py-1 rounded-lg border border-gray-300 bg-white text-xs"
+                              onClick={() => setVideoPicks((prev) =>
+                                prev.size === v.pendingStudents.length ? new Set() : new Set(v.pendingStudents.map((p) => p.studentId)))}>
+                              {videoPicks.size === v.pendingStudents.length ? "Untick all" : "Tick all"}
+                            </button>
+                            <button type="button" disabled={videoPicks.size === 0 || marking}
+                              onClick={() => {
+                                if (window.confirm(`Mark "${v.title}" as watched for ${videoPicks.size} student(s)?`)) {
+                                  markWatched({ videoId: v.videoId, studentIds: [...videoPicks] });
+                                }
+                              }}
+                              className="px-3 py-1 rounded-lg text-white text-xs font-medium"
+                              style={{ backgroundColor: videoPicks.size === 0 ? "#99f6e4" : "#0f766e" }}>
+                              ✓ Mark watched for {videoPicks.size} selected
+                            </button>
+                            <span className="text-xs text-gray-400">e.g. they attended this class or watched it on YouTube</span>
+                          </div>
                           <div className="flex flex-wrap gap-2">
                             {v.pendingStudents.map((p) => {
                               const st = ITEM_STATUS[p.status] || ITEM_STATUS.no_date;
+                              const picked = videoPicks.has(p.studentId);
                               return (
-                                <button key={p.studentId} type="button" onClick={() => setDetailId(p.studentId)}
-                                  className="text-left bg-white border border-gray-200 rounded-lg px-3 py-2">
+                                <div key={p.studentId}
+                                  className="flex items-start gap-2 bg-white border rounded-lg px-3 py-2"
+                                  style={{ borderColor: picked ? "#0f766e" : "#e5e7eb" }}>
+                                  <input type="checkbox" className="mt-1" checked={picked}
+                                    onChange={() => setVideoPicks((prev) => {
+                                      const next = new Set(prev);
+                                      if (next.has(p.studentId)) next.delete(p.studentId);
+                                      else next.add(p.studentId);
+                                      return next;
+                                    })} />
+                                  <button type="button" onClick={() => setDetailId(p.studentId)} className="text-left">
                                   <p className="text-sm font-medium text-gray-800">{p.name}</p>
                                   <p className="text-xs text-gray-500">
                                     {p.percentWatched > 0 ? `${Math.round(p.percentWatched)}% watched` : "Not started"}
                                     {p.batch ? ` · ${p.batch}` : ""}
                                   </p>
                                   <Pill bg={st.bg} fg={st.fg}>{st.label}{p.targetDate ? ` · ${fmtYmd(p.targetDate)}` : ""}</Pill>
-                                </button>
+                                  </button>
+                                </div>
                               );
                             })}
                           </div>
@@ -541,6 +632,12 @@ const VideoTrackerAdminPage = () => {
                 <Pill bg="#fee2e2" fg="#b91c1c">Date missed {detail.summary.missed}</Pill>
                 <Pill bg="#dcfce7" fg="#166534">Kept {detail.summary.doneOnTime}</Pill>
                 <Pill bg="#ffedd5" fg="#9a3412">Late {detail.summary.doneLate}</Pill>
+                {detail.summary.selfReported > 0 && (
+                  <Pill bg="#ede9fe" fg="#6d28d9">🟣 Says watched {detail.summary.selfReported}</Pill>
+                )}
+                {detail.summary.adminMarked > 0 && (
+                  <Pill bg="#ccfbf1" fg="#115e59">Marked by you {detail.summary.adminMarked}</Pill>
+                )}
               </div>
               <div className="overflow-x-auto border border-gray-200 rounded-lg">
                 <table className="min-w-full text-sm">
@@ -551,6 +648,7 @@ const VideoTrackerAdminPage = () => {
                       <th className="px-3 py-2 text-left">Status</th>
                       <th className="px-3 py-2 text-left">Promised date</th>
                       <th className="px-3 py-2 text-left">Date history</th>
+                      <th className="px-3 py-2"></th>
                     </tr>
                   </thead>
                   <tbody>
@@ -576,6 +674,26 @@ const VideoTrackerAdminPage = () => {
                                     {fmtYmd(h.targetDate)} {h.missed ? <b style={{ color: "#b91c1c" }}>(missed)</b> : "(changed early)"}
                                   </span>
                                 ))}
+                          </td>
+                          <td className="px-3 py-2 whitespace-nowrap">
+                            {it.markedWatched ? (
+                              <button type="button" disabled={marking}
+                                onClick={() => unmarkWatched(detail.student.studentId, it.videoId)}
+                                className="px-2 py-1 rounded-lg border text-xs font-medium"
+                                style={{ borderColor: "#b91c1c", color: "#b91c1c" }}>
+                                Undo
+                              </button>
+                            ) : !it.measuredComplete ? (
+                              <button type="button" disabled={marking}
+                                onClick={() => markWatched(
+                                  { studentId: detail.student.studentId, videoIds: [it.videoId] },
+                                  { refreshDetail: detail.student.studentId }
+                                )}
+                                className="px-2 py-1 rounded-lg text-white text-xs font-medium"
+                                style={{ backgroundColor: "#0f766e" }}>
+                                ✓ Mark watched
+                              </button>
+                            ) : null}
                           </td>
                         </tr>
                       );

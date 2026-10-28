@@ -99,6 +99,9 @@ const PendingVideosPopup = () => {
   const [data, setData] = useState(null);
   const [open, setOpen] = useState(false);
   const [dates, setDates] = useState({});
+  // videoId -> true when the student ticks "I already watched this fully
+  // on YouTube" (no date needed; shown to the admin as "Says watched").
+  const [watchedElsewhere, setWatchedElsewhere] = useState({});
   const [allDate, setAllDate] = useState("");
   const [saving, setSaving] = useState(false);
 
@@ -159,13 +162,17 @@ const PendingVideosPopup = () => {
 
   const items = data?.items || [];
   const missingCount = useMemo(
-    () => items.filter((it) => needsNewDate(it) && !dates[it.videoId]).length,
-    [items, dates]
+    () => items.filter((it) => needsNewDate(it) && !watchedElsewhere[it.videoId] && !dates[it.videoId]).length,
+    [items, dates, watchedElsewhere]
   );
   const changed = useMemo(
     () =>
-      items.filter((it) => dates[it.videoId] && dates[it.videoId] !== (needsNewDate(it) ? "" : it.targetDate)),
-    [items, dates]
+      items.filter(
+        (it) =>
+          watchedElsewhere[it.videoId] ||
+          (dates[it.videoId] && dates[it.videoId] !== (needsNewDate(it) ? "" : it.targetDate))
+      ),
+    [items, dates, watchedElsewhere]
   );
 
   if (!open || !data || skipHere) return null;
@@ -183,6 +190,7 @@ const PendingVideosPopup = () => {
     let clipped = 0;
     items.forEach((it) => {
       if (!needsNewDate(it) && dates[it.videoId]) return; // keep planned ones
+      if (watchedElsewhere[it.videoId]) return;
       let d = allDate < it.minDate ? it.minDate : allDate;
       if (d > it.maxDate) {
         d = it.maxDate;
@@ -202,7 +210,11 @@ const PendingVideosPopup = () => {
       toast.error(`Pick a date for ${missingCount} more video(s).`);
       return false;
     }
-    const payload = changed.map((it) => ({ videoId: it.videoId, date: dates[it.videoId] }));
+    const payload = changed.map((it) =>
+      watchedElsewhere[it.videoId]
+        ? { videoId: it.videoId, watchedOnYoutube: true }
+        : { videoId: it.videoId, date: dates[it.videoId] }
+    );
     if (payload.length === 0) {
       markSeen(userId);
       setOpen(false);
@@ -215,6 +227,7 @@ const PendingVideosPopup = () => {
       if (d?.needsDates) {
         // Something changed meanwhile (e.g. a new video) — show the new list.
         setData(d);
+        setWatchedElsewhere({});
         toast.error("Please pick a date for the remaining videos.");
         return false;
       }
@@ -298,7 +311,8 @@ const PendingVideosPopup = () => {
         <div className="flex-1 overflow-y-auto px-5 py-3 space-y-3">
           {items.map((it) => {
             const value = dates[it.videoId] || "";
-            const missing = needsNewDate(it) && !value;
+            const elsewhere = !!watchedElsewhere[it.videoId];
+            const missing = needsNewDate(it) && !elsewhere && !value;
             return (
               <div
                 key={it.videoId}
@@ -329,11 +343,15 @@ const PendingVideosPopup = () => {
                   </span>
                 </div>
 
-                <label className="flex flex-wrap items-center gap-2 mt-2 text-sm">
+                <label
+                  className="flex flex-wrap items-center gap-2 mt-2 text-sm"
+                  style={elsewhere ? { opacity: 0.45 } : undefined}
+                >
                   <span className="text-[#374151]">I will finish by:</span>
                   <input
                     type="date"
-                    value={value}
+                    disabled={elsewhere}
+                    value={elsewhere ? "" : value}
                     min={it.minDate}
                     max={it.maxDate}
                     onChange={(e) => setDates((prev) => ({ ...prev, [it.videoId]: e.target.value }))}
@@ -342,6 +360,26 @@ const PendingVideosPopup = () => {
                     }`}
                   />
                   <span className="text-xs text-[#6b7280]">(last day: {formatDate(it.maxDate)})</span>
+                </label>
+
+                <label className="flex items-start gap-2 mt-2 text-sm cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={elsewhere}
+                    onChange={(e) =>
+                      setWatchedElsewhere((prev) => ({ ...prev, [it.videoId]: e.target.checked }))
+                    }
+                    className="mt-0.5"
+                    style={{ width: 16, height: 16, accentColor: "#7c3aed" }}
+                  />
+                  <span style={{ color: elsewhere ? "#6d28d9" : "#4b5563" }}>
+                    I already watched this fully on YouTube
+                    {elsewhere && (
+                      <span className="block text-xs" style={{ color: "#6b7280" }}>
+                        Your teacher will see this. From now on, please watch inside the app so it is counted.
+                      </span>
+                    )}
+                  </span>
                 </label>
               </div>
             );
