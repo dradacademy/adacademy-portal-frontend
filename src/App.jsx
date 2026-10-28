@@ -18,6 +18,7 @@ import EvaluatorDashboard from "./pages/dashboard/evaluator/EvaluatorDashboard";
 import AttendExamStudent from "./pages/exam/AttendExamStudent";
 import CompletedExamSubmissionDetail from "./pages/activities/examDetailedView/CompletedExamSubmissionDetail";
 import PendingVideosPopup from "./components/common/popup/PendingVideosPopup";
+import StudyTrackerPopup from "./components/common/popup/StudyTrackerPopup";
 
 const AdminDashboard = lazy(
   () => import("./pages/dashboard/admin/AdminDashboard"),
@@ -149,6 +150,8 @@ function App() {
       </Routes>
       {/* Students: pending recorded classes + "finish by" dates, every time the app opens. */}
       <PendingVideosPopup />
+      {/* TNPSC JDO (or admin-chosen) students: daily study update reminder from 5:30 PM. */}
+      <StudyTrackerPopup />
       <Toaster />
     </div>
   );

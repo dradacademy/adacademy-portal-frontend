@@ -21,6 +21,7 @@ import LiveClassAdminPage from "./subpages/LiveClassAdminPage";
 import AttendanceReportAdminPage from "./subpages/AttendanceReportAdminPage";
 import StudentProgressDashboardAdminPage from "./subpages/StudentProgressDashboardAdminPage";
 import VideoTrackerAdminPage from "./subpages/VideoTrackerAdminPage";
+import StudyTrackerAdminPage from "./subpages/StudyTrackerAdminPage";
 import AttachmentsAdminPage from "./subpages/AttachmentsAdminPage";
 import AnswerSheetsAdminPage from "./subpages/AnswerSheetsAdminPage";
 import StudentProfilesAdminPage from "./subpages/StudentProfilesAdminPage";
@@ -53,6 +54,7 @@ const AdminDashboard = () => {
             <Route path="/attendance-report" element={<AttendanceReportAdminPage />} />
             <Route path="/student-progress" element={<StudentProgressDashboardAdminPage />} />
             <Route path="/video-tracker" element={<VideoTrackerAdminPage />} />
+            <Route path="/study-tracker" element={<StudyTrackerAdminPage />} />
             <Route path="/attachments" element={<AttachmentsAdminPage />} />
             <Route path="/answer-sheets" element={<AnswerSheetsAdminPage />} />
             <Route path="/student-profiles" element={<StudentProfilesAdminPage />} />

@@ -156,6 +156,16 @@ const Navbar = ({ dashboard }) => {
                     <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-gold transition-all group-hover:w-full"></span>
                   </Link>
                 )}
+                {userData?.role === "student" && !isFreeTrial && userData?.studyTracker && (
+                  <button
+                    type="button"
+                    onClick={() => window.dispatchEvent(new Event("open-study-tracker"))}
+                    className="font-medium hover:text-navy transition-colors relative group"
+                  >
+                    Daily Update
+                    <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-gold transition-all group-hover:w-full"></span>
+                  </button>
+                )}
                 {userData?.role === "student" && !isFreeTrial && (
                   <Link
                     to={"/progress"}
@@ -422,6 +432,18 @@ const Navbar = ({ dashboard }) => {
                     >
                       Notebook
                     </Link>
+                  )}
+                  {userData?.role === "student" && !isFreeTrial && userData?.studyTracker && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        closeMenu();
+                        window.dispatchEvent(new Event("open-study-tracker"));
+                      }}
+                      className="block w-full text-left px-6 py-3 text-gray-600 hover:text-navy hover:bg-gray-50 transition-colors font-medium"
+                    >
+                      Daily Update
+                    </button>
                   )}
                   {userData?.role === "student" && !isFreeTrial && (
                     <Link
