@@ -944,6 +944,37 @@ const Sidebar = () => {
                     </Link>
                   </div>
 
+                  {/* Video Tracker */}
+                  <div className="flex items-center">
+                    <div
+                      className={`h-10 w-2 ${
+                        location.pathname === "/dashboard/video-tracker" ||
+                        location.pathname === "/dashboard/video-tracker/"
+                          ? "bg-stone-50"
+                          : "bg-indigo-500"
+                      } rounded-tr-full rounded-br-full`}
+                    ></div>
+                    <Link
+                      to={"/dashboard/video-tracker"}
+                      className={`flex items-center gap-2 px-[17px] transition-all duration-300 ${
+                        location.pathname === "/dashboard/video-tracker" ||
+                        location.pathname === "/dashboard/video-tracker/"
+                          ? "text-stone-50"
+                          : "text-indigo-100 hover:opacity-80 duration-300"
+                      } ${showCollapsed ? "justify-center px-2" : ""}`}
+                      title={showCollapsed ? "Video Tracker" : ""}
+                    >
+                      <Video
+                        className={`${
+                          showCollapsed ? "w-5 h-5 sm:w-6 sm:h-6" : "w-6 h-6"
+                        }`}
+                      />
+                      {!showCollapsed && (
+                        <h2 className="font-medium text-lg">Video Tracker</h2>
+                      )}
+                    </Link>
+                  </div>
+
                   {/* Attachments */}
                   <div className="flex items-center">
                     <div

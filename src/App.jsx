@@ -17,6 +17,7 @@ import EvaluatorActivities from "./pages/activities/evaluator/EvaluatorActivitie
 import EvaluatorDashboard from "./pages/dashboard/evaluator/EvaluatorDashboard";
 import AttendExamStudent from "./pages/exam/AttendExamStudent";
 import CompletedExamSubmissionDetail from "./pages/activities/examDetailedView/CompletedExamSubmissionDetail";
+import PendingVideosPopup from "./components/common/popup/PendingVideosPopup";
 
 const AdminDashboard = lazy(
   () => import("./pages/dashboard/admin/AdminDashboard"),
@@ -146,6 +147,8 @@ function App() {
           element={<TermsAndConditions />}
         />
       </Routes>
+      {/* Students: pending recorded classes + "finish by" dates, every time the app opens. */}
+      <PendingVideosPopup />
       <Toaster />
     </div>
   );
