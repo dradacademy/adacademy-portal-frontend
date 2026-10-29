@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from "react";
 import axios from "axios";
 import { createWatchTracker } from "../../../utils/watchTracker";
 import { X, Volume2, VolumeX } from "lucide-react";
+import LiveQaPanel from "./LiveQaPanel";
 
 const YOUTUBE_IFRAME_API_URL = "https://www.youtube.com/iframe_api";
 
@@ -175,8 +176,10 @@ const LiveClassPlayer = ({ liveClass, onClose }) => {
   }
 
   return (
-    <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4">
-      <div className="bg-black rounded-2xl overflow-hidden w-full max-w-4xl relative">
+    <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-2 sm:p-4">
+      {/* Video + Live Q&A side by side on wide screens, stacked on phones (2026-10-28). */}
+      <div className="w-full max-w-6xl max-h-full flex flex-col lg:flex-row gap-2 lg:gap-3">
+      <div className="bg-black rounded-2xl overflow-hidden w-full lg:flex-1 relative shrink-0">
         <button
           onClick={onClose}
           className="absolute top-3 right-3 z-10 text-white bg-black/50 hover:bg-black/70 rounded-full p-1.5"
@@ -224,6 +227,12 @@ const LiveClassPlayer = ({ liveClass, onClose }) => {
             <div ref={iframeContainerRef} className="w-full h-full" />
           </div>
         )}
+      </div>
+      {!error && (
+        <div className="rounded-2xl overflow-hidden w-full lg:w-[340px] h-[48vh] lg:h-auto lg:max-h-[80vh] min-h-0">
+          <LiveQaPanel liveClassId={liveClass._id} />
+        </div>
+      )}
       </div>
     </div>
   );
