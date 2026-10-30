@@ -2,55 +2,67 @@ import React from "react";
 import Navbar from "../../components/common/Navbar";
 import Footer from "../../components/common/Footer";
 import PromoBannerCarousel from "../../components/home/PromoBannerCarousel";
-import HeroSectionHome from "../../components/home/HeroSectionHome";
-import TrackRecord from "../../components/home/TrackRecord";
-import Courses from "../../components/home/Courses";
-import TestSeries from "../../components/home/TestSeries";
-import WhatYouGet from "../../components/home/WhatYouGet";
 import AboutFounder from "../../components/home/AboutFounder";
-import HowItWorks from "../../components/home/HowItWorks";
 import Achievers from "../../components/home/Achievers";
 import Testimonials from "../../components/home/Testimonials";
 import Gallery from "../../components/home/Gallery";
 import Announcements from "../../components/home/Announcements";
-import FreeResources from "../../components/home/FreeResources";
 import FAQ from "../../components/home/FAQ";
 import Contact from "../../components/home/Contact";
-import FollowUs from "../../components/home/FollowUs";
-import CTA from "../../components/home/CTA";
 import PopularVideos from "../../components/home/PopularVideos";
 import ShowcaseVideos from "../../components/home/ShowcaseVideos";
+import {
+  HeroNew,
+  ExamStrip,
+  ProblemSection,
+  SelfCheck,
+  ResultsStats,
+  CoursesNew,
+  WhatYouGetNew,
+  BatchesSection,
+  StepsSection,
+  FinalCTA,
+  useReserve,
+} from "../../components/home/landing/Landing";
+
+// Front page — 2026-10-30 new design (approved mock-up). The story order:
+// hero + countdown → exams → the problem → self-check → results →
+// achievers → classroom & testimonial videos → courses → what you get →
+// mentor → free classes → batches → how to join → gallery, updates, FAQ,
+// contact → final call to action. Every "Reserve my seat" opens the same
+// enquiry popup as before.
 
 const Home = () => {
+  const [reserve, reservePopup] = useReserve();
   return (
-    <div className=" p-5">
+    <div className="p-3 sm:p-5">
       <Navbar />
       <div className="flex flex-col gap-6 mt-5">
+        <HeroNew onReserve={reserve} />
+        <ExamStrip />
         <PromoBannerCarousel />
-        <HeroSectionHome />
-        <TrackRecord />
-        {/* "Inside our classroom": how classes are handled + student testimonials (2026-10-30). */}
-        <ShowcaseVideos />
-        {/* Most-watched YouTube videos, picked automatically (2026-10-30). */}
-        <PopularVideos />
-        <Courses />
-        <TestSeries />
-        <WhatYouGet />
-        <AboutFounder />
-        <HowItWorks />
+        <ProblemSection />
+        <SelfCheck />
+        <ResultsStats />
         <Achievers />
+        <ShowcaseVideos />
         <Testimonials />
+        <CoursesNew />
+        <WhatYouGetNew />
+        <AboutFounder />
+        <PopularVideos />
+        <BatchesSection onReserve={reserve} />
+        <StepsSection />
         <Gallery />
         <Announcements />
-        <FreeResources />
         <FAQ />
         <Contact />
-        <FollowUs />
-        <CTA />
+        <FinalCTA onReserve={reserve} />
       </div>
       <div className="mt-5">
         <Footer />
       </div>
+      {reservePopup}
       {/* Floating WhatsApp button (2026-10-30). */}
       <a
         href="https://wa.me/919566818665?text=Hi%2C%20I%20would%20like%20to%20know%20about%20the%20courses%20at%20Dr.%20A.D.%20Academy"
