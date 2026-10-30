@@ -19,6 +19,7 @@ import Contact from "../../components/home/Contact";
 import FollowUs from "../../components/home/FollowUs";
 import CTA from "../../components/home/CTA";
 import PopularVideos from "../../components/home/PopularVideos";
+import ShowcaseVideos from "../../components/home/ShowcaseVideos";
 
 const Home = () => {
   return (
@@ -28,6 +29,8 @@ const Home = () => {
         <PromoBannerCarousel />
         <HeroSectionHome />
         <TrackRecord />
+        {/* "Inside our classroom": how classes are handled + student testimonials (2026-10-30). */}
+        <ShowcaseVideos />
         {/* Most-watched YouTube videos, picked automatically (2026-10-30). */}
         <PopularVideos />
         <Courses />
