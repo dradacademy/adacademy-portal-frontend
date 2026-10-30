@@ -6,13 +6,28 @@ const HeroSectionHome = () => {
   const [showEnrollModal, setShowEnrollModal] = useState(false);
 
   return (
-    <section className="relative overflow-hidden bg-navy-dark rounded-xl">
+    <section className="relative overflow-hidden bg-navy-dark rounded-3xl">
       <div
         className="absolute inset-0 pointer-events-none"
         style={{
           background:
-            "radial-gradient(ellipse 900px 600px at 82% -10%, rgba(201,151,31,0.16), transparent)",
+            "radial-gradient(ellipse 900px 600px at 82% -10%, rgba(201,151,31,0.16), transparent), radial-gradient(ellipse 700px 500px at 10% 110%, rgba(22,54,94,0.9), transparent)",
         }}
+      ></div>
+      {/* Faint engineering-drawing grid (2026-10-29 new look). */}
+      <div
+        aria-hidden="true"
+        className="absolute inset-0 pointer-events-none"
+        style={{
+          backgroundImage:
+            "linear-gradient(rgba(255,255,255,0.04) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.04) 1px, transparent 1px)",
+          backgroundSize: "48px 48px",
+        }}
+      ></div>
+      <div
+        aria-hidden="true"
+        className="absolute pointer-events-none hidden lg:block rounded-full"
+        style={{ right: -140, top: 40, width: 560, height: 560, border: "1px solid rgba(232,185,74,0.16)" }}
       ></div>
       <div className="container mx-auto px-4 relative">
         <div className="grid gap-12 lg:grid-cols-[1.15fr_0.85fr] items-center py-16 lg:py-20">
@@ -21,10 +36,10 @@ const HeroSectionHome = () => {
               GATE Civil &nbsp;•&nbsp; IES/ESE &nbsp;•&nbsp; TNPSC AE
               &nbsp;•&nbsp; TNPSC JDO &nbsp;•&nbsp; SSC JE &nbsp;•&nbsp; RRB JE
             </span>
-            <h1 className="text-white text-4xl sm:text-5xl font-newsreader font-semibold mt-5 leading-tight tracking-tight">
+            <h1 className="text-white text-[40px] sm:text-6xl xl:text-7xl font-newsreader font-semibold mt-5 leading-[1.03] tracking-tight">
               Build Your Rank.
               <br />
-              Engineer Your Future.
+              <em className="text-gold-light">Engineer</em> Your Future.
             </h1>
             <p className="text-[#C9D2DE] text-lg leading-relaxed max-w-lg mt-6 font-inter">
               Clear concepts. Practical problem solving. Complete guidance for
@@ -75,7 +90,25 @@ const HeroSectionHome = () => {
           </div>
 
           <div className="relative">
-            <div className="bg-white rounded-lg shadow-2xl overflow-hidden">
+            {/* Floating "progress" card — decoration only (laptops). */}
+            <div
+              aria-hidden="true"
+              className="hidden lg:block absolute -top-28 -right-6 z-10 bg-white rounded-2xl shadow-2xl p-4 w-48"
+            >
+              <div className="text-[11px] text-slate">Your score this week</div>
+              <div className="font-newsreader font-semibold text-4xl text-navy">78%</div>
+              <div className="flex items-end gap-1 mt-2 h-9">
+                {[40, 52, 47, 63, 70, 78].map((h, i) => (
+                  <div
+                    key={i}
+                    className="flex-1 rounded-sm"
+                    style={{ height: `${h}%`, backgroundColor: i === 5 ? "#c9971f" : "#0f2a4a" }}
+                  ></div>
+                ))}
+              </div>
+              <div className="text-[11px] font-semibold mt-1.5" style={{ color: "#15803d" }}>▲ improving every week</div>
+            </div>
+            <div className="bg-white rounded-2xl shadow-2xl overflow-hidden lg:rotate-[-1.5deg]">
               <div className="bg-navy px-5 py-4 flex items-center justify-between">
                 <span className="text-white text-[13px] font-semibold">
                   Fluid Mechanics — Topic Test

@@ -1,4 +1,4 @@
-@import url("https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&family=Manrope:wght@200..800&family=Newsreader:ital,opsz,wght@0,6..72,200..800;1,6..72,200..800&family=Poppins:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&family=Rubik:ital,wght@0,300..900;1,300..900&family=Work+Sans:ital,wght@0,100..900;1,100..900&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Newsreader:ital,opsz,wght@0,6..72,400..700;1,6..72,400..700&family=Poppins:wght@400;500;600;700;800&display=swap");
 
 @import "tailwindcss";
 
@@ -6,7 +6,7 @@
   --font-inter: "Inter", sans-serif;
 }
 @theme {
-  --font-manrope: "Manrope", serif;
+  --font-manrope: "Inter", sans-serif; /* Manrope dropped 2026-10-29 (one font fewer to download) */
 }
 @theme {
   --font-newsreader: "Newsreader", serif;
@@ -15,11 +15,43 @@
   --font-poppins: "Poppins", sans-serif;
 }
 @theme {
-  --font-rubik: "Rubik", sans-serif;
+  --font-rubik: "Inter", sans-serif; /* Rubik dropped 2026-10-29 */
 }
 @theme {
-  --font-work-sans: "Work Sans", sans-serif;
+  --font-work-sans: "Inter", sans-serif; /* Work Sans dropped 2026-10-29 */
 }
+
+/* ONE BRAND LOOK (2026-10-29): the app's pages were built with Tailwind's
+   "indigo" colour (600+ places) while the front page uses the academy's
+   navy & gold. Instead of editing every page, the indigo scale itself is
+   redefined here as the academy NAVY scale, so every indigo button, link,
+   badge and sidebar turns navy at once. Plain hex values (not oklch), so
+   old phones/laptops show them correctly too. */
+@theme {
+  --color-indigo-50: #f1f5fa;
+  --color-indigo-100: #dfe8f3;
+  --color-indigo-200: #b9cbe1;
+  --color-indigo-300: #7f9cc2;
+  --color-indigo-400: #3d6596;
+  --color-indigo-500: #16365e;
+  --color-indigo-600: #0f2a4a;
+  --color-indigo-700: #0a1e36;
+  --color-indigo-800: #081a30;
+  --color-indigo-900: #061426;
+  --color-indigo-950: #040d1a;
+}
+
+body {
+  font-family: "Inter", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Logo splash while the app starts (App.jsx). */
+@keyframes ad-splash-pulse {
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(0.94); opacity: 0.85; }
+}
+.ad-splash-logo { animation: ad-splash-pulse 1.4s ease-in-out infinite; }
 
 /* Brand palette — Dr. A.D. Academy of Excellence (navy/gold, from the academy logo) */
 @theme {
@@ -57,3 +89,25 @@ input[type="number"] {
 .hide-scrollbar::-webkit-scrollbar {
   display: none;                  /* Chrome, Safari, Edge Chromium */
 }
+
+/* Student app layout (StudentShell.jsx): leave room for the fixed menus —
+   the left menu on laptops, the bottom tabs on phones. */
+body.ad-student-shell {
+  background-color: #f6f3ea;
+}
+@media (min-width: 1024px) {
+  body.ad-student-shell { padding-left: 240px; }
+}
+@media (max-width: 1023.98px) {
+  body.ad-student-shell { padding-bottom: calc(76px + env(safe-area-inset-bottom)); }
+}
+
+/* Admin/evaluator on phones: room for the bottom menu bar (Sidebar.jsx). */
+body.ad-admin-shell {
+  padding-bottom: calc(76px + env(safe-area-inset-bottom));
+}
+
+/* Admin menu: thin, subtle scrollbar when the list is taller than the screen. */
+.ad-admin-menu { scrollbar-width: thin; scrollbar-color: rgba(255,255,255,0.2) transparent; }
+.ad-admin-menu::-webkit-scrollbar { width: 6px; }
+.ad-admin-menu::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); border-radius: 9px; }

@@ -7,13 +7,14 @@ const CTA = () => {
   return (
     <section
       id="cta"
-      className="py-16 sm:py-20 bg-navy-dark text-center rounded-xl"
+      className="py-16 sm:py-20 text-center rounded-3xl"
+      style={{ background: "linear-gradient(120deg, #c9971f, #e8b94a)" }}
     >
-      <div className="container mx-auto px-4 max-w-xl">
-        <h2 className="font-newsreader text-3xl sm:text-4xl text-white">
+      <div className="container mx-auto px-4 max-w-2xl">
+        <h2 className="font-newsreader font-semibold text-3xl sm:text-5xl text-navy-dark">
           Ready to start your preparation?
         </h2>
-        <p className="text-[15.5px] text-[#C9D2DE] mt-3.5 font-inter">
+        <p className="text-[15.5px] text-navy-dark/80 mt-3.5 font-inter">
           Enroll with Dr. A.D. Academy of Excellence and start practicing
           across topic-wise, subject-wise, mixed-subject, and full-length
           tests today.
@@ -22,13 +23,13 @@ const CTA = () => {
           <button
             type="button"
             onClick={() => setShowEnrollModal(true)}
-            className="px-6 py-3 bg-gold text-navy-dark rounded-full font-semibold hover:bg-gold-light transition-colors cursor-pointer"
+            className="px-6 py-3 bg-navy-dark text-white rounded-full font-semibold hover:bg-navy transition-colors cursor-pointer"
           >
             Enroll Now
           </button>
           <a
             href="mailto:dradacademy@gmail.com"
-            className="px-6 py-3 border border-white/30 text-white rounded-full font-medium hover:bg-white/10 transition-colors"
+            className="px-6 py-3 border-[1.5px] border-navy-dark text-navy-dark rounded-full font-semibold hover:bg-white/20 transition-colors"
           >
             Contact the Academy
           </a>

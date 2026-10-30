@@ -220,6 +220,9 @@ export const AuthContextProvider = ({ children }) => {
           !data.user?.profileCompleted
         ) {
           Navigate("/profile");
+        } else if (data.user?.role === "student" && data.user?.accountType !== "free_trial") {
+          // New look: enrolled students land on their own Home.
+          Navigate("/my");
         } else {
           Navigate("/");
         }
