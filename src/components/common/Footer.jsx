@@ -7,7 +7,7 @@ import { AuthContext } from "../../context/AuthContext";
 const SOCIAL_LINKS = [
   { name: "Instagram", href: "https://q.me-qr.com/h398jvcc", icon: Instagram },
   { name: "Telegram", href: "https://q.me-qr.com/njnd7s2z", icon: Send },
-  { name: "YouTube", href: "https://www.youtube.com/@DrADAcademy", icon: Youtube },
+  { name: "YouTube", href: "https://www.youtube.com/@dradacademy", icon: Youtube },
 ];
 
 const COURSE_LINKS = [

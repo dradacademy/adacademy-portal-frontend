@@ -10,6 +10,99 @@ import LiveQuizCard from "./LiveQuizCard";
 const POLL_MS = 4000;
 const timeOf = (d) => new Date(d).toLocaleTimeString("en-IN", { hour: "numeric", minute: "2-digit" });
 
+// Attendance check (2026-10-30): when the teacher asks, a big
+// "I'm present" button appears at the top for the time the teacher chose.
+// Attendance % for the class = checks answered ÷ checks asked.
+const AttendanceBanner = ({ att, offsetMs, onDone }) => {
+  const cur = att?.current || null;
+  const [left, setLeft] = useState(0);
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState("");
+  useEffect(() => {
+    if (!cur) return undefined;
+    const tick = () => setLeft(Math.max(0, Math.ceil((new Date(cur.closesAt).getTime() - (Date.now() + offsetMs)) / 1000)));
+    tick();
+    const t = setInterval(tick, 250);
+    return () => clearInterval(t);
+  }, [cur?._id, cur?.closesAt, offsetMs]);
+
+  // A new check: leave full-screen video so the button is visible, and
+  // buzz the phone once.
+  useEffect(() => {
+    if (!cur || cur.done) return;
+    try {
+      const fs = document.fullscreenElement || document.webkitFullscreenElement;
+      if (fs) {
+        if (document.exitFullscreen) document.exitFullscreen();
+        else if (document.webkitExitFullscreen) document.webkitExitFullscreen();
+      }
+    } catch {
+      /* ignore */
+    }
+    try {
+      if (navigator.vibrate) navigator.vibrate(250);
+    } catch {
+      /* ignore */
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [cur?._id]);
+
+  const present = async () => {
+    if (!cur || busy) return;
+    setBusy(true);
+    setErr("");
+    try {
+      await api.post(`/live-qa/polls/${cur._id}/answer`, { present: true });
+      await onDone();
+    } catch (e) {
+      setErr(e.response?.data?.message || "Could not mark. Check your internet and tap again.");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const summary =
+    att && att.total > 0 ? (
+      <span className="text-xs text-[#3A4754]">
+        My attendance this class: <b>{att.responded}/{att.total}</b> ({att.percent}%)
+      </span>
+    ) : null;
+
+  if (cur && !cur.done && left > 0) {
+    return (
+      <div className="ad-att-blink m-2 rounded-xl p-3 text-center" style={{ background: "#0F2A4A", color: "#fff" }}>
+        {/* Blinking so nobody misses it (2026-10-30). */}
+        <style>{`
+          @keyframes adAttBlink { 0%,100% { box-shadow: 0 0 0 0 rgba(232,185,74,.9); } 50% { box-shadow: 0 0 0 8px rgba(232,185,74,0); } }
+          @keyframes adAttBtn { 0%,100% { background:#C9971F; transform:scale(1); } 50% { background:#F2C14E; transform:scale(1.03); } }
+          .ad-att-blink { animation: adAttBlink 0.9s ease-in-out infinite; }
+          .ad-att-btn { animation: adAttBtn 0.9s ease-in-out infinite; }
+        `}</style>
+        <div className="text-sm font-semibold" style={{ color: "#E8B94A" }}>📋 Attendance — tap within {left} second{left === 1 ? "" : "s"}!</div>
+        <button
+          type="button"
+          onClick={present}
+          disabled={busy}
+          className="ad-att-btn mt-2 w-full rounded-xl py-3 text-lg font-bold"
+          style={{ background: "#C9971F", color: "#0F2A4A" }}
+        >
+          {busy ? "Marking…" : "✋ I'm present"}
+        </button>
+        {err && <div className="text-xs mt-1" style={{ color: "#FCA5A5" }}>{err}</div>}
+      </div>
+    );
+  }
+  if (cur && cur.done && left > 0) {
+    return (
+      <div className="mx-2 mt-2 rounded-xl px-3 py-2 flex flex-wrap items-center justify-between gap-1" style={{ background: "#DDF3E5", color: "#1E7B47" }}>
+        <b className="text-sm">✓ Marked present</b>
+        {summary}
+      </div>
+    );
+  }
+  return summary ? <div className="px-3 pt-2">{summary}</div> : null;
+};
+
 const LiveQaPanel = ({ liveClassId }) => {
   const [board, setBoard] = useState(null);
   const [text, setText] = useState("");
@@ -95,6 +188,7 @@ const LiveQaPanel = ({ liveClassId }) => {
 
   return (
     <div className="flex flex-col h-full min-h-0 bg-white text-[#13202B]">
+      <AttendanceBanner att={board?.quiz?.attendance} offsetMs={offsetMs} onDone={load} />
       <div className="px-2 pt-2 border-b border-[#E3E8EE] flex items-end gap-1">
         {[["quiz", `🏆 Quiz & ranks${board?.quiz?.currentPoll?.open && !board.quiz.currentPoll.myAnswer ? " •" : ""}`], ["questions", "💬 Ask"]].map(([k, l]) => (
           <button key={k} type="button" onClick={() => setTab(k)} className={`px-3 py-1.5 rounded-t-lg text-sm font-semibold ${tab === k ? "bg-[#EEF1F4] text-[#1F4E78]" : "text-gray-500"}`}>
