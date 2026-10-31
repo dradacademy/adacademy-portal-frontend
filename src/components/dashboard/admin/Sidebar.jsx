@@ -1,302 +1,1314 @@
-import React, { useContext, useEffect, useState } from "react";
-import { Link, useLocation } from "react-router-dom";
-import {
-  Gauge, Users, Layers, FileText, ClipboardCheck, PenLine, Radio, Video, MessageCircleQuestion,
-  Paperclip, UserCheck, IdCard, HelpCircle, Shield, TrendingUp, ListChecks, BarChart3,
-  CalendarCheck, CalendarDays, Image, Gift, MessageSquare, LogOut, Menu, X, ChevronLeft,
-  ChevronRight,
-} from "lucide-react";
+// import React, { useContext } from "react";
+// import { RiDashboardHorizontalLine } from "react-icons/ri";
+// import { RiDashboardHorizontalFill } from "react-icons/ri";
+// import { TbBooks } from "react-icons/tb";
+// import { ImBooks } from "react-icons/im";
+// import { IoNewspaperOutline } from "react-icons/io5";
+// import { IoNewspaper } from "react-icons/io5";
+// import { FaRegUser } from "react-icons/fa";
+// import { FaUser } from "react-icons/fa";
+// import { IoDocumentLockOutline } from "react-icons/io5";
+// import { IoDocumentLock } from "react-icons/io5";
+// import { FiLogOut } from "react-icons/fi";
+// import { TbSettings } from "react-icons/tb";
+// import { TbSettingsFilled } from "react-icons/tb";
+// import { IoMailOutline } from "react-icons/io5";
+// import { IoMailSharp } from "react-icons/io5";
+// import { IoAddCircleOutline } from "react-icons/io5";
+// import { IoAddCircle } from "react-icons/io5";
+// import { Link, useLocation, useNavigate } from "react-router-dom";
+// import { AuthContext } from "../../../context/AuthContext";
+// import { MdOutlineRateReview, MdRateReview } from "react-icons/md";
+// import axios from "axios";
+// import toast from "react-hot-toast";
+
+// const Sidebar = () => {
+//   const { userData, setUserData } = useContext(AuthContext);
+//   const navigate = useNavigate();
+//   const location = useLocation();
+
+//   const handleLogout = async () => {
+//     try {
+//       const response = await axios.post(
+//         `${import.meta.env.VITE_APP_API_URL}/users/logout`,
+//         {},
+//         { withCredentials: true }
+//       );
+//       const { data } = response;
+//       if (data) {
+//         setUserData(null);
+//         navigate("/login");
+//       }
+//     } catch (error) {
+//       toast.error("Logout failed");
+//     }
+//   };
+
+//   return (
+//     <div className=" flex flex-col justify-between gap-6 bg-indigo-500 rounded-3xl min-w-[280px] h-[95vh] sticky top-5 overflow-y-auto hide-scrollbar">
+//       <div className=" flex flex-col gap-5">
+//         <div className=" p-6 ">
+//           <h1 className=" text-stone-50 font-bold text-3xl font-manrope">
+//             <span className="">Dr. A. D. Academy </span>
+//             <br />
+//             of Excellence
+//           </h1>
+//         </div>
+//         <div className=" flex flex-col gap-3">
+//           <h1 className=" text-[13px] text-stone-50 font-medium px-6">MENU</h1>
+//           <div className=" flex flex-col gap-[10px] font-inter ">
+//             <div className=" flex items-center ">
+//               <div
+//                 className={` h-10 w-2 ${
+//                   location.pathname === "/dashboard" ||
+//                   location.pathname === "/dashboard/"
+//                     ? " bg-stone-50"
+//                     : " bg-indigo-500"
+//                 } rounded-tr-full rounded-br-full`}
+//               ></div>
+//               <Link
+//                 to={"/dashboard"}
+//                 className={` flex items-center gap-2 px-[17px] ${
+//                   location.pathname === "/dashboard" ||
+//                   location.pathname === "/dashboard/"
+//                     ? " text-stone-50"
+//                     : " text-indigo-100 hover:opacity-80 duration-300"
+//                 }`}
+//               >
+//                 {location.pathname === "/dashboard" ||
+//                 location.pathname === "/dashboard/" ? (
+//                   <RiDashboardHorizontalFill className=" text-2xl" />
+//                 ) : (
+//                   <RiDashboardHorizontalLine className=" text-2xl" />
+//                 )}
+//                 <h2 className=" font-medium text-lg">Dashboard</h2>
+//               </Link>
+//             </div>
+//             {userData.role === "admin" && (
+//               <>
+//                 <div className=" flex items-center ">
+//                   <div
+//                     className={` h-10 w-2 ${
+//                       location.pathname === "/dashboard/create-subject" ||
+//                       location.pathname === "/dashboard/create-subject/"
+//                         ? " bg-stone-50"
+//                         : " bg-indigo-500"
+//                     } rounded-tr-full rounded-br-full`}
+//                   ></div>
+//                   <Link
+//                     to={"/dashboard/create-subject"}
+//                     className={` flex items-center gap-2 px-[17px] ${
+//                       location.pathname === "/dashboard/create-subject" ||
+//                       location.pathname === "/dashboard/create-subject/"
+//                         ? " text-stone-50"
+//                         : " text-indigo-100 hover:opacity-80 duration-300"
+//                     }`}
+//                   >
+//                     {location.pathname === "/dashboard/create-subject" ||
+//                     location.pathname === "/dashboard/create-subject/" ? (
+//                       <ImBooks className=" text-2xl text-stone-50 ml-[3px]" />
+//                     ) : (
+//                       <TbBooks className=" text-2xl" />
+//                     )}
+//                     <h2 className=" font-medium text-lg">Subject</h2>
+//                   </Link>
+//                 </div>
+//                 <div className=" flex items-center ">
+//                   <div
+//                     className={` h-10 w-2 ${
+//                       location.pathname.startsWith("/dashboard/exam")
+//                         ? " bg-[#fafafa]"
+//                         : " bg-indigo-500"
+//                     } rounded-tr-full rounded-br-full`}
+//                   ></div>
+//                   <Link
+//                     to={"/dashboard/exam"}
+//                     className={` flex items-center gap-2 px-[17px] ${
+//                       location.pathname.startsWith("/dashboard/exam")
+//                         ? " text-stone-50"
+//                         : " text-indigo-100 hover:opacity-80 duration-300"
+//                     }`}
+//                   >
+//                     {location.pathname.startsWith("/dashboard/exam") ? (
+//                       <IoNewspaper className=" text-2xl" />
+//                     ) : (
+//                       <IoNewspaperOutline className=" text-2xl " />
+//                     )}
+//                     <h2 className=" font-medium text-lg">Exam</h2>
+//                   </Link>
+//                 </div>
+//                 <div className=" flex items-center ">
+//                   <div
+//                     className={` h-10 w-2 ${
+//                       location.pathname === "/dashboard/users" ||
+//                       location.pathname === "/dashboard/users/"
+//                         ? " bg-stone-50"
+//                         : " bg-indigo-500"
+//                     } rounded-tr-full rounded-br-full`}
+//                   ></div>
+//                   <Link
+//                     to={"/dashboard/users"}
+//                     className={` flex items-center gap-3 px-[17px] ${
+//                       location.pathname === "/dashboard/users" ||
+//                       location.pathname === "/dashboard/users/"
+//                         ? " text-stone-50"
+//                         : " text-indigo-100 hover:opacity-80 duration-300"
+//                     }`}
+//                   >
+//                     {location.pathname === "/dashboard/users" ||
+//                     location.pathname === "/dashboard/users/" ? (
+//                       <FaUser className=" text-xl" />
+//                     ) : (
+//                       <FaRegUser className=" text-xl " />
+//                     )}
+//                     <h2 className=" font-medium text-lg">Users</h2>
+//                   </Link>
+//                 </div>
+//                 <div className=" flex items-center ">
+//                   <div
+//                     className={` h-10 w-2 ${
+//                       location.pathname === "/dashboard/controllers" ||
+//                       location.pathname === "/dashboard/controllers/"
+//                         ? " bg-stone-50"
+//                         : " bg-indigo-500"
+//                     } rounded-tr-full rounded-br-full`}
+//                   ></div>
+//                   <Link
+//                     to={"/dashboard/controllers"}
+//                     className={` flex items-center gap-2 px-[17px] ${
+//                       location.pathname === "/dashboard/controllers" ||
+//                       location.pathname === "/dashboard/controllers/"
+//                         ? " text-stone-50"
+//                         : " text-indigo-100 hover:opacity-80 duration-300"
+//                     }`}
+//                   >
+//                     {location.pathname === "/dashboard/controllers" ||
+//                     location.pathname === "/dashboard/controllers/" ? (
+//                       <IoAddCircle className=" text-2xl" />
+//                     ) : (
+//                       <IoAddCircleOutline className=" text-2xl " />
+//                     )}
+//                     <h2 className=" font-medium text-lg">Controllers</h2>
+//                   </Link>
+//                 </div>
+//                 <div className=" flex items-center ">
+//                   <div
+//                     className={` h-10 w-2 ${
+//                       location.pathname === "/dashboard/trigger-mail" ||
+//                       location.pathname === "/dashboard/trigger-mail/"
+//                         ? " bg-stone-50"
+//                         : " bg-indigo-500"
+//                     } rounded-tr-full rounded-br-full`}
+//                   ></div>
+//                   <Link
+//                     to={"/dashboard/trigger-mail"}
+//                     className={` flex items-center gap-2 px-[17px] ${
+//                       location.pathname === "/dashboard/trigger-mail" ||
+//                       location.pathname === "/dashboard/trigger-mail/"
+//                         ? " text-stone-50"
+//                         : " text-indigo-100 hover:opacity-80 duration-300"
+//                     }`}
+//                   >
+//                     {location.pathname === "/dashboard/trigger-mail" ||
+//                     location.pathname === "/dashboard/trigger-mail/" ? (
+//                       <IoMailSharp className=" text-2xl" />
+//                     ) : (
+//                       <IoMailOutline className=" text-2xl " />
+//                     )}
+//                     <h2 className=" font-medium text-lg">Trigger Mail</h2>
+//                   </Link>
+//                 </div>
+//               </>
+//             )}
+//             {(userData.role === "evaluator" || userData.role === "admin") && (
+//               <div className=" flex items-center ">
+//                 <div
+//                   className={` h-10 w-2 ${
+//                     location.pathname === "/dashboard/comment" ||
+//                     location.pathname === "/dashboard/comment/"
+//                       ? " bg-stone-50"
+//                       : " bg-indigo-500"
+//                   } rounded-tr-full rounded-br-full`}
+//                 ></div>
+//                 <Link
+//                   to={"/dashboard/comment"}
+//                   className={` flex items-center gap-2 px-[17px] ${
+//                     location.pathname === "/dashboard/comment" ||
+//                     location.pathname === "/dashboard/comment/"
+//                       ? " text-stone-50"
+//                       : " text-indigo-100 hover:opacity-80 duration-300"
+//                   }`}
+//                 >
+//                   {location.pathname === "/dashboard/comment" ||
+//                   location.pathname === "/dashboard/comment/" ? (
+//                     <MdRateReview className=" text-2xl" />
+//                   ) : (
+//                     <MdOutlineRateReview className=" text-2xl " />
+//                   )}
+//                   <h2 className=" font-medium text-lg">Comment</h2>
+//                 </Link>
+//               </div>
+//             )}
+//           </div>
+//         </div>
+//       </div>
+//       <div className=" flex flex-col gap-3 pb-5">
+//         <h1 className=" text-[13px] text-stone-100 font-medium px-6">
+//           GENERAL
+//         </h1>
+//         <div className=" flex flex-col gap-[10px] font-inter ">
+//           {/* <div className=" flex items-center ">
+//             <div
+//               className={` h-10 w-2 ${
+//                 location.pathname === "/dashboard/settings" ||
+//                 location.pathname === "/dashboard/settings/"
+//                   ? " bg-stone-50"
+//                   : " bg-indigo-500"
+//               } rounded-tr-full rounded-br-full`}
+//             ></div>
+//             <Link
+//               to={"/dashboard/settings"}
+//               className={` flex items-center gap-2 px-[17px] ${
+//                 location.pathname === "/dashboard/settings" ||
+//                 location.pathname === "/dashboard/settings/"
+//                   ? " text-stone-50"
+//                   : " text-indigo-100 hover:opacity-80 duration-300"
+//               }`}
+//             >
+//               {location.pathname === "/dashboard/settings" ||
+//               location.pathname === "/dashboard/settings/" ? (
+//                 <TbSettingsFilled className=" text-2xl" />
+//               ) : (
+//                 <TbSettings className=" text-2xl " />
+//               )}
+//               <h2 className=" font-medium text-lg">Settings</h2>
+//             </Link>
+//           </div> */}
+//           <div className=" flex items-center text-stone-100">
+//             <div
+//               className={` h-10 w-2 bg-indigo-500 rounded-tr-full rounded-br-full`}
+//             ></div>
+//             <div
+//               className=" flex items-center gap-2 px-[17px] cursor-pointer text-stone-50"
+//               onClick={handleLogout}
+//             >
+//               <FiLogOut className=" text-2xl" />
+//               <h2 className=" font-medium text-lg">Logout</h2>
+//             </div>
+//           </div>
+//         </div>
+//       </div>
+//     </div>
+//   );
+// };
+
+// export default Sidebar;
+
+import React, { useContext, useState, useEffect } from "react";
+import { RiDashboardHorizontalLine } from "react-icons/ri";
+import { RiDashboardHorizontalFill } from "react-icons/ri";
+import { TbBooks } from "react-icons/tb";
+import { ImBooks } from "react-icons/im";
+import { IoNewspaperOutline } from "react-icons/io5";
+import { IoNewspaper } from "react-icons/io5";
+import { FaRegUser } from "react-icons/fa";
+import { FaUser } from "react-icons/fa";
+import { IoDocumentLockOutline } from "react-icons/io5";
+import { IoDocumentLock } from "react-icons/io5";
+import { FiLogOut } from "react-icons/fi";
+import { TbSettings } from "react-icons/tb";
+import { TbSettingsFilled } from "react-icons/tb";
+import { IoMailOutline } from "react-icons/io5";
+import { IoMailSharp } from "react-icons/io5";
+import { IoAddCircleOutline } from "react-icons/io5";
+import { IoAddCircle } from "react-icons/io5";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { AuthContext } from "../../../context/AuthContext";
-import logo from "../../../assets/images/common/logo.png";
-
-// Admin/evaluator menu — 2026-10-29 "new look".
-// The old menu was one long list of 23 links. It is now grouped into six
-// sections (Overview · Tests · Classes · Students · Reports · Website) in
-// the academy's navy & gold. Every page and route is unchanged.
-//   ≥1280px: full menu with labels (can be collapsed to icons).
-//   768–1279px: icon rail (hover shows the name).
-//   <768px (phones): a bottom bar with the 4 most used pages + "Menu",
-//     which opens the full grouped menu.
-
-const NAVY = "#0f2a4a";
-const GOLD = "#c9971f";
-const GOLD_LIGHT = "#e8b94a";
-
-const ADMIN_GROUPS = [
-  {
-    title: "OVERVIEW",
-    items: [
-      { to: "/dashboard", label: "Exam Dashboard", icon: Gauge, exact: true },
-      { to: "/dashboard/user-based", label: "User Dashboard", icon: Users },
-    ],
-  },
-  {
-    title: "TESTS",
-    items: [
-      { to: "/dashboard/create-subject", label: "Subjects", icon: Layers },
-      { to: "/dashboard/exam", label: "Exams", icon: FileText },
-      { to: "/dashboard/test-tracking", label: "Test Tracking", icon: ClipboardCheck },
-      { to: "/dashboard/answer-sheets", label: "Answer Sheets", icon: PenLine },
-    ],
-  },
-  {
-    title: "CLASSES",
-    items: [
-      { to: "/dashboard/live-class", label: "Live Classes", icon: Radio },
-      { to: "/dashboard/recorded-classes", label: "Recorded Classes", icon: Video },
-      { to: "/dashboard/live-qa", label: "Live Q&A", icon: MessageCircleQuestion },
-      { to: "/dashboard/attachments", label: "Materials", icon: Paperclip },
-    ],
-  },
-  {
-    title: "STUDENTS",
-    items: [
-      { to: "/dashboard/users", label: "Users", icon: UserCheck },
-      { to: "/dashboard/student-profiles", label: "Student Profiles", icon: IdCard },
-      { to: "/dashboard/doubts", label: "Doubts", icon: HelpCircle },
-      { to: "/dashboard/controllers", label: "Controllers", icon: Shield },
-    ],
-  },
-  {
-    title: "REPORTS",
-    items: [
-      { to: "/dashboard/student-progress", label: "Student Progress", icon: TrendingUp },
-      { to: "/dashboard/video-tracker", label: "Video Tracker", icon: ListChecks },
-      { to: "/dashboard/video-analytics", label: "Video Analytics", icon: BarChart3 },
-      { to: "/dashboard/attendance-report", label: "Attendance", icon: CalendarCheck },
-      { to: "/dashboard/study-tracker", label: "Study Tracker", icon: CalendarDays },
-    ],
-  },
-  {
-    title: "WEBSITE",
-    items: [
-      { to: "/dashboard/content", label: "Content", icon: Image },
-      { to: "/dashboard/free-test", label: "Free Test Leads", icon: Gift },
-    ],
-  },
-];
-
-// Evaluators only review answers (Comment page), as before.
-const EVALUATOR_GROUPS = [
-  { title: "EVALUATION", items: [{ to: "/dashboard/comment", label: "Comment", icon: MessageSquare }] },
-];
-
-// Phone bottom bar shortcuts (admin).
-const ADMIN_BOTTOM = [
-  { to: "/dashboard", label: "Home", icon: Gauge, exact: true },
-  { to: "/dashboard/exam", label: "Exams", icon: FileText },
-  { to: "/dashboard/recorded-classes", label: "Classes", icon: Video },
-  { to: "/dashboard/users", label: "Students", icon: UserCheck },
-];
-
-const isActive = (item, path) => {
-  const clean = path.replace(/\/+$/, "") || "/";
-  if (item.exact) return clean === item.to;
-  return clean === item.to || clean.startsWith(`${item.to}/`);
-};
-
-const useWidth = () => {
-  const [w, setW] = useState(typeof window !== "undefined" ? window.innerWidth : 1440);
-  useEffect(() => {
-    const on = () => setW(window.innerWidth);
-    window.addEventListener("resize", on);
-    return () => window.removeEventListener("resize", on);
-  }, []);
-  return w;
-};
-
-const MenuLink = ({ item, active, compact, onClick }) => {
-  const Icon = item.icon;
-  return (
-    <Link
-      to={item.to}
-      onClick={onClick}
-      title={compact ? item.label : undefined}
-      className={`flex items-center gap-3 rounded-xl transition-colors ${compact ? "justify-center p-2.5" : "px-3 py-[7px]"}`}
-      style={
-        active
-          ? { backgroundColor: "rgba(232,185,74,0.16)", color: GOLD_LIGHT, fontWeight: 700 }
-          : { color: "rgba(255,255,255,0.8)" }
-      }
-    >
-      <Icon className="w-[19px] h-[19px] shrink-0" />
-      {!compact && <span className="text-[14px] truncate">{item.label}</span>}
-    </Link>
-  );
-};
-
-const GroupedMenu = ({ groups, path, compact, onNavigate, grid }) => (
-  <>
-    {groups.map((g, gi) => (
-      <div key={g.title}>
-        {compact ? (
-          gi > 0 && <div className="mx-3 my-2" style={{ height: 1, backgroundColor: "rgba(255,255,255,0.12)" }} />
-        ) : (
-          <div className="text-[10.5px] font-bold tracking-widest px-3 mt-3 mb-0.5" style={{ color: "rgba(255,255,255,0.45)" }}>
-            {g.title}
-          </div>
-        )}
-        <div className={grid ? "grid grid-cols-2 gap-1" : "flex flex-col gap-0.5"}>
-          {g.items.map((item) => (
-            <MenuLink key={item.to} item={item} active={isActive(item, path)} compact={compact} onClick={onNavigate} />
-          ))}
-        </div>
-      </div>
-    ))}
-  </>
-);
+import { MdOutlineRateReview, MdRateReview } from "react-icons/md";
+import { MdOutlineFactCheck, MdFactCheck } from "react-icons/md";
+import {
+  Images,
+  Video,
+  BarChart3,
+  Megaphone,
+  ClipboardCheck,
+  Users as UsersIcon,
+  Paperclip,
+  FileText,
+  User as UserIcon,
+  MessageSquare,
+  Gift,
+} from "lucide-react";
+import axios from "axios";
+import toast from "react-hot-toast";
 
 const Sidebar = () => {
-  const { userData, handleLogout } = useContext(AuthContext);
+  const { userData, setUserData, handleLogout } = useContext(AuthContext);
+  const navigate = useNavigate();
   const location = useLocation();
-  const path = location.pathname;
-  const width = useWidth();
   const [isCollapsed, setIsCollapsed] = useState(false);
-  const [drawerOpen, setDrawerOpen] = useState(false);
 
-  const groups = userData?.role === "admin" ? ADMIN_GROUPS : EVALUATOR_GROUPS;
-  const isPhone = width < 768;
-  const compact = !isPhone && (isCollapsed || width < 1280);
+  // const handleLogout = async () => {
+  //   try {
+  //     const response = await axios.post(
+  //       `${import.meta.env.VITE_APP_API_URL}/users/logout`,
+  //       {},
+  //       { withCredentials: true }
+  //     );
+  //     const { data } = response;
+  //     if (data) {
+  //       setUserData(null);
+  //       navigate("/login");
+  //     }
+  //   } catch (error) {
+  //     toast.error("Logout failed");
+  //   }
+  // };
 
-  // Close the phone menu after navigating.
-  useEffect(() => {
-    setDrawerOpen(false);
-  }, [path]);
+  const toggleCollapse = () => {
+    setIsCollapsed(!isCollapsed);
+  };
 
-  // Phones: room for the bottom bar (index.css: body.ad-admin-shell).
-  useEffect(() => {
-    if (!isPhone) return undefined;
-    document.body.classList.add("ad-admin-shell");
-    return () => document.body.classList.remove("ad-admin-shell");
-  }, [isPhone]);
+  const SidebarContent = () => {
+    // Check if we should show collapsed version based on screen size
+    const [windowWidth, setWindowWidth] = useState(window.innerWidth);
 
-  /* ------------------------- phones ------------------------- */
-  if (isPhone) {
-    const bottom = userData?.role === "admin" ? ADMIN_BOTTOM : EVALUATOR_GROUPS[0].items;
+    useEffect(() => {
+      const handleResize = () => setWindowWidth(window.innerWidth);
+      window.addEventListener("resize", handleResize);
+      return () => window.removeEventListener("resize", handleResize);
+    }, []);
+
+    const showCollapsed = isCollapsed || windowWidth < 1280; // xl breakpoint is 1280px
+
     return (
       <>
-        <nav
-          className="fixed left-0 right-0 bottom-0 z-40 bg-white flex justify-around"
-          style={{ borderTop: "1px solid #e7e1d2", padding: "6px 4px calc(8px + env(safe-area-inset-bottom))" }}
-        >
-          {[...bottom, { label: "Menu", icon: Menu, menu: true }].map((item) => {
-            const Icon = item.icon;
-            const active = item.menu ? drawerOpen : isActive(item, path);
-            const inner = (
-              <>
-                <span className="rounded-2xl px-3.5 py-1" style={{ backgroundColor: active ? "#f3ecd9" : "transparent" }}>
-                  <Icon className="w-[21px] h-[21px]" />
-                </span>
-                <span className="text-[11px]" style={{ fontWeight: active ? 700 : 500 }}>{item.label}</span>
-              </>
-            );
-            const cls = "flex flex-col items-center gap-0.5 w-16";
-            const style = { color: active ? NAVY : "#8a93a0" };
-            return item.menu ? (
-              <button key="menu" type="button" className={cls} style={style} onClick={() => setDrawerOpen(true)}>
-                {inner}
-              </button>
-            ) : (
-              <Link key={item.to} to={item.to} className={cls} style={style}>
-                {inner}
-              </Link>
-            );
-          })}
-        </nav>
+        <div className="flex flex-col gap-5">
+          {/* Header */}
+          <div className="p-6">
+            <h1
+              className={`text-stone-50 font-bold font-manrope transition-all duration-300 ${
+                showCollapsed
+                  ? "text-base sm:text-lg xl:text-xl text-center leading-tight"
+                  : "text-3xl"
+              }`}
+            >
+              {showCollapsed ? (
+                <span className="block">Dr. A.D.</span>
+              ) : (
+                <>
+                  <span>Dr. A. D. Academy </span>
+                  <br />
+                  of Excellence
+                </>
+              )}
+            </h1>
+          </div>
 
-        {drawerOpen && (
-          <div className="fixed inset-0 z-50">
-            <div className="absolute inset-0" style={{ backgroundColor: "rgba(10,30,54,0.5)" }} onClick={() => setDrawerOpen(false)} />
-            <div className="absolute top-0 bottom-0 left-0 overflow-y-auto p-4" style={{ width: "min(340px, 88vw)", backgroundColor: NAVY }}>
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <img src={logo} alt="" className="w-9 h-9 rounded-lg bg-white object-contain p-0.5" />
-                  <div style={{ lineHeight: 1.1 }}>
-                    <div className="text-white font-bold text-sm font-poppins">Dr. A.D. Academy</div>
-                    <div className="text-[10px] font-bold tracking-widest" style={{ color: GOLD_LIGHT }}>
-                      {userData?.role === "admin" ? "ADMIN" : "EVALUATOR"}
-                    </div>
+          {/* Menu Section */}
+          <div className="flex flex-col gap-3">
+            <h1
+              className={`text-[13px] text-stone-50 font-medium px-6 transition-all duration-300 ${
+                showCollapsed ? "text-center text-[10px] sm:text-[11px]" : ""
+              }`}
+            >
+              {showCollapsed ? "" : "MENU"}
+            </h1>
+            <div className="flex flex-col gap-[10px] font-inter">
+              {/* Admin Only Items */}
+              {userData.role === "admin" && (
+                <>
+                  {/* Dashboard */}
+                  <div className="flex items-center">
+                    <div
+                      className={`h-10 w-2 ${
+                        location.pathname === "/dashboard" ||
+                        location.pathname === "/dashboard/"
+                          ? "bg-stone-50"
+                          : "bg-indigo-500"
+                      } rounded-tr-full rounded-br-full`}
+                    ></div>
+                    <Link
+                      to={"/dashboard"}
+                      className={`flex items-center gap-2 px-[17px] transition-all duration-300 ${
+                        location.pathname === "/dashboard" ||
+                        location.pathname === "/dashboard/"
+                          ? "text-stone-50"
+                          : "text-indigo-100 hover:opacity-80 duration-300"
+                      } ${showCollapsed ? "justify-center px-2" : ""}`}
+                      title={showCollapsed ? "Dashboard" : ""}
+                    >
+                      {location.pathname === "/dashboard" ||
+                      location.pathname === "/dashboard/" ? (
+                        <RiDashboardHorizontalFill
+                          className={`${
+                            showCollapsed ? "text-xl sm:text-2xl" : "text-2xl"
+                          }`}
+                        />
+                      ) : (
+                        <RiDashboardHorizontalLine
+                          className={`${
+                            showCollapsed ? "text-xl sm:text-2xl" : "text-2xl"
+                          }`}
+                        />
+                      )}
+                      {!showCollapsed && (
+                        <h2 className="font-medium text-lg">Exam Dashboard</h2>
+                      )}
+                    </Link>
                   </div>
+                  <div className="flex items-center">
+                    <div
+                      className={`h-10 w-2 ${
+                        location.pathname === "/dashboard/user-based" ||
+                        location.pathname === "/dashboard/user-based/"
+                          ? "bg-stone-50"
+                          : "bg-indigo-500"
+                      } rounded-tr-full rounded-br-full`}
+                    ></div>
+                    <Link
+                      to={"/dashboard/user-based"}
+                      className={`flex items-center gap-2 px-[17px] transition-all duration-300 ${
+                        location.pathname === "/dashboard/user-based" ||
+                        location.pathname === "/dashboard/user-based/"
+                          ? "text-stone-50"
+                          : "text-indigo-100 hover:opacity-80 duration-300"
+                      } ${showCollapsed ? "justify-center px-2" : ""}`}
+                      title={showCollapsed ? "Dashboard" : ""}
+                    >
+                      {location.pathname === "/dashboard/user-based" ||
+                      location.pathname === "/dashboard/user-based/" ? (
+                        <RiDashboardHorizontalFill
+                          className={`${
+                            showCollapsed ? "text-xl sm:text-2xl" : "text-2xl"
+                          }`}
+                        />
+                      ) : (
+                        <RiDashboardHorizontalLine
+                          className={`${
+                            showCollapsed ? "text-xl sm:text-2xl" : "text-2xl"
+                          }`}
+                        />
+                      )}
+                      {!showCollapsed && (
+                        <h2 className="font-medium text-lg">User Dashboard</h2>
+                      )}
+                    </Link>
+                  </div>
+                  {/* Subject */}
+                  <div className="flex items-center">
+                    <div
+                      className={`h-10 w-2 ${
+                        location.pathname === "/dashboard/create-subject" ||
+                        location.pathname === "/dashboard/create-subject/"
+                          ? "bg-stone-50"
+                          : "bg-indigo-500"
+                      } rounded-tr-full rounded-br-full`}
+                    ></div>
+                    <Link
+                      to={"/dashboard/create-subject"}
+                      className={`flex items-center gap-2 px-[17px] transition-all duration-300 ${
+                        location.pathname === "/dashboard/create-subject" ||
+                        location.pathname === "/dashboard/create-subject/"
+                          ? "text-stone-50"
+                          : "text-indigo-100 hover:opacity-80 duration-300"
+                      } ${showCollapsed ? "justify-center px-2" : ""}`}
+                      title={showCollapsed ? "Subject" : ""}
+                    >
+                      {location.pathname === "/dashboard/create-subject" ||
+                      location.pathname === "/dashboard/create-subject/" ? (
+                        <ImBooks
+                          className={`text-stone-50 ${
+                            showCollapsed
+                              ? "text-xl sm:text-2xl ml-0"
+                              : "text-2xl ml-[3px]"
+                          }`}
+                        />
+                      ) : (
+                        <TbBooks
+                          className={`${
+                            showCollapsed ? "text-xl sm:text-2xl" : "text-2xl"
+                          }`}
+                        />
+                      )}
+                      {!showCollapsed && (
+                        <h2 className="font-medium text-lg">Subject</h2>
+                      )}
+                    </Link>
+                  </div>
+
+                  {/* Exam */}
+                  <div className="flex items-center">
+                    <div
+                      className={`h-10 w-2 ${
+                        location.pathname.startsWith("/dashboard/exam")
+                          ? "bg-[#fafafa]"
+                          : "bg-indigo-500"
+                      } rounded-tr-full rounded-br-full`}
+                    ></div>
+                    <Link
+                      to={"/dashboard/exam"}
+                      className={`flex items-center gap-2 px-[17px] transition-all duration-300 ${
+                        location.pathname.startsWith("/dashboard/exam")
+                          ? "text-stone-50"
+                          : "text-indigo-100 hover:opacity-80 duration-300"
+                      } ${showCollapsed ? "justify-center px-2" : ""}`}
+                      title={showCollapsed ? "Exam" : ""}
+                    >
+                      {location.pathname.startsWith("/dashboard/exam") ? (
+                        <IoNewspaper
+                          className={`${
+                            showCollapsed ? "text-xl sm:text-2xl" : "text-2xl"
+                          }`}
+                        />
+                      ) : (
+                        <IoNewspaperOutline
+                          className={`${
+                            showCollapsed ? "text-xl sm:text-2xl" : "text-2xl"
+                          }`}
+                        />
+                      )}
+                      {!showCollapsed && (
+                        <h2 className="font-medium text-lg">Exam</h2>
+                      )}
+                    </Link>
+                  </div>
+
+                  {/* Users */}
+                  <div className="flex items-center">
+                    <div
+                      className={`h-10 w-2 ${
+                        location.pathname === "/dashboard/users" ||
+                        location.pathname === "/dashboard/users/"
+                          ? "bg-stone-50"
+                          : "bg-indigo-500"
+                      } rounded-tr-full rounded-br-full`}
+                    ></div>
+                    <Link
+                      to={"/dashboard/users"}
+                      className={`flex items-center gap-3 px-[17px] transition-all duration-300 ${
+                        location.pathname === "/dashboard/users" ||
+                        location.pathname === "/dashboard/users/"
+                          ? "text-stone-50"
+                          : "text-indigo-100 hover:opacity-80 duration-300"
+                      } ${showCollapsed ? "justify-center px-2 gap-0" : ""}`}
+                      title={showCollapsed ? "Users" : ""}
+                    >
+                      {location.pathname === "/dashboard/users" ||
+                      location.pathname === "/dashboard/users/" ? (
+                        <FaUser
+                          className={`${
+                            showCollapsed ? "text-lg sm:text-xl" : "text-xl"
+                          }`}
+                        />
+                      ) : (
+                        <FaRegUser
+                          className={`${
+                            showCollapsed ? "text-lg sm:text-xl" : "text-xl"
+                          }`}
+                        />
+                      )}
+                      {!showCollapsed && (
+                        <h2 className="font-medium text-lg">Users</h2>
+                      )}
+                    </Link>
+                  </div>
+
+                  {/* Controllers */}
+                  <div className="flex items-center">
+                    <div
+                      className={`h-10 w-2 ${
+                        location.pathname === "/dashboard/controllers" ||
+                        location.pathname === "/dashboard/controllers/"
+                          ? "bg-stone-50"
+                          : "bg-indigo-500"
+                      } rounded-tr-full rounded-br-full`}
+                    ></div>
+                    <Link
+                      to={"/dashboard/controllers"}
+                      className={`flex items-center gap-2 px-[17px] transition-all duration-300 ${
+                        location.pathname === "/dashboard/controllers" ||
+                        location.pathname === "/dashboard/controllers/"
+                          ? "text-stone-50"
+                          : "text-indigo-100 hover:opacity-80 duration-300"
+                      } ${showCollapsed ? "justify-center px-2" : ""}`}
+                      title={showCollapsed ? "Controllers" : ""}
+                    >
+                      {location.pathname === "/dashboard/controllers" ||
+                      location.pathname === "/dashboard/controllers/" ? (
+                        <IoAddCircle
+                          className={`${
+                            showCollapsed ? "text-xl sm:text-2xl" : "text-2xl"
+                          }`}
+                        />
+                      ) : (
+                        <IoAddCircleOutline
+                          className={`${
+                            showCollapsed ? "text-xl sm:text-2xl" : "text-2xl"
+                          }`}
+                        />
+                      )}
+                      {!showCollapsed && (
+                        <h2 className="font-medium text-lg">Controllers</h2>
+                      )}
+                    </Link>
+                  </div>
+
+                  {/* Test Tracking */}
+                  <div className="flex items-center">
+                    <div
+                      className={`h-10 w-2 ${
+                        location.pathname === "/dashboard/test-tracking" ||
+                        location.pathname === "/dashboard/test-tracking/"
+                          ? "bg-stone-50"
+                          : "bg-indigo-500"
+                      } rounded-tr-full rounded-br-full`}
+                    ></div>
+                    <Link
+                      to={"/dashboard/test-tracking"}
+                      className={`flex items-center gap-2 px-[17px] transition-all duration-300 ${
+                        location.pathname === "/dashboard/test-tracking" ||
+                        location.pathname === "/dashboard/test-tracking/"
+                          ? "text-stone-50"
+                          : "text-indigo-100 hover:opacity-80 duration-300"
+                      } ${showCollapsed ? "justify-center px-2" : ""}`}
+                      title={showCollapsed ? "Test Tracking" : ""}
+                    >
+                      {location.pathname === "/dashboard/test-tracking" ||
+                      location.pathname === "/dashboard/test-tracking/" ? (
+                        <MdFactCheck
+                          className={`${
+                            showCollapsed ? "text-xl sm:text-2xl" : "text-2xl"
+                          }`}
+                        />
+                      ) : (
+                        <MdOutlineFactCheck
+                          className={`${
+                            showCollapsed ? "text-xl sm:text-2xl" : "text-2xl"
+                          }`}
+                        />
+                      )}
+                      {!showCollapsed && (
+                        <h2 className="font-medium text-lg">Test Tracking</h2>
+                      )}
+                    </Link>
+                  </div>
+
+                  {/* Content Management */}
+                  <div className="flex items-center">
+                    <div
+                      className={`h-10 w-2 ${
+                        location.pathname === "/dashboard/content" ||
+                        location.pathname === "/dashboard/content/"
+                          ? "bg-stone-50"
+                          : "bg-indigo-500"
+                      } rounded-tr-full rounded-br-full`}
+                    ></div>
+                    <Link
+                      to={"/dashboard/content"}
+                      className={`flex items-center gap-2 px-[17px] transition-all duration-300 ${
+                        location.pathname === "/dashboard/content" ||
+                        location.pathname === "/dashboard/content/"
+                          ? "text-stone-50"
+                          : "text-indigo-100 hover:opacity-80 duration-300"
+                      } ${showCollapsed ? "justify-center px-2" : ""}`}
+                      title={showCollapsed ? "Content" : ""}
+                    >
+                      <Images
+                        className={`${
+                          showCollapsed
+                            ? "w-5 h-5 sm:w-6 sm:h-6"
+                            : "w-6 h-6"
+                        }`}
+                      />
+                      {!showCollapsed && (
+                        <h2 className="font-medium text-lg">Content</h2>
+                      )}
+                    </Link>
+                  </div>
+
+                  {/* Live Class */}
+                  <div className="flex items-center">
+                    <div
+                      className={`h-10 w-2 ${
+                        location.pathname === "/dashboard/live-class" ||
+                        location.pathname === "/dashboard/live-class/"
+                          ? "bg-stone-50"
+                          : "bg-indigo-500"
+                      } rounded-tr-full rounded-br-full`}
+                    ></div>
+                    <Link
+                      to={"/dashboard/live-class"}
+                      className={`flex items-center gap-2 px-[17px] transition-all duration-300 ${
+                        location.pathname === "/dashboard/live-class" ||
+                        location.pathname === "/dashboard/live-class/"
+                          ? "text-stone-50"
+                          : "text-indigo-100 hover:opacity-80 duration-300"
+                      } ${showCollapsed ? "justify-center px-2" : ""}`}
+                      title={showCollapsed ? "Live Class" : ""}
+                    >
+                      <Megaphone
+                        className={`${
+                          showCollapsed ? "w-5 h-5 sm:w-6 sm:h-6" : "w-6 h-6"
+                        }`}
+                      />
+                      {!showCollapsed && (
+                        <h2 className="font-medium text-lg">Live Class</h2>
+                      )}
+                    </Link>
+                  </div>
+
+                  {/* Recorded Classes */}
+                  <div className="flex items-center">
+                    <div
+                      className={`h-10 w-2 ${
+                        location.pathname === "/dashboard/recorded-classes" ||
+                        location.pathname === "/dashboard/recorded-classes/"
+                          ? "bg-stone-50"
+                          : "bg-indigo-500"
+                      } rounded-tr-full rounded-br-full`}
+                    ></div>
+                    <Link
+                      to={"/dashboard/recorded-classes"}
+                      className={`flex items-center gap-2 px-[17px] transition-all duration-300 ${
+                        location.pathname === "/dashboard/recorded-classes" ||
+                        location.pathname === "/dashboard/recorded-classes/"
+                          ? "text-stone-50"
+                          : "text-indigo-100 hover:opacity-80 duration-300"
+                      } ${showCollapsed ? "justify-center px-2" : ""}`}
+                      title={showCollapsed ? "Recorded Classes" : ""}
+                    >
+                      <Video
+                        className={`${
+                          showCollapsed ? "w-5 h-5 sm:w-6 sm:h-6" : "w-6 h-6"
+                        }`}
+                      />
+                      {!showCollapsed && (
+                        <h2 className="font-medium text-lg">Recorded Classes</h2>
+                      )}
+                    </Link>
+                  </div>
+
+                  {/* Video Analytics */}
+                  <div className="flex items-center">
+                    <div
+                      className={`h-10 w-2 ${
+                        location.pathname === "/dashboard/video-analytics" ||
+                        location.pathname === "/dashboard/video-analytics/"
+                          ? "bg-stone-50"
+                          : "bg-indigo-500"
+                      } rounded-tr-full rounded-br-full`}
+                    ></div>
+                    <Link
+                      to={"/dashboard/video-analytics"}
+                      className={`flex items-center gap-2 px-[17px] transition-all duration-300 ${
+                        location.pathname === "/dashboard/video-analytics" ||
+                        location.pathname === "/dashboard/video-analytics/"
+                          ? "text-stone-50"
+                          : "text-indigo-100 hover:opacity-80 duration-300"
+                      } ${showCollapsed ? "justify-center px-2" : ""}`}
+                      title={showCollapsed ? "Video Analytics" : ""}
+                    >
+                      <BarChart3
+                        className={`${
+                          showCollapsed ? "w-5 h-5 sm:w-6 sm:h-6" : "w-6 h-6"
+                        }`}
+                      />
+                      {!showCollapsed && (
+                        <h2 className="font-medium text-lg">Video Analytics</h2>
+                      )}
+                    </Link>
+                  </div>
+
+                  {/* Attendance Report */}
+                  <div className="flex items-center">
+                    <div
+                      className={`h-10 w-2 ${
+                        location.pathname === "/dashboard/attendance-report" ||
+                        location.pathname === "/dashboard/attendance-report/"
+                          ? "bg-stone-50"
+                          : "bg-indigo-500"
+                      } rounded-tr-full rounded-br-full`}
+                    ></div>
+                    <Link
+                      to={"/dashboard/attendance-report"}
+                      className={`flex items-center gap-2 px-[17px] transition-all duration-300 ${
+                        location.pathname === "/dashboard/attendance-report" ||
+                        location.pathname === "/dashboard/attendance-report/"
+                          ? "text-stone-50"
+                          : "text-indigo-100 hover:opacity-80 duration-300"
+                      } ${showCollapsed ? "justify-center px-2" : ""}`}
+                      title={showCollapsed ? "Attendance Report" : ""}
+                    >
+                      <ClipboardCheck
+                        className={`${
+                          showCollapsed ? "w-5 h-5 sm:w-6 sm:h-6" : "w-6 h-6"
+                        }`}
+                      />
+                      {!showCollapsed && (
+                        <h2 className="font-medium text-lg">Attendance Report</h2>
+                      )}
+                    </Link>
+                  </div>
+
+                  {/* Doubts */}
+                  <div className="flex items-center">
+                    <div
+                      className={`h-10 w-2 ${
+                        location.pathname === "/dashboard/doubts" ||
+                        location.pathname === "/dashboard/doubts/"
+                          ? "bg-stone-50"
+                          : "bg-indigo-500"
+                      } rounded-tr-full rounded-br-full`}
+                    ></div>
+                    <Link
+                      to={"/dashboard/doubts"}
+                      className={`flex items-center gap-2 px-[17px] transition-all duration-300 ${
+                        location.pathname === "/dashboard/doubts" ||
+                        location.pathname === "/dashboard/doubts/"
+                          ? "text-stone-50"
+                          : "text-indigo-100 hover:opacity-80 duration-300"
+                      } ${showCollapsed ? "justify-center px-2" : ""}`}
+                      title={showCollapsed ? "Doubts" : ""}
+                    >
+                      <MessageSquare
+                        className={`${
+                          showCollapsed ? "w-5 h-5 sm:w-6 sm:h-6" : "w-6 h-6"
+                        }`}
+                      />
+                      {!showCollapsed && (
+                        <h2 className="font-medium text-lg">Doubts</h2>
+                      )}
+                    </Link>
+                  </div>
+
+                  {/* Free Test Leads */}
+                  <div className="flex items-center">
+                    <div
+                      className={`h-10 w-2 ${
+                        location.pathname === "/dashboard/free-test" ||
+                        location.pathname === "/dashboard/free-test/"
+                          ? "bg-stone-50"
+                          : "bg-indigo-500"
+                      } rounded-tr-full rounded-br-full`}
+                    ></div>
+                    <Link
+                      to={"/dashboard/free-test"}
+                      className={`flex items-center gap-2 px-[17px] transition-all duration-300 ${
+                        location.pathname === "/dashboard/free-test" ||
+                        location.pathname === "/dashboard/free-test/"
+                          ? "text-stone-50"
+                          : "text-indigo-100 hover:opacity-80 duration-300"
+                      } ${showCollapsed ? "justify-center px-2" : ""}`}
+                      title={showCollapsed ? "Free Test Leads" : ""}
+                    >
+                      <Gift
+                        className={`${
+                          showCollapsed ? "w-5 h-5 sm:w-6 sm:h-6" : "w-6 h-6"
+                        }`}
+                      />
+                      {!showCollapsed && (
+                        <h2 className="font-medium text-lg">Free Test Leads</h2>
+                      )}
+                    </Link>
+                  </div>
+
+                  {/* Student Progress */}
+                  <div className="flex items-center">
+                    <div
+                      className={`h-10 w-2 ${
+                        location.pathname === "/dashboard/student-progress" ||
+                        location.pathname === "/dashboard/student-progress/"
+                          ? "bg-stone-50"
+                          : "bg-indigo-500"
+                      } rounded-tr-full rounded-br-full`}
+                    ></div>
+                    <Link
+                      to={"/dashboard/student-progress"}
+                      className={`flex items-center gap-2 px-[17px] transition-all duration-300 ${
+                        location.pathname === "/dashboard/student-progress" ||
+                        location.pathname === "/dashboard/student-progress/"
+                          ? "text-stone-50"
+                          : "text-indigo-100 hover:opacity-80 duration-300"
+                      } ${showCollapsed ? "justify-center px-2" : ""}`}
+                      title={showCollapsed ? "Student Progress" : ""}
+                    >
+                      <UsersIcon
+                        className={`${
+                          showCollapsed ? "w-5 h-5 sm:w-6 sm:h-6" : "w-6 h-6"
+                        }`}
+                      />
+                      {!showCollapsed && (
+                        <h2 className="font-medium text-lg">Student Progress</h2>
+                      )}
+                    </Link>
+                  </div>
+
+                  {/* Video Tracker */}
+                  <div className="flex items-center">
+                    <div
+                      className={`h-10 w-2 ${
+                        location.pathname === "/dashboard/video-tracker" ||
+                        location.pathname === "/dashboard/video-tracker/"
+                          ? "bg-stone-50"
+                          : "bg-indigo-500"
+                      } rounded-tr-full rounded-br-full`}
+                    ></div>
+                    <Link
+                      to={"/dashboard/video-tracker"}
+                      className={`flex items-center gap-2 px-[17px] transition-all duration-300 ${
+                        location.pathname === "/dashboard/video-tracker" ||
+                        location.pathname === "/dashboard/video-tracker/"
+                          ? "text-stone-50"
+                          : "text-indigo-100 hover:opacity-80 duration-300"
+                      } ${showCollapsed ? "justify-center px-2" : ""}`}
+                      title={showCollapsed ? "Video Tracker" : ""}
+                    >
+                      <Video
+                        className={`${
+                          showCollapsed ? "w-5 h-5 sm:w-6 sm:h-6" : "w-6 h-6"
+                        }`}
+                      />
+                      {!showCollapsed && (
+                        <h2 className="font-medium text-lg">Video Tracker</h2>
+                      )}
+                    </Link>
+                  </div>
+
+                  {/* Live Q&A */}
+                  <div className="flex items-center">
+                    <div
+                      className={`h-10 w-2 ${
+                        location.pathname === "/dashboard/live-qa" ||
+                        location.pathname === "/dashboard/live-qa/"
+                          ? "bg-stone-50"
+                          : "bg-indigo-500"
+                      } rounded-tr-full rounded-br-full`}
+                    ></div>
+                    <Link
+                      to={"/dashboard/live-qa"}
+                      className={`flex items-center gap-2 px-[17px] transition-all duration-300 ${
+                        location.pathname === "/dashboard/live-qa" ||
+                        location.pathname === "/dashboard/live-qa/"
+                          ? "text-stone-50"
+                          : "text-indigo-100 hover:opacity-80 duration-300"
+                      } ${showCollapsed ? "justify-center px-2" : ""}`}
+                      title={showCollapsed ? "Live Q&A" : ""}
+                    >
+                      <MessageSquare
+                        className={`${
+                          showCollapsed ? "w-5 h-5 sm:w-6 sm:h-6" : "w-6 h-6"
+                        }`}
+                      />
+                      {!showCollapsed && (
+                        <h2 className="font-medium text-lg">Live Q&A</h2>
+                      )}
+                    </Link>
+                  </div>
+
+                  {/* Study Tracker */}
+                  <div className="flex items-center">
+                    <div
+                      className={`h-10 w-2 ${
+                        location.pathname === "/dashboard/study-tracker" ||
+                        location.pathname === "/dashboard/study-tracker/"
+                          ? "bg-stone-50"
+                          : "bg-indigo-500"
+                      } rounded-tr-full rounded-br-full`}
+                    ></div>
+                    <Link
+                      to={"/dashboard/study-tracker"}
+                      className={`flex items-center gap-2 px-[17px] transition-all duration-300 ${
+                        location.pathname === "/dashboard/study-tracker" ||
+                        location.pathname === "/dashboard/study-tracker/"
+                          ? "text-stone-50"
+                          : "text-indigo-100 hover:opacity-80 duration-300"
+                      } ${showCollapsed ? "justify-center px-2" : ""}`}
+                      title={showCollapsed ? "Study Tracker" : ""}
+                    >
+                      <ClipboardCheck
+                        className={`${
+                          showCollapsed ? "w-5 h-5 sm:w-6 sm:h-6" : "w-6 h-6"
+                        }`}
+                      />
+                      {!showCollapsed && (
+                        <h2 className="font-medium text-lg">Study Tracker</h2>
+                      )}
+                    </Link>
+                  </div>
+
+                  {/* Attachments */}
+                  <div className="flex items-center">
+                    <div
+                      className={`h-10 w-2 ${
+                        location.pathname === "/dashboard/attachments" ||
+                        location.pathname === "/dashboard/attachments/"
+                          ? "bg-stone-50"
+                          : "bg-indigo-500"
+                      } rounded-tr-full rounded-br-full`}
+                    ></div>
+                    <Link
+                      to={"/dashboard/attachments"}
+                      className={`flex items-center gap-2 px-[17px] transition-all duration-300 ${
+                        location.pathname === "/dashboard/attachments" ||
+                        location.pathname === "/dashboard/attachments/"
+                          ? "text-stone-50"
+                          : "text-indigo-100 hover:opacity-80 duration-300"
+                      } ${showCollapsed ? "justify-center px-2" : ""}`}
+                      title={showCollapsed ? "Attachments" : ""}
+                    >
+                      <Paperclip
+                        className={`${
+                          showCollapsed ? "w-5 h-5 sm:w-6 sm:h-6" : "w-6 h-6"
+                        }`}
+                      />
+                      {!showCollapsed && (
+                        <h2 className="font-medium text-lg">Attachments</h2>
+                      )}
+                    </Link>
+                  </div>
+
+                  {/* Answer Sheets */}
+                  <div className="flex items-center">
+                    <div
+                      className={`h-10 w-2 ${
+                        location.pathname === "/dashboard/answer-sheets" ||
+                        location.pathname === "/dashboard/answer-sheets/"
+                          ? "bg-stone-50"
+                          : "bg-indigo-500"
+                      } rounded-tr-full rounded-br-full`}
+                    ></div>
+                    <Link
+                      to={"/dashboard/answer-sheets"}
+                      className={`flex items-center gap-2 px-[17px] transition-all duration-300 ${
+                        location.pathname === "/dashboard/answer-sheets" ||
+                        location.pathname === "/dashboard/answer-sheets/"
+                          ? "text-stone-50"
+                          : "text-indigo-100 hover:opacity-80 duration-300"
+                      } ${showCollapsed ? "justify-center px-2" : ""}`}
+                      title={showCollapsed ? "Answer Sheets" : ""}
+                    >
+                      <FileText
+                        className={`${
+                          showCollapsed ? "w-5 h-5 sm:w-6 sm:h-6" : "w-6 h-6"
+                        }`}
+                      />
+                      {!showCollapsed && (
+                        <h2 className="font-medium text-lg">Answer Sheets</h2>
+                      )}
+                    </Link>
+                  </div>
+
+                  {/* Student Profiles */}
+                  <div className="flex items-center">
+                    <div
+                      className={`h-10 w-2 ${
+                        location.pathname === "/dashboard/student-profiles" ||
+                        location.pathname === "/dashboard/student-profiles/"
+                          ? "bg-stone-50"
+                          : "bg-indigo-500"
+                      } rounded-tr-full rounded-br-full`}
+                    ></div>
+                    <Link
+                      to={"/dashboard/student-profiles"}
+                      className={`flex items-center gap-2 px-[17px] transition-all duration-300 ${
+                        location.pathname === "/dashboard/student-profiles" ||
+                        location.pathname === "/dashboard/student-profiles/"
+                          ? "text-stone-50"
+                          : "text-indigo-100 hover:opacity-80 duration-300"
+                      } ${showCollapsed ? "justify-center px-2" : ""}`}
+                      title={showCollapsed ? "Student Profiles" : ""}
+                    >
+                      <UserIcon
+                        className={`${
+                          showCollapsed ? "w-5 h-5 sm:w-6 sm:h-6" : "w-6 h-6"
+                        }`}
+                      />
+                      {!showCollapsed && (
+                        <h2 className="font-medium text-lg">Student Profiles</h2>
+                      )}
+                    </Link>
+                  </div>
+
+                  {/* Trigger Mail */}
+                  {/* <div className="flex items-center">
+                    <div
+                      className={`h-10 w-2 ${
+                        location.pathname === "/dashboard/trigger-mail" ||
+                        location.pathname === "/dashboard/trigger-mail/"
+                          ? "bg-stone-50"
+                          : "bg-indigo-500"
+                      } rounded-tr-full rounded-br-full`}
+                    ></div>
+                    <Link
+                      to={"/dashboard/trigger-mail"}
+                      className={`flex items-center gap-2 px-[17px] transition-all duration-300 ${
+                        location.pathname === "/dashboard/trigger-mail" ||
+                        location.pathname === "/dashboard/trigger-mail/"
+                          ? "text-stone-50"
+                          : "text-indigo-100 hover:opacity-80 duration-300"
+                      } ${showCollapsed ? "justify-center px-2" : ""}`}
+                      title={showCollapsed ? "Trigger Mail" : ""}
+                    >
+                      {location.pathname === "/dashboard/trigger-mail" ||
+                      location.pathname === "/dashboard/trigger-mail/" ? (
+                        <IoMailSharp
+                          className={`${
+                            showCollapsed ? "text-xl sm:text-2xl" : "text-2xl"
+                          }`}
+                        />
+                      ) : (
+                        <IoMailOutline
+                          className={`${
+                            showCollapsed ? "text-xl sm:text-2xl" : "text-2xl"
+                          }`}
+                        />
+                      )}
+                      {!showCollapsed && (
+                        <h2 className="font-medium text-lg">Trigger Mail</h2>
+                      )}
+                    </Link>
+                  </div> */}
+                </>
+              )}
+
+              {/* Comment — evaluator only now; removed from the admin panel
+                  per the admin's own request (admin has every other tool
+                  already, and evaluators are the ones actually using this
+                  for submission review). The /dashboard/comment route and
+                  CommentDashboard.jsx are untouched, so this is purely a
+                  nav-visibility change, not a feature removal. */}
+              {userData.role === "evaluator" && (
+                <div className="flex items-center">
+                  <div
+                    className={`h-10 w-2 ${
+                      location.pathname === "/dashboard/comment" ||
+                      location.pathname === "/dashboard/comment/"
+                        ? "bg-stone-50"
+                        : "bg-indigo-500"
+                    } rounded-tr-full rounded-br-full`}
+                  ></div>
+                  <Link
+                    to={"/dashboard/comment"}
+                    className={`flex items-center gap-2 px-[17px] transition-all duration-300 ${
+                      location.pathname === "/dashboard/comment" ||
+                      location.pathname === "/dashboard/comment/"
+                        ? "text-stone-50"
+                        : "text-indigo-100 hover:opacity-80 duration-300"
+                    } ${showCollapsed ? "justify-center px-2" : ""}`}
+                    title={showCollapsed ? "Comment" : ""}
+                  >
+                    {location.pathname === "/dashboard/comment" ||
+                    location.pathname === "/dashboard/comment/" ? (
+                      <MdRateReview
+                        className={`${
+                          showCollapsed ? "text-xl sm:text-2xl" : "text-2xl"
+                        }`}
+                      />
+                    ) : (
+                      <MdOutlineRateReview
+                        className={`${
+                          showCollapsed ? "text-xl sm:text-2xl" : "text-2xl"
+                        }`}
+                      />
+                    )}
+                    {!showCollapsed && (
+                      <h2 className="font-medium text-lg">Comment</h2>
+                    )}
+                  </Link>
                 </div>
-                <button type="button" onClick={() => setDrawerOpen(false)} aria-label="Close menu" style={{ color: "#fff" }}>
-                  <X className="w-6 h-6" />
-                </button>
-              </div>
-              <GroupedMenu groups={groups} path={path} compact={false} onNavigate={() => setDrawerOpen(false)} />
-              <button
-                type="button"
-                onClick={handleLogout}
-                className="mt-4 w-full flex items-center gap-2 px-3 py-2.5 rounded-xl text-sm"
-                style={{ color: "#fca5a5", backgroundColor: "rgba(255,255,255,0.06)" }}
-              >
-                <LogOut className="w-[18px] h-[18px]" /> Logout
-              </button>
+              )}
             </div>
           </div>
-        )}
-      </>
-    );
-  }
+        </div>
 
-  /* --------------------- tablets & laptops --------------------- */
-  return (
-    <aside
-      className="ad-admin-menu flex flex-col rounded-3xl h-[95vh] sticky top-5 overflow-y-auto transition-all duration-300 shrink-0"
-      style={{ width: compact ? 78 : 264, backgroundColor: NAVY, padding: compact ? "16px 10px" : "18px 14px" }}
-    >
-      <div className={`flex items-center ${compact ? "justify-center" : "justify-between"} gap-2`}>
-        <Link to="/dashboard" className="flex items-center gap-2.5 min-w-0">
-          <img src={logo} alt="" className="w-10 h-10 rounded-xl bg-white object-contain p-0.5 shrink-0" />
-          {!compact && (
-            <div style={{ lineHeight: 1.1 }} className="min-w-0">
-              <div className="text-white font-bold text-[15px] font-poppins truncate">Dr. A.D. Academy</div>
-              <div className="text-[10px] font-bold tracking-widest" style={{ color: GOLD_LIGHT }}>
-                {userData?.role === "admin" ? "ADMIN" : "EVALUATOR"}
+        {/* General Section */}
+        <div className="flex flex-col gap-3 pb-5">
+          <h1
+            className={`text-[13px] text-stone-100 font-medium px-6 transition-all duration-300 ${
+              showCollapsed ? "text-center text-[10px] sm:text-[11px]" : ""
+            }`}
+          >
+            {showCollapsed ? "" : "GENERAL"}
+          </h1>
+          <div className="flex flex-col gap-[10px] font-inter">
+            {/* Logout */}
+            <div className="flex items-center text-stone-100">
+              <div className="h-10 w-2 bg-indigo-500 rounded-tr-full rounded-br-full"></div>
+              <div
+                className={`flex items-center gap-2 px-[17px] cursor-pointer text-stone-50 hover:opacity-80 duration-300 transition-all ${
+                  showCollapsed ? "justify-center px-2" : ""
+                }`}
+                onClick={handleLogout}
+                title={showCollapsed ? "Logout" : ""}
+              >
+                <FiLogOut
+                  className={`${
+                    showCollapsed ? "text-xl sm:text-2xl" : "text-2xl"
+                  }`}
+                />
+                {!showCollapsed && (
+                  <h2 className="font-medium text-lg">Logout</h2>
+                )}
               </div>
             </div>
-          )}
-        </Link>
-        {width >= 1280 && !compact && (
-          <button
-            type="button"
-            onClick={() => setIsCollapsed(true)}
-            aria-label="Collapse menu"
-            className="p-1 rounded-lg"
-            style={{ color: "rgba(255,255,255,0.7)", backgroundColor: "rgba(255,255,255,0.08)" }}
+          </div>
+        </div>
+      </>
+    );
+  };
+
+  return (
+    <div
+      className={`flex flex-col justify-between gap-6 bg-indigo-500 rounded-3xl h-[95vh] sticky top-5 overflow-y-auto hide-scrollbar transition-all duration-300 ${
+        // Mobile: always collapsed (icon-only)
+        // Tablet: medium width
+        // Desktop: full width or collapsed based on state
+        "min-w-[70px] sm:w-[70px] md:min-w-[80px] md:w-[80px] lg:min-w-[90px] lg:w-[90px]" +
+        " xl:" +
+        (isCollapsed
+          ? "min-w-[90px] xl:w-[90px]"
+          : "min-w-[280px] xl:w-[280px]")
+      }`}
+    >
+      {/* Desktop Collapse Button - only show on xl screens */}
+      <button
+        onClick={toggleCollapse}
+        className="hidden xl:block absolute top-6 right-4 p-1 text-stone-50 bg-indigo-400 hover:bg-indigo-600 rounded-full transition-colors duration-200 z-10 cursor-pointer"
+        aria-label={isCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+      >
+        {isCollapsed ? (
+          <svg
+            className="w-5 h-5"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
           >
-            <ChevronLeft className="w-4 h-4" />
-          </button>
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M9 5l7 7-7 7"
+            />
+          </svg>
+        ) : (
+          <svg
+            className="w-5 h-5"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M15 19l-7-7 7-7"
+            />
+          </svg>
         )}
-      </div>
-      {width >= 1280 && isCollapsed && (
-        <button
-          type="button"
-          onClick={() => setIsCollapsed(false)}
-          aria-label="Expand menu"
-          className="mt-3 mx-auto p-1 rounded-lg"
-          style={{ color: "rgba(255,255,255,0.7)", backgroundColor: "rgba(255,255,255,0.08)" }}
-        >
-          <ChevronRight className="w-4 h-4" />
-        </button>
-      )}
-
-      <nav className={compact ? "mt-3" : "mt-1"}>
-        <GroupedMenu groups={groups} path={path} compact={compact} />
-      </nav>
-
-      <div className="mt-auto pt-4">
-        <button
-          type="button"
-          onClick={handleLogout}
-          title={compact ? "Logout" : undefined}
-          className={`w-full flex items-center gap-3 rounded-xl ${compact ? "justify-center p-2.5" : "px-3 py-2"}`}
-          style={{ color: "#fca5a5", backgroundColor: "rgba(255,255,255,0.06)" }}
-        >
-          <LogOut className="w-[19px] h-[19px]" />
-          {!compact && <span className="text-[14px]">Logout</span>}
-        </button>
-      </div>
-    </aside>
+      </button>
+      <SidebarContent />
+    </div>
   );
 };
 

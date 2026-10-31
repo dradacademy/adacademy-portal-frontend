@@ -14,7 +14,6 @@ import Tooltip from "@mui/material/Tooltip";
 import { FiLogOut } from "react-icons/fi";
 import PortalSelectorPopup from "./popup/PortalSelectorPopup";
 import NotificationBell from "./NotificationBell";
-import StudentShell, { STUDENT_SHELL_PATHS } from "../student/StudentShell";
 
 const EXAM_LINKS = [
   { name: "GATE Civil", to: "/exams/gate" },
@@ -73,16 +72,6 @@ const Navbar = ({ dashboard }) => {
   // enforcement) — this banner is just orientation, not the lock itself.
   const profileLocked = userData?.role === "student" && !userData?.profileCompleted;
 
-  // New look (2026-10-29): enrolled students get the app layout (left menu
-  // on laptops, bottom tabs on phones) on all their own pages.
-  if (
-    userData?.role === "student" &&
-    !isFreeTrial &&
-    STUDENT_SHELL_PATHS.some((re) => re.test(location.pathname))
-  ) {
-    return <StudentShell />;
-  }
-
   const toggleMenu = () => {
     setIsMenuOpen(!isMenuOpen);
   };
@@ -127,7 +116,7 @@ const Navbar = ({ dashboard }) => {
             {userData != null ? (
               <>
                 <Link
-                  to={userData?.role === "student" && !isFreeTrial ? "/my" : "/"}
+                  to={"/"}
                   className="font-medium hover:text-navy transition-colors relative group"
                 >
                   Home
@@ -404,7 +393,7 @@ const Navbar = ({ dashboard }) => {
               {userData != null ? (
                 <>
                   <Link
-                    to={userData?.role === "student" && !isFreeTrial ? "/my" : "/"}
+                    to={"/"}
                     onClick={closeMenu}
                     className="block px-6 py-3 text-gray-600 hover:text-navy hover:bg-gray-50 transition-colors font-medium"
                   >

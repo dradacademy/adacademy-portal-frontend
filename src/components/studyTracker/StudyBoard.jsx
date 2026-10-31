@@ -93,7 +93,7 @@ export const StudyBoard = ({ progress, tests, showMissing = true }) => {
         </div>
       </div>
       <div>
-        <div className="text-[11px] font-semibold tracking-widest uppercase text-[#6A7785] mb-1.5">Civil units</div>
+        <div className="text-[11px] font-semibold tracking-widest uppercase text-[#6A7785] mb-1.5">{progress.civilTrack === "draughtsman" ? "Civil units · Draughtsman (388)" : "Civil units"}</div>
         <div className="grid gap-1.5" style={{ gridTemplateColumns: "repeat(10, minmax(0,1fr))" }}>
           {civil.map((u, i) => {
             const st = STATUS_STYLE[u.status] || STATUS_STYLE.not_started;
@@ -104,7 +104,7 @@ export const StudyBoard = ({ progress, tests, showMissing = true }) => {
                 className="rounded-md h-9 flex flex-col items-center justify-center"
                 style={{ background: st.bg, color: st.fg }}
               >
-                <span className="text-xs font-bold leading-none">C{i + 1}</span>
+                <span className="text-xs font-bold leading-none">{u.unit.split(" ")[0] || `C${i + 1}`}</span>
                 <span className="text-[10px] leading-none mt-0.5 tabular-nums">{pct(u.percent)}</span>
               </div>
             );
@@ -115,7 +115,7 @@ export const StudyBoard = ({ progress, tests, showMissing = true }) => {
         <Bar label="GS" value={progress.subjects.GS.percent} />
         <Bar label="Civil" value={progress.subjects.Civil.percent} />
         <Bar label="Aptitude" value={progress.subjects.Aptitude.percent} />
-        <Bar label="English" value={progress.subjects.Language.percent} />
+        <Bar label="Tamil" value={progress.subjects.Language.percent} />
       </div>
       {tests && (
         <div className="flex flex-wrap items-center gap-2 text-sm text-[#3A4754]">

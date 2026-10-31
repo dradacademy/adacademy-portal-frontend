@@ -114,6 +114,10 @@ const LiveClassPlayer = ({ liveClass, onClose }) => {
           rel: 0,
           modestbranding: 1,
           playsinline: 1,
+          // No YouTube full-screen button: full screen would hide the live
+          // quiz / Ask panel. Turning the phone sideways gives a big video
+          // with the panel beside it instead (2026-10-29).
+          fs: 0,
           autoplay: 1,
           // Starts muted so the browser actually allows the autoplay —
           // see the isMuted comment above.
@@ -177,9 +181,16 @@ const LiveClassPlayer = ({ liveClass, onClose }) => {
 
   return (
     <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-2 sm:p-4">
+      {/* Phone turned sideways: video left, Quiz/Ask panel right, both fit the
+          short screen without scrolling (2026-10-29). */}
+      <style>{`@media (orientation: landscape) and (max-height: 520px) {
+        .lq-wrap { flex-direction: row !important; align-items: center; }
+        .lq-video { flex: 1 1 0; min-width: 0; max-width: calc((100vh - 1rem) * 16 / 9); }
+        .lq-panel { width: 42% !important; flex: none; height: calc(100vh - 1rem) !important; max-height: none !important; }
+      }`}</style>
       {/* Video + Live Q&A side by side on wide screens, stacked on phones (2026-10-28). */}
-      <div className="w-full max-w-6xl max-h-full flex flex-col lg:flex-row gap-2 lg:gap-3">
-      <div className="bg-black rounded-2xl overflow-hidden w-full lg:flex-1 relative shrink-0">
+      <div className="lq-wrap w-full max-w-6xl max-h-full flex flex-col lg:flex-row gap-2 lg:gap-3">
+      <div className="lq-video bg-black rounded-2xl overflow-hidden w-full lg:flex-1 relative shrink-0">
         <button
           onClick={onClose}
           className="absolute top-3 right-3 z-10 text-white bg-black/50 hover:bg-black/70 rounded-full p-1.5"
@@ -229,7 +240,7 @@ const LiveClassPlayer = ({ liveClass, onClose }) => {
         )}
       </div>
       {!error && (
-        <div className="rounded-2xl overflow-hidden w-full lg:w-[340px] h-[48vh] lg:h-auto lg:max-h-[80vh] min-h-0">
+        <div className="lq-panel rounded-2xl overflow-hidden w-full lg:w-[340px] h-[48vh] lg:h-auto lg:max-h-[80vh] min-h-0">
           <LiveQaPanel liveClassId={liveClass._id} />
         </div>
       )}

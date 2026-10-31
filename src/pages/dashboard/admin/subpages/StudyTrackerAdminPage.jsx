@@ -101,7 +101,7 @@ const SummaryTab = ({ onOpenStudent }) => {
               <th className="py-2 pr-3">GS</th>
               <th className="py-2 pr-3">Civil</th>
               <th className="py-2 pr-3">Apt</th>
-              <th className="py-2 pr-3">Eng</th>
+              <th className="py-2 pr-3">Tamil</th>
               <th className="py-2 pr-3">Overdue</th>
               <th className="py-2 pr-3">Tests GS / Civil / Apt&Lang</th>
               <th className="py-2 pr-3">Last update</th>
@@ -178,6 +178,7 @@ const SummaryTab = ({ onOpenStudent }) => {
 const StudentTab = ({ studentId, students, onPick }) => {
   const [data, setData] = useState(null);
   const [dates, setDates] = useState({});
+  const [civilTrack, setCivilTrack] = useState("jdo");
   const [saving, setSaving] = useState(false);
   const [syllabus, setSyllabus] = useState(null);
   const [fix, setFix] = useState({ subject: "GS", unit: "", material: "", percent: 1, day: IST_TODAY() });
@@ -187,6 +188,7 @@ const StudentTab = ({ studentId, students, onPick }) => {
     api.get(`/study-tracker/admin/student/${studentId}`).then((r) => {
       setData(r.data?.data);
       setDates(r.data?.data?.planDates || {});
+      setCivilTrack(r.data?.data?.civilTrack || "jdo");
     });
   };
   useEffect(() => {
@@ -200,7 +202,7 @@ const StudentTab = ({ studentId, students, onPick }) => {
   const savePlan = async () => {
     setSaving(true);
     try {
-      await api.put(`/study-tracker/admin/plan/${studentId}`, { dates });
+      await api.put(`/study-tracker/admin/plan/${studentId}`, { dates, civilTrack });
       toast.success("Target dates saved.");
       load();
     } catch (e) {
@@ -246,11 +248,18 @@ const StudentTab = ({ studentId, students, onPick }) => {
               <h3 className="text-lg font-bold">Target dates (only you can change these)</h3>
               <button type="button" disabled={saving} onClick={savePlan} className="px-4 py-2 rounded-lg bg-[#1F4E78] text-white font-semibold">Save target dates</button>
             </div>
+            <div className="flex flex-wrap items-center gap-2 mb-3 text-sm">
+              <b>Civil syllabus:</b>
+              {Object.entries(syllabus?.civilTracks || { jdo: { label: "TNPSC JDO Civil" } }).map(([k, t]) => (
+                <button key={k} type="button" onClick={() => setCivilTrack(k)} className={`px-3 py-1.5 rounded-lg font-semibold ${civilTrack === k ? "bg-[#1F4E78] text-white" : "bg-[#EEF1F4]"}`}>{t.label}</button>
+              ))}
+              <span className="text-gray-500">Change, then Save target dates.</span>
+            </div>
             {syllabus && (
               <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-2">
-                {[...syllabus.units.GS.map((u) => ["GS", u]), ...syllabus.units.Civil.map((u) => ["Civil", u]), ["Aptitude", "Aptitude"], ["Language", "Language"]].map(([s, k]) => (
+                {[...syllabus.units.GS.map((u) => ["GS", u]), ...((syllabus.civilTracks?.[civilTrack]?.units) || syllabus.units.Civil).map((u) => ["Civil", u]), ["Aptitude", "Aptitude"], ["Language", "Language"]].map(([s, k]) => (
                   <label key={k} className="flex items-center justify-between gap-2 text-sm bg-[#F6F8FA] rounded-lg px-3 py-1.5">
-                    <span className="min-w-0 truncate"><span className="text-xs text-gray-500">{s === "Language" ? "English" : s}</span> {k === "Language" ? "English (all)" : k === "Aptitude" ? "Aptitude (all)" : k}</span>
+                    <span className="min-w-0 truncate"><span className="text-xs text-gray-500">{s === "Language" ? "Tamil" : s}</span> {k === "Language" ? "Tamil (all)" : k === "Aptitude" ? "Aptitude (all)" : k}</span>
                     <input type="date" value={dates[k] || ""} onChange={(e) => setDates((d) => ({ ...d, [k]: e.target.value }))} className="border rounded p-1" />
                   </label>
                 ))}

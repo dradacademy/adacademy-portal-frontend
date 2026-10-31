@@ -85,7 +85,7 @@ const Shell = ({ eyebrow, title, onClose, closeLabel = "Close", children, tabs }
         )}
       </div>
       {tabs}
-      <div className="px-4 sm:px-5 py-4 overflow-y-auto">{children}</div>
+      <div data-study-scroll="" className="px-4 sm:px-5 py-4 overflow-y-auto">{children}</div>
     </div>
   </div>
 );
@@ -179,6 +179,13 @@ const StudyTrackerPopup = () => {
     }
   }, [info?.pendingCheck]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // Show the result (top of the check) as soon as it arrives.
+  useEffect(() => {
+    if (!result) return;
+    const el = document.querySelector("[data-study-scroll]");
+    if (el) el.scrollTo({ top: 0, behavior: "smooth" });
+  }, [result]);
+
   const currentMat = useMemo(() => {
     if (!info || !sel.subject || !sel.unit || !sel.material) return 0;
     const u = info.progress.subjects[sel.subject].units.find((x) => x.unit === sel.unit);
@@ -238,7 +245,7 @@ const StudyTrackerPopup = () => {
         <div className="grid sm:grid-cols-2 gap-2">
           {info.missingDates.map((m) => (
             <label key={m.key} className="flex items-center justify-between gap-2 rounded-lg bg-[#F6F8FA] px-3 py-2 text-sm">
-              <span className="min-w-0"><span className="text-xs text-gray-500 block">{m.subject === "Language" ? "English" : m.subject}</span>{m.label}</span>
+              <span className="min-w-0"><span className="text-xs text-gray-500 block">{m.subject === "Language" ? "Tamil" : m.subject}</span>{m.label}</span>
               <input type="date" min={today} max={m.maxDate} value={newDates[m.key] || ""} onChange={(e) => setNewDates((d) => ({ ...d, [m.key]: e.target.value }))} className="border rounded p-1.5" />
             </label>
           ))}
