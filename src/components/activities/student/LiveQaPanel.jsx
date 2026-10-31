@@ -7,7 +7,8 @@ import LiveQuizCard from "./LiveQuizCard";
 // "I didn't understand" — the teacher sees all of it on Dashboard → Live Q&A.
 // Updates every 4 seconds while the player is open.
 
-const POLL_MS = 4000;
+// 3 s (was 4) so a 20-second attendance check reaches every phone quickly.
+const POLL_MS = 3000;
 const timeOf = (d) => new Date(d).toLocaleTimeString("en-IN", { hour: "numeric", minute: "2-digit" });
 
 // Attendance check (2026-10-30): when the teacher asks, a big
@@ -103,7 +104,10 @@ const AttendanceBanner = ({ att, offsetMs, onDone }) => {
   return summary ? <div className="px-3 pt-2">{summary}</div> : null;
 };
 
-const LiveQaPanel = ({ liveClassId }) => {
+// onBoard(board, offsetMs): lets the video player know when a question or
+// attendance check is open (it shows this box / the attendance card only
+// then). hideAttendance: the player shows attendance on the video instead.
+const LiveQaPanel = ({ liveClassId, onBoard, hideAttendance = false, refresh = 0 }) => {
   const [board, setBoard] = useState(null);
   const [text, setText] = useState("");
   const [sending, setSending] = useState(false);
@@ -121,7 +125,9 @@ const LiveQaPanel = ({ liveClassId }) => {
         .get(`/live-qa/${liveClassId}`)
         .then((r) => {
           const d = r.data?.data;
-          if (d?.serverTime) setOffsetMs(new Date(d.serverTime).getTime() - Date.now());
+          const off = d?.serverTime ? new Date(d.serverTime).getTime() - Date.now() : null;
+          if (off !== null) setOffsetMs(off);
+          if (onBoard) onBoard(d, off ?? 0);
           // A new question from the teacher → jump to the quiz tab.
           const pid = d?.quiz?.currentPoll?._id || null;
           if (pid && pid !== lastPollId.current) setTab("quiz");
@@ -129,8 +135,14 @@ const LiveQaPanel = ({ liveClassId }) => {
           setBoard(d);
         })
         .catch(() => {}),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     [liveClassId]
   );
+
+  // The player asks for a fresh copy right after "I'm present" is tapped.
+  useEffect(() => {
+    if (refresh) load();
+  }, [refresh, load]);
 
   useEffect(() => {
     load();
@@ -188,7 +200,15 @@ const LiveQaPanel = ({ liveClassId }) => {
 
   return (
     <div className="flex flex-col h-full min-h-0 bg-white text-[#13202B]">
-      <AttendanceBanner att={board?.quiz?.attendance} offsetMs={offsetMs} onDone={load} />
+      {hideAttendance ? (
+        board?.quiz?.attendance?.total > 0 && (
+          <div className="px-3 pt-2 text-xs text-[#3A4754]">
+            My attendance this class: <b>{board.quiz.attendance.responded}/{board.quiz.attendance.total}</b> ({board.quiz.attendance.percent}%)
+          </div>
+        )
+      ) : (
+        <AttendanceBanner att={board?.quiz?.attendance} offsetMs={offsetMs} onDone={load} />
+      )}
       <div className="px-2 pt-2 border-b border-[#E3E8EE] flex items-end gap-1">
         {[["quiz", `🏆 Quiz & ranks${board?.quiz?.currentPoll?.open && !board.quiz.currentPoll.myAnswer ? " •" : ""}`], ["questions", "💬 Ask"]].map(([k, l]) => (
           <button key={k} type="button" onClick={() => setTab(k)} className={`px-3 py-1.5 rounded-t-lg text-sm font-semibold ${tab === k ? "bg-[#EEF1F4] text-[#1F4E78]" : "text-gray-500"}`}>
