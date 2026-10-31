@@ -38,22 +38,24 @@ const Home = () => {
     <div className="p-3 sm:p-5">
       <Navbar />
       <div className="flex flex-col gap-6 mt-5">
-        <HeroNew onReserve={reserve} />
-        <ExamStrip />
-        {/* Classroom + student testimonial videos, right under "We prepare you for" (2026-10-31). */}
-        <ShowcaseVideos />
+        {/* Order set by Dr. Dinesh (2026-10-31): achievers banner first,
+            then exams, hero, student stories, your own videos, the rest. */}
         <PromoBannerCarousel />
-        <ProblemSection />
-        <SelfCheck />
+        <ExamStrip />
+        <HeroNew onReserve={reserve} />
+        <ShowcaseVideos kind="students" />
+        <Testimonials />
+        <ShowcaseVideos kind="teacher" />
+        <PopularVideos />
         <ResultsStats />
         <Achievers />
-        <Testimonials />
+        <ProblemSection />
+        <SelfCheck />
         <CoursesNew />
         <WhatYouGetNew />
-        <AboutFounder />
-        <PopularVideos />
         <BatchesSection onReserve={reserve} />
         <StepsSection />
+        <AboutFounder />
         <Gallery />
         <Announcements />
         <FAQ />

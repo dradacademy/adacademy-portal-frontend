@@ -56,43 +56,91 @@ const VideoCard = ({ v }) => {
   );
 };
 
-const ShowcaseVideos = () => {
-  const [videos, setVideos] = useState(null);
+// Student success-story videos vs Dr. Dinesh's own videos (2026-10-31):
+// split by title, so no extra setting is needed on Railway.
+const STUDENT_RE = /success\s*stor|testimonial|student|review|experience|achiever|feedback/i;
+let showcasePromise = null; // both sections share one request
+const loadShowcase = () => {
+  if (!showcasePromise) {
+    showcasePromise = axios
+      .get(`${import.meta.env.VITE_APP_API_URL}/public-videos`)
+      .then((r) => r.data?.showcase || [])
+      .catch(() => {
+        showcasePromise = null;
+        return [];
+      });
+  }
+  return showcasePromise;
+};
+
+const TEXT = {
+  students: {
+    id: "student-stories",
+    tag: "Student success stories",
+    title: (
+      <>
+        Hear it from <em style={{ color: GOLD_LIGHT }}>our students.</em>
+      </>
+    ),
+    sub: "Our GATE 2026 achievers talk about how they prepared with us.",
+  },
+  teacher: {
+    id: "inside-our-classroom",
+    tag: "Inside our classroom",
+    title: (
+      <>
+        See how we teach — <em style={{ color: GOLD_LIGHT }}>with Dr. A. Dinesh.</em>
+      </>
+    ),
+    sub: "Watch Dr. A. Dinesh explain, guide and answer the questions students ask most.",
+  },
+};
+
+const ShowcaseVideos = ({ kind = "teacher" }) => {
+  const [all, setAll] = useState(null);
 
   useEffect(() => {
-    axios
-      .get(`${import.meta.env.VITE_APP_API_URL}/public-videos`)
-      .then((r) => setVideos(r.data?.showcase || []))
-      .catch(() => setVideos([]));
+    let alive = true;
+    loadShowcase().then((v) => alive && setAll(v));
+    return () => {
+      alive = false;
+    };
   }, []);
 
-  if (!videos || videos.length === 0) return null;
-  const cols = videos.length === 1 ? "max-w-3xl mx-auto" : "md:grid-cols-2";
+  const videos = (all || []).filter((v) => (kind === "students" ? STUDENT_RE.test(v.title || "") : !STUDENT_RE.test(v.title || "")));
+  const t = TEXT[kind] || TEXT.teacher;
+  if (videos.length === 0) return null;
+  // First video big on top; the rest fit in a row below it (2026-10-31).
+  const [first, ...rest] = videos;
+  const restCols = rest.length === 1 ? "max-w-2xl mx-auto" : rest.length === 2 ? "sm:grid-cols-2" : "sm:grid-cols-2 lg:grid-cols-3";
 
   return (
     <section
-      id="inside-our-classroom"
+      id={t.id}
       className="py-16 sm:py-20 rounded-3xl text-white relative overflow-hidden"
       style={{ background: "radial-gradient(900px 500px at 15% 0%, #16365e, #0f2a4a 60%, #0a1e36)" }}
     >
       <div className="container mx-auto px-4 relative">
         <div className="max-w-2xl mb-10">
           <span className="text-xs font-bold tracking-[0.2em] uppercase" style={{ color: GOLD_LIGHT }}>
-            Inside our classroom
+            {t.tag}
           </span>
-          <h2 className="font-newsreader font-semibold text-3xl sm:text-5xl mt-2 leading-tight">
-            See how we teach — <em style={{ color: GOLD_LIGHT }}>hear it from our students.</em>
-          </h2>
+          <h2 className="font-newsreader font-semibold text-3xl sm:text-5xl mt-2 leading-tight">{t.title}</h2>
           <p className="mt-3 flex items-start gap-2" style={{ color: "rgba(255,255,255,0.75)" }}>
             <Quote className="w-5 h-5 shrink-0 mt-0.5" style={{ color: GOLD }} />
-            Watch a real class with Dr. A. Dinesh, and what our students say about learning here.
+            {t.sub}
           </p>
         </div>
-        <div className={`grid gap-8 items-start ${cols}`}>
-          {videos.map((v) => (
-            <VideoCard key={v.id} v={v} />
-          ))}
+        <div className="max-w-4xl mx-auto">
+          <VideoCard v={first} />
         </div>
+        {rest.length > 0 && (
+          <div className={`grid gap-8 items-start mt-10 ${restCols}`}>
+            {rest.map((v) => (
+              <VideoCard key={v.id} v={v} />
+            ))}
+          </div>
+        )}
       </div>
     </section>
   );
