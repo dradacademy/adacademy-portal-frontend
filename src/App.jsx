@@ -9,6 +9,8 @@ import StudentActivities from "./pages/activities/student/StudentActivities";
 import RecordedClassesStudent from "./pages/activities/student/RecordedClassesStudent";
 import AttachmentsStudent from "./pages/activities/student/AttachmentsStudent";
 import MyProgressStudent from "./pages/activities/student/MyProgressStudent";
+import StudentHome from "./pages/activities/student/StudentHome";
+import StudentMe from "./pages/activities/student/StudentMe";
 import MyNotebookStudent from "./pages/activities/student/MyNotebookStudent";
 import PerformanceAnalyticsStudent from "./pages/activities/student/PerformanceAnalyticsStudent";
 import StudentProfilePage from "./pages/activities/student/StudentProfilePage";
@@ -38,7 +40,18 @@ function App() {
   const { userData, loading } = useContext(AuthContext);
 
   if (loading) {
-    return <div className="flex items-center justify-center h-screen"></div>;
+    // Logo splash instead of a blank white screen while the app starts.
+    return (
+      <div
+        className="flex flex-col items-center justify-center h-screen gap-4"
+        style={{ backgroundColor: "#0f2a4a" }}
+      >
+        <img src="/logo.png" alt="Dr. A.D. Academy" width={96} height={96} className="ad-splash-logo rounded-2xl" />
+        <p style={{ color: "#e8b94a", fontFamily: "Poppins, Inter, sans-serif" }} className="text-sm font-semibold tracking-wide">
+          Dr. A.D. Academy of Excellence
+        </p>
+      </div>
+    );
   }
 
   // A student who hasn't completed (submitted) their profile is locked out
@@ -66,7 +79,21 @@ function App() {
   return (
     <div className=" text-stone-800 bg-[#fafafa] min-h-screen">
       <Routes>
-        <Route index path="/" element={<Home />} />
+        {/* Enrolled students opening the site/app go straight to their own
+            Home (/my); visitors still see the public front page. */}
+        <Route
+          index
+          path="/"
+          element={
+            userData?.role === "student" &&
+            userData?.accountType !== "free_trial" &&
+            userData?.profileCompleted ? (
+              <Navigate to="/my" replace />
+            ) : (
+              <Home />
+            )
+          }
+        />
         <Route
           path="/dashboard/*"
           element={
@@ -120,6 +147,9 @@ function App() {
           path="/attachments"
           element={studentGate(<AttachmentsStudent />)}
         />
+        {/* New look (2026-10-29): the student's own Home and "Me" pages. */}
+        <Route path="/my" element={studentGate(<StudentHome />)} />
+        <Route path="/me" element={studentGate(<StudentMe />)} />
         <Route path="/progress" element={studentGate(<MyProgressStudent />)} />
         <Route path="/notebook" element={studentGate(<MyNotebookStudent />)} />
         <Route

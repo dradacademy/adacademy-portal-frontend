@@ -33,9 +33,9 @@ const AdminDashboard = () => {
   return (
     <div className=" min-h-screen h-full flex gap-1 sm:gap-5 p-2 sm:p-5">
       <Sidebar />
-      <div className=" flex flex-col gap-3 w-full">
+      <div className=" flex flex-col gap-3 w-full min-w-0">
         <Navbar dashboard={true} />
-        <div className=" bg-white rounded-3xl py-7 px-10 w-full h-full">
+        <div className=" bg-white rounded-3xl py-5 px-3 sm:py-7 sm:px-10 w-full h-full">
           <Routes>
             <Route index path="/" element={<ExamDashboard />} />
             <Route index path="/user-based" element={<StudentDashboard />} />
