@@ -406,6 +406,11 @@ const StudyTrackerPopup = () => {
     return (
       <Shell eyebrow="TNPSC JDO" title="My progress" onClose={close} tabs={tabs}>
         <div className="flex flex-col gap-4">
+          {info.civilExamDate && (
+            <div className="rounded-xl bg-[#E8F1F8] px-3 py-2 text-sm font-semibold text-[#1F4E78]">
+              📅 {info.civilLabel || "Civil"} exam: {fmtDay(info.civilExamDate)} · {Math.max(0, Math.round((Date.parse(`${info.civilExamDate}T00:00:00Z`) - Date.parse(`${info.today}T00:00:00Z`)) / 86400000))} days left
+            </div>
+          )}
           <Legend />
           <StudyBoard progress={info.progress} tests={info.tests} />
           <p className="text-xs text-gray-500">Test average = marks ÷ {info.testTotalMarks} for each test (latest attempt).</p>

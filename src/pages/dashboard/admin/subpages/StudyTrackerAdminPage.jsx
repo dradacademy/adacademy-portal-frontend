@@ -160,6 +160,7 @@ const SummaryTab = ({ onOpenStudent }) => {
                     ) : (
                       <span className="text-sm font-semibold px-3 py-1 rounded-full bg-[#FDE3E1] text-[#B42318]">📵 No update today</span>
                     )}
+                    {r.civilTrack === "draughtsman" && <span className="text-sm font-semibold px-3 py-1 rounded-full bg-[#7DC4F0] text-[#06263A]">📅 Draughtsman exam {fmtDay(data.exams.draughtsman)} · {daysTo(day, data.exams.draughtsman)} days</span>}
                     {r.progress.counts.overdue > 0 && <span className="text-sm font-semibold px-3 py-1 rounded-full bg-[#B42318] text-white">{r.progress.counts.overdue} overdue</span>}
                   </div>
                   <StudyBoard progress={r.progress} tests={r.tests} />
@@ -493,6 +494,7 @@ const SettingsTab = ({ cfg, reload, students }) => {
         <span />
         <label>GS exam date <input type="date" value={s.gsExamDate} onChange={(e) => setS({ ...s, gsExamDate: e.target.value })} className="border rounded p-1 ml-2" /></label>
         <label>Civil exam date <input type="date" value={s.civilExamDate} onChange={(e) => setS({ ...s, civilExamDate: e.target.value })} className="border rounded p-1 ml-2" /></label>
+        <label>Draughtsman (388) exam date <input type="date" value={s.draughtsmanExamDate || ""} onChange={(e) => setS({ ...s, draughtsmanExamDate: e.target.value })} className="border rounded p-1 ml-2" /></label>
       </div>
       <div className="rounded-xl border p-4">
         <h3 className="font-bold mb-1">Which test subjects count for test averages</h3>

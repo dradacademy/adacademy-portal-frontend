@@ -40,12 +40,13 @@ const Home = () => {
       <div className="flex flex-col gap-6 mt-5">
         <HeroNew onReserve={reserve} />
         <ExamStrip />
+        {/* Classroom + student testimonial videos, right under "We prepare you for" (2026-10-31). */}
+        <ShowcaseVideos />
         <PromoBannerCarousel />
         <ProblemSection />
         <SelfCheck />
         <ResultsStats />
         <Achievers />
-        <ShowcaseVideos />
         <Testimonials />
         <CoursesNew />
         <WhatYouGetNew />

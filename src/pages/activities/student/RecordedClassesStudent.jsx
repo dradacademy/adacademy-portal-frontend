@@ -1,4 +1,5 @@
 import React, { useContext, useEffect, useMemo, useState } from "react";
+import { PartBadge, matchesPart } from "../../../components/dashboard/admin/SubjectTopicPicker";
 import axios from "axios";
 import Navbar from "../../../components/common/Navbar";
 import { AuthContext } from "../../../context/AuthContext";
@@ -94,6 +95,7 @@ const VideoCard = ({ video, onPlay }) => (
       {video.description && (
         <p className="text-xs text-gray-500 line-clamp-2">{video.description}</p>
       )}
+      {video.part && <PartBadge part={video.part} className="self-start" />}
       <div className="flex items-center justify-between text-xs text-gray-400">
         <span>{video.percentWatched > 0 ? `${Math.round(video.percentWatched)}% watched` : ""}</span>
         <span>{formatDuration(video.durationSeconds)}</span>
@@ -190,18 +192,25 @@ const RecordedClassesStudent = () => {
   // Subject → Subtopic → by date browsing.
   const [subjectFilter, setSubjectFilter] = useState(() => loadPref("subject", ALL));
   const [subtopicFilter, setSubtopicFilter] = useState(ALL);
+  // Theory / Problems filter (2026-10-31) — shown only when classes have it.
+  const [partFilter, setPartFilter] = useState(ALL);
   const [sortDir, setSortDir] = useState(() => loadPref("sort", "asc"));
 
-  const subjects = useMemo(() => listSubjects(videos), [videos]);
+  const hasParts = videos.some((v) => v.part);
+  const partVideos = useMemo(
+    () => (partFilter === ALL ? videos : videos.filter((v) => matchesPart(v.part, partFilter))),
+    [videos, partFilter]
+  );
+  const subjects = useMemo(() => listSubjects(partVideos), [partVideos]);
 
   // A remembered subject that no longer has classes falls back to "All".
   const activeSubject = subjects.some((s) => s.key === subjectFilter) ? subjectFilter : ALL;
 
   const groups = useMemo(() => {
     const inSubject =
-      activeSubject === ALL ? videos : videos.filter((v) => subjectKey(v) === activeSubject);
+      activeSubject === ALL ? partVideos : partVideos.filter((v) => subjectKey(v) === activeSubject);
     return groupRecordings(inSubject, sortDir);
-  }, [videos, activeSubject, sortDir]);
+  }, [partVideos, activeSubject, sortDir]);
 
   const subtopicsOfSubject = activeSubject === ALL ? [] : groups[0]?.subtopics || [];
   const activeSubtopic = subtopicsOfSubject.some((t) => t.key === subtopicFilter)
@@ -324,7 +333,7 @@ const RecordedClassesStudent = () => {
                   onChange={(e) => chooseSubject(e.target.value)}
                   className="border border-gray-300 rounded-xl py-2 pl-3 pr-8 text-sm bg-white text-gray-800 focus:outline-none focus:ring-2 focus:ring-indigo-200 max-w-[70vw]"
                 >
-                  <option value={ALL}>All subjects ({videos.length})</option>
+                  <option value={ALL}>All subjects ({partVideos.length})</option>
                   {subjects.map((s) => (
                     <option key={s.key} value={s.key}>
                       {s.name} ({s.count})
@@ -342,6 +351,28 @@ const RecordedClassesStudent = () => {
                 {sortDir === "asc" ? "Oldest first" : "Newest first"}
               </button>
             </div>
+
+            {hasParts && (
+              <div className="flex gap-2 overflow-x-auto pb-1 -mx-1 px-1">
+                {[
+                  [ALL, "All classes"],
+                  ["theory", "📘 Theory"],
+                  ["problems", "✏️ Problems"],
+                  ["both", "📘✏️ Theory + Problems"],
+                ].map(([key, label]) => (
+                  <button
+                    key={key}
+                    type="button"
+                    onClick={() => setPartFilter(key)}
+                    className={`shrink-0 py-1.5 px-3.5 rounded-full text-sm font-semibold transition-colors ${
+                      partFilter === key ? "bg-navy text-white" : "bg-white border border-gray-200 text-gray-600 hover:bg-gray-50"
+                    }`}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+            )}
 
             {subtopicsOfSubject.length > 1 && (
               <div className="flex gap-2 overflow-x-auto pb-1 -mx-1 px-1">
@@ -377,6 +408,10 @@ const RecordedClassesStudent = () => {
           <div className="text-center text-gray-400 py-16 border-2 border-dashed border-gray-200 rounded-xl flex flex-col items-center gap-2">
             <Video className="h-8 w-8 text-gray-300" />
             No recorded classes are available for your course yet.
+          </div>
+        ) : partVideos.length === 0 ? (
+          <div className="text-center text-gray-400 py-12">
+            No {partFilter === "theory" ? "Theory" : partFilter === "problems" ? "Problems" : "Theory + Problems"} classes yet — tap "All classes".
           </div>
         ) : activeSubject === ALL ? (
           <div className="flex flex-col gap-10">

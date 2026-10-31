@@ -11,6 +11,7 @@ import {
   EXAM_CATEGORY_OPTIONS,
   getCategoryLabel,
 } from "../../../../constants/examCategories";
+import SyllabusImportDialog from "../../../../components/dashboard/admin/SyllabusImportDialog";
 
 function SubjectsAdminPage() {
   const [openSubjectPopup, setOpenSubjectPopup] = useState(false);
@@ -28,6 +29,13 @@ function SubjectsAdminPage() {
   // them) are organized per category so the admin only works within one
   // category's content at a time, never a mixed list.
   const [activeCategory, setActiveCategory] = useState("all");
+  // Built-in GATE syllabus loader (2026-10-31).
+  const [openSyllabus, setOpenSyllabus] = useState(false);
+  const reloadSubjects = () =>
+    axios
+      .get(`${import.meta.env.VITE_APP_API_URL}/subjects/get`)
+      .then((r) => setSubjects(r.data))
+      .catch(() => {});
 
   const visibleSubjects =
     activeCategory === "all"
@@ -158,7 +166,7 @@ function SubjectsAdminPage() {
 
   return (
     <div className=" flex flex-col gap-8 w-full">
-      <div className="flex items-center justify-between gap-20 font-inter">
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 lg:gap-20 font-inter">
         <div className=" flex flex-col gap-2">
           <h1 className=" text-3xl text-stone-700 font-bold font-poppins">
             Subject
@@ -169,13 +177,27 @@ function SubjectsAdminPage() {
             organize exam content efficiently.
           </p>
         </div>
-        <button
-          onClick={handleClickOpenSubjectPopup}
-          className=" text-nowrap bg-indigo-400 text-stone-50 font-medium py-2 px-5 rounded-4xl font-poppins cursor-pointer hover:opacity-85 duration-300"
-        >
-          Create Subject
-        </button>
+        <div className="flex flex-wrap gap-2 justify-end">
+          <button
+            onClick={() => setOpenSyllabus(true)}
+            className=" text-nowrap border border-indigo-400 text-indigo-500 font-medium py-2 px-5 rounded-4xl font-poppins cursor-pointer hover:opacity-85 duration-300"
+          >
+            📚 Load GATE syllabus
+          </button>
+          <button
+            onClick={handleClickOpenSubjectPopup}
+            className=" text-nowrap bg-indigo-400 text-stone-50 font-medium py-2 px-5 rounded-4xl font-poppins cursor-pointer hover:opacity-85 duration-300"
+          >
+            Create Subject
+          </button>
+        </div>
       </div>
+      <SyllabusImportDialog
+        open={openSyllabus}
+        onClose={() => setOpenSyllabus(false)}
+        onImported={reloadSubjects}
+        defaultCategory={activeCategory === "all" ? "gate" : activeCategory}
+      />
 
       {/* Category tabs — isolation-by-workflow: the admin works within one
           exam category's subjects at a time (or "All" to see everything),

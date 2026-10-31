@@ -1,4 +1,5 @@
 import axios from "axios";
+import SubjectTopicPicker, { PartBadge } from "../../../../components/dashboard/admin/SubjectTopicPicker";
 import React, { useEffect, useMemo, useState } from "react";
 import toast from "react-hot-toast";
 import { Dialog } from "@mui/material";
@@ -82,55 +83,9 @@ const ALL = "__all__";
 const selectCls =
   "border border-stone-300 py-[10px] px-4 focus:outline-stone-300 rounded-2xl bg-white text-sm disabled:opacity-60";
 
-// Subject + Subtopic pickers (native selects, same subjects/subtopics as
-// the Subjects page). `subjects` must already be limited to the right exam
-// category; `showCategory` adds the category to each name when several
-// categories are mixed (bulk grouping).
-const SubjectSubtopicFields = ({ subjects, value, onChange, disabled, showCategory, allowNone = true }) => {
-  const subject = subjects.find((s) => String(s._id) === String(value.subject));
-  return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-      <div className="flex flex-col gap-1">
-        <label className="text-sm text-stone-500 font-medium">Subject</label>
-        <select
-          className={selectCls}
-          value={value.subject || ""}
-          onChange={(e) => onChange({ subject: e.target.value, subtopic: "" })}
-          disabled={disabled}
-        >
-          {allowNone && <option value="">— Not grouped —</option>}
-          {subjects.map((s) => (
-            <option key={s._id} value={s._id}>
-              {s.name}
-              {showCategory ? ` (${getCategoryLabel(s.category)})` : ""}
-            </option>
-          ))}
-        </select>
-      </div>
-      <div className="flex flex-col gap-1">
-        <label className="text-sm text-stone-500 font-medium">Subtopic</label>
-        <select
-          className={selectCls}
-          value={value.subtopic || ""}
-          onChange={(e) => onChange({ ...value, subtopic: e.target.value })}
-          disabled={disabled || !subject}
-        >
-          <option value="">{subject ? "— General (no subtopic) —" : "Pick a subject first"}</option>
-          {(subject?.subtopics || []).map((t) => (
-            <option key={t._id} value={t._id}>
-              {t.name}
-            </option>
-          ))}
-        </select>
-      </div>
-      {subjects.length === 0 && (
-        <p className="sm:col-span-2 text-xs text-amber-600">
-          No subjects in this exam category yet — add them (with subtopics) on the Subjects page.
-        </p>
-      )}
-    </div>
-  );
-};
+// Subject + Subtopic + Theory/Problems pickers — shared component (with
+// "+ New subject / subtopic" right in the form), see SubjectTopicPicker.
+const SubjectSubtopicFields = (props) => <SubjectTopicPicker {...props} />;
 
 const formatDateTime = (value) => {
   if (!value) return "—";
@@ -150,6 +105,7 @@ const EMPTY_FORM = {
   durationMinutes: "",
   subject: "",
   subtopic: "",
+  part: "",
   availability: defaultAvailability(),
   // Only send availability on Edit when the admin actually changed it, so
   // fixing a title on an already-expired class doesn't trip the "date
@@ -216,7 +172,7 @@ const RecordedClassesAdminPage = () => {
   const [subjectFilter, setSubjectFilter] = useState(ALL);
   const [subtopicFilter, setSubtopicFilter] = useState(ALL);
   const [groupOpen, setGroupOpen] = useState(false);
-  const [groupValue, setGroupValue] = useState({ subject: "", subtopic: "" });
+  const [groupValue, setGroupValue] = useState({ subject: "", subtopic: "", part: null });
   const [groupSaving, setGroupSaving] = useState(false);
   const [suggestOpen, setSuggestOpen] = useState(false);
   const [suggestions, setSuggestions] = useState([]);
@@ -228,6 +184,14 @@ const RecordedClassesAdminPage = () => {
       .then((res) => setAllSubjects(Array.isArray(res.data) ? res.data : []))
       .catch(() => toast.error("Couldn't load subjects."));
   }, []);
+
+  // A subject added/changed from the form ("+ New") — update the list in place.
+  const upsertSubject = (subj) =>
+    setAllSubjects((prev) =>
+      prev.some((s) => String(s._id) === String(subj._id))
+        ? prev.map((s) => (String(s._id) === String(subj._id) ? subj : s))
+        : [...prev, subj]
+    );
 
   const subjectsForCategory = (category) =>
     allSubjects
@@ -385,7 +349,12 @@ const RecordedClassesAdminPage = () => {
     try {
       const { data } = await axios.patch(
         `${import.meta.env.VITE_APP_API_URL}/recorded-classes/bulk-group`,
-        { ids: selectedIds, subject: groupValue.subject || null, subtopic: groupValue.subtopic || null }
+        {
+          ids: selectedIds,
+          subject: groupValue.subject || null,
+          subtopic: groupValue.subtopic || null,
+          ...(groupValue.part === null || groupValue.part === undefined ? {} : { part: groupValue.part }),
+        }
       );
       toast.success(
         groupValue.subject
@@ -509,6 +478,7 @@ const RecordedClassesAdminPage = () => {
         : "",
       subject: rec.subject?._id || "",
       subtopic: rec.subtopic?._id || "",
+      part: rec.part || "",
       availability: availabilityFromRecord(rec),
       availabilityTouched: false,
     });
@@ -543,6 +513,7 @@ const RecordedClassesAdminPage = () => {
           : null,
         subject: form.subject || null,
         subtopic: form.subtopic || null,
+        part: form.part || "",
         ...availabilityPayload,
       };
 
@@ -767,7 +738,7 @@ const RecordedClassesAdminPage = () => {
           </button>
           <button
             onClick={() => {
-              setGroupValue({ subject: "", subtopic: "" });
+              setGroupValue({ subject: "", subtopic: "", part: null });
               setGroupOpen(true);
             }}
             className="flex items-center gap-1.5 bg-indigo-500 text-white text-sm font-medium py-1.5 px-4 rounded-xl hover:opacity-85"
@@ -875,6 +846,7 @@ const RecordedClassesAdminPage = () => {
                         <span className={`text-xs ${rec.subtopic ? "text-gray-500" : "text-amber-600"}`}>
                           {rec.subtopic ? rec.subtopic.name : "No subtopic"}
                         </span>
+                        {rec.part && <PartBadge part={rec.part} className="self-start mt-1" />}
                       </div>
                     ) : (
                       <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-amber-50 text-amber-700">
@@ -1032,7 +1004,9 @@ const RecordedClassesAdminPage = () => {
             />
             <SubjectSubtopicFields
               subjects={subjectsForCategory(form.category)}
-              value={{ subject: form.subject, subtopic: form.subtopic }}
+              category={form.category}
+              onSubjectSaved={upsertSubject}
+              value={{ subject: form.subject, subtopic: form.subtopic, part: form.part }}
               onChange={(v) => setForm({ ...form, ...v })}
               disabled={saving}
             />
@@ -1187,6 +1161,9 @@ const RecordedClassesAdminPage = () => {
             onChange={setGroupValue}
             disabled={groupSaving}
             showCategory={selectedCategories.length > 1}
+            category={selectedCategories.length === 1 ? selectedCategories[0] : null}
+            onSubjectSaved={upsertSubject}
+            keepPartOption
           />
           {selectedCategories.length > 1 && (
             <p className="text-xs text-amber-600 -mt-2">

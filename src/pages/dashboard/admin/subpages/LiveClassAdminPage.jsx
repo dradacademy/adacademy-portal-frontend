@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import AdminVideoPreviewDialog from "../../../../components/dashboard/admin/AdminVideoPreviewDialog";
 import AvailabilityPicker from "../../../../components/dashboard/admin/AvailabilityPicker";
+import SubjectTopicPicker, { PartBadge } from "../../../../components/dashboard/admin/SubjectTopicPicker";
 import {
   availabilityFromRecord,
   availabilityToPayload,
@@ -64,6 +65,11 @@ const EMPTY_FORM = {
   title: "",
   category: EXAM_CATEGORY_OPTIONS[0].value,
   youtubeUrl: "",
+  // What is taught (2026-10-31): subject → subtopic → Theory/Problems.
+  // Copied onto the recording that End Live creates.
+  subject: "",
+  subtopic: "",
+  part: "",
   // How long the replay stays watchable after End Live (copied onto the
   // recording that End Live adds to Recorded Classes).
   availability: defaultAvailability(),
@@ -74,6 +80,9 @@ const EMPTY_EDIT_FORM = {
   category: EXAM_CATEGORY_OPTIONS[0].value,
   youtubeUrl: "",
   durationMinutes: "",
+  subject: "",
+  subtopic: "",
+  part: "",
   availability: defaultAvailability(),
   availabilityTouched: false,
   classDate: "",
@@ -125,6 +134,33 @@ const LiveClassAdminPage = () => {
   const [editSaving, setEditSaving] = useState(false);
   const [sort, setSort] = useState({ key: null, dir: "asc" });
   const [preview, setPreview] = useState(null);
+  // Subjects (same list as the test series / Subjects page).
+  const [allSubjects, setAllSubjects] = useState([]);
+  useEffect(() => {
+    axios
+      .get(`${import.meta.env.VITE_APP_API_URL}/subjects/get`)
+      .then((res) => setAllSubjects(Array.isArray(res.data) ? res.data : []))
+      .catch(() => {});
+  }, []);
+  const subjectsForCategory = (category) =>
+    allSubjects.filter((s) => s.category === category).sort((a, b) => a.name.localeCompare(b.name));
+  const upsertSubject = (subj) =>
+    setAllSubjects((prev) =>
+      prev.some((s) => String(s._id) === String(subj._id))
+        ? prev.map((s) => (String(s._id) === String(subj._id) ? subj : s))
+        : [...prev, subj]
+    );
+  // "Fluid Mechanics › Laminar Flow · Theory" for a history row.
+  const describeTopic = (lc) => {
+    const subjId = lc.subject?._id || lc.subject;
+    const subj = allSubjects.find((s) => String(s._id) === String(subjId));
+    const subjName = lc.subject?.name || subj?.name;
+    if (!subjName) return null;
+    const topic = lc.subtopic
+      ? subj?.subtopics?.find((t) => String(t._id) === String(lc.subtopic))?.name || lc.subtopicName
+      : "";
+    return `${subjName}${topic ? ` › ${topic}` : ""}`;
+  };
 
   const handleSort = (key) => {
     setSort((prev) =>
@@ -186,6 +222,8 @@ const LiveClassAdminPage = () => {
       const { availability, ...rest } = form;
       await axios.post(`${import.meta.env.VITE_APP_API_URL}/live-classes`, {
         ...rest,
+        subject: rest.subject || null,
+        subtopic: rest.subtopic || null,
         ...availabilityPayload,
       });
       toast.success("You're live — students in this category can now join.");
@@ -250,6 +288,9 @@ const LiveClassAdminPage = () => {
       durationMinutes: liveClass.durationSeconds
         ? String(Math.round(liveClass.durationSeconds / 60))
         : "",
+      subject: liveClass.subject?._id || liveClass.subject || "",
+      subtopic: liveClass.subtopic || "",
+      part: liveClass.part || "",
       availability: availabilityFromRecord(liveClass),
       availabilityTouched: false,
       classDate: liveClass.startedAt ? toIstYmd(liveClass.startedAt) : todayIstYmd(),
@@ -282,7 +323,7 @@ const LiveClassAdminPage = () => {
       const { availability, availabilityTouched, classDate, ...rest } = editForm;
       await axios.patch(
         `${import.meta.env.VITE_APP_API_URL}/live-classes/${editingId}`,
-        { ...rest, ...availabilityPayload }
+        { ...rest, subject: rest.subject || null, subtopic: rest.subtopic || null, ...availabilityPayload }
       );
       toast.success("Live class updated.");
       handleCloseEdit();
@@ -356,6 +397,11 @@ const LiveClassAdminPage = () => {
                 </span>
                 <div>
                   <p className="font-medium text-gray-800">{lc.title}</p>
+                  {(describeTopic(lc) || lc.part) && (
+                    <p className="text-xs text-indigo-700 flex items-center gap-1.5 flex-wrap">
+                      {describeTopic(lc)} <PartBadge part={lc.part} />
+                    </p>
+                  )}
                   <p className="text-xs text-gray-500">
                     {getCategoryLabel(lc.category)} · started {formatTime(lc.startedAt)}
                   </p>
@@ -418,7 +464,7 @@ const LiveClassAdminPage = () => {
           options={EXAM_CATEGORY_OPTIONS}
           value={EXAM_CATEGORY_OPTIONS.find((opt) => opt.value === form.category)}
           onChange={(selectedOption) =>
-            setForm({ ...form, category: selectedOption.value })
+            setForm({ ...form, category: selectedOption.value, subject: "", subtopic: "" })
           }
           isDisabled={saving}
           isSearchable={false}
@@ -435,6 +481,14 @@ const LiveClassAdminPage = () => {
           }}
           menuPortalTarget={document.body}
           menuPosition="absolute"
+        />
+        <SubjectTopicPicker
+          subjects={subjectsForCategory(form.category)}
+          category={form.category}
+          onSubjectSaved={upsertSubject}
+          value={{ subject: form.subject, subtopic: form.subtopic, part: form.part }}
+          onChange={(v) => setForm({ ...form, ...v })}
+          disabled={saving}
         />
         <div className="flex flex-col gap-1">
           <input
@@ -500,7 +554,11 @@ const LiveClassAdminPage = () => {
             ) : (
               sortedHistory.map((lc) => (
                 <tr key={lc._id} className="border-t border-gray-50">
-                  <td className="px-4 py-3 font-medium text-gray-800">{lc.title}</td>
+                  <td className="px-4 py-3">
+                    <p className="font-medium text-gray-800">{lc.title}</p>
+                    {describeTopic(lc) && <p className="text-xs text-gray-500">{describeTopic(lc)}</p>}
+                    {lc.part && <PartBadge part={lc.part} className="mt-1" />}
+                  </td>
                   <td className="px-4 py-3 text-gray-600">
                     {getCategoryLabel(lc.category)}
                   </td>
@@ -594,7 +652,7 @@ const LiveClassAdminPage = () => {
                 Edit Live Class
               </h1>
               <p className="text-sm text-stone-500 font-work-sans">
-                Update the title, category, or YouTube link. Whether it's
+                Update the title, category, subject / subtopic, Theory or Problems, or YouTube link. Whether it's
                 live or ended isn't changed here.
               </p>
             </div>
@@ -620,7 +678,7 @@ const LiveClassAdminPage = () => {
               options={EXAM_CATEGORY_OPTIONS}
               value={EXAM_CATEGORY_OPTIONS.find((opt) => opt.value === editForm.category)}
               onChange={(selectedOption) =>
-                setEditForm({ ...editForm, category: selectedOption.value })
+                setEditForm({ ...editForm, category: selectedOption.value, subject: "", subtopic: "" })
               }
               isDisabled={editSaving}
               isSearchable={false}
@@ -637,6 +695,14 @@ const LiveClassAdminPage = () => {
               }}
               menuPortalTarget={document.body}
               menuPosition="absolute"
+            />
+            <SubjectTopicPicker
+              subjects={subjectsForCategory(editForm.category)}
+              category={editForm.category}
+              onSubjectSaved={upsertSubject}
+              value={{ subject: editForm.subject, subtopic: editForm.subtopic, part: editForm.part }}
+              onChange={(v) => setEditForm({ ...editForm, ...v })}
+              disabled={editSaving}
             />
             <div className="flex flex-col gap-1">
               <input
